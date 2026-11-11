@@ -375,3 +375,19 @@ while the pack visibly strains (scale/tilt, creak-ticks), pops lurch it
 forward with crinkle and flecks; the final give lets the clip play out
 in realtime into the card ritual. The SVG rig remains as a fallback if
 the video can't load. Spend: $1.18 of $5 cumulative.
+
+## v13 — CARDS, BORN FROM THE PACK (Mikkel: "the items need to be the
+right size (cutoff atm) and look like cards. the cards should come out
+of the pack. animation cool")
+- Sizing: cards were fixed 210x320 in a row that overflowed smaller
+  windows and clipped. Now width min(196px, 27.5vw) with a true card
+  aspect (63:88), the modal scrolls, and the whole stage scales under
+  560px. Name is a single-line nameplate (ellipsis, never wrapped off
+  the card); the blurb clamps at 3 lines.
+- Faces rebuilt as CARDS: rarity gem, framed art window with a rarity
+  border, a raised nameplate banner across the art, type line, an inset
+  stat box, and a permanent sheen gradient.
+- Emergence: the torn pack no longer vanishes — it shrinks into a husk
+  above, and each card flies out of its mouth (measured live from the
+  pack's rect) arcing into its fan slot, flipping as it lands. On the
+  choice, the husk smoulders out with the burning cards.

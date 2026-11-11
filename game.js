@@ -353,7 +353,7 @@
     else return;
     packsOpened++; packsThisBuild++; state = "pack"; currentPack = null; flipped = 0;
     $("pack-modal").classList.remove("hidden");
-    $("pack-closed").style.display = ""; $("pack-cards").classList.add("hidden");
+    $("pack-closed").style.display = ""; $("pack-closed").classList.remove("husk"); $("pack-closed").style.opacity = ""; $("pack-cards").classList.add("hidden");
     $("pack-cards").innerHTML = ""; $("btn-collect").classList.add("hidden"); $("pack-prompt").classList.add("hidden"); resetRipAny(); ritualChosen = false;
     $("foil-note").textContent = packsThisBuild >= 3 ? "" : (packsThisBuild === 2 ? "One more pack this vigil and it turns FOIL — every card +1 rarity." : "");
     updatePackButton(); updateHUD();
@@ -378,6 +378,7 @@
     if (ritualChosen) return; ritualChosen = true;
     stopWhispers();
     el.classList.add("chosen"); SFX.toll(); SFX.shock();
+    $("pack-closed").style.opacity = "0";
     [...$("pack-cards").children].forEach(c => { if (c !== el) burnCard(c); });
     playSnd("boom", 0.30); noiseBurst(0.4, 0.10);
     log(`You take the ${pull.def.name}. The rest burn. The pack does not forgive — but it respects.`, "epic");
@@ -389,15 +390,17 @@
     const v = $("pack-vid"); if (v) v.pause();
     currentPack = rollPack(); ritualChosen = false;
     if (currentPack[0] && currentPack[0].foil) { $("foil-note").textContent = "\u2726 FOIL PACK \u2014 every card raised a rarity \u2726"; hitStop = Math.max(hitStop, 0.08); }
-    $("pack-closed").style.display = "none";
+    const closedEl = $("pack-closed");
+    closedEl.classList.add("husk");
     const wrap = $("pack-cards"); wrap.classList.remove("hidden");
+    const mid = (currentPack.length - 1) / 2;
     currentPack.forEach((pull, i) => {
       const R = G.RARITIES[pull.rarityIdx], d = document.createElement("div");
-      d.className = "gcard risen";
+      d.className = "gcard";
       d.style.setProperty("--fan", (i - (currentPack.length - 1) / 2) * 7 + "deg");
       d.innerHTML = `<div class="inner">
         <div class="face back"><img src="assets/card-back.jpg" alt=""></div>
-        <div class="face front" style="border-color:${R.color}">
+        <div class="face front" style="border-color:${R.color};--rc:${R.color}">
           <img src="${pull.def.art}" alt="">
           <div class="cbody">
             <span class="cname">${pull.def.name}</span>
@@ -418,7 +421,19 @@
         else { d.classList.add("nudge"); setTimeout(() => d.classList.remove("nudge"), 400); }
       };
       wrap.appendChild(d);
-      setTimeout(() => { if (!d.classList.contains("flipped")) d.click(); }, 700 + i * 650);
+      requestAnimationFrame(() => {
+        const src = (ripMode === "vid" ? vidWrap : $("pack-svg")).getBoundingClientRect();
+        const r = d.getBoundingClientRect();
+        const dx = (src.left + src.width / 2) - (r.left + r.width / 2);
+        const dy = (src.top + src.height * 0.20) - (r.top + r.height / 2);
+        const fan = (i - mid) * 7;
+        d.animate([
+          { transform: `translate(${dx}px, ${dy}px) scale(.16) rotate(0deg)`, opacity: 0 },
+          { transform: `translate(${dx * 0.38}px, ${dy * 0.5 - 30}px) scale(.55) rotate(${fan * 0.5}deg)`, opacity: 1, offset: 0.55 },
+          { transform: `translate(0px, 0px) scale(1) rotate(${fan}deg)`, opacity: 1 }
+        ], { duration: 640, delay: 430 + i * 160, easing: "cubic-bezier(.2,.8,.3,1.05)", fill: "backwards" });
+      });
+      setTimeout(() => { if (!d.classList.contains("flipped")) d.click(); }, 430 + i * 160 + 620 + i * 300);
     });
   }
 

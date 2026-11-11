@@ -412,3 +412,36 @@ tones. Now a ~4.1s directed sequence (state "dying", click skips after
   in. The music sags (playbackRate 0.5) as it fades.
 - Three heartbeats, slowing (0.2 / 1.15 / 2.3s), then none. The end
   screen now fades in over 1.1s instead of popping.
+
+## v16 — A REAL PHYSICS ENGINE, A NEW CATHEDRAL EVERY VIGIL
+(Mikkel: "the enemies path finding and the map need iteration. like
+its pretty boring atm. put it into a physics engine make it legit
+interesting")
+- Matter.js 0.19 vendored into the repo (assets/matter.min.js, MIT).
+  Steering still proposes a velocity from the flow field; the engine
+  disposes: enemies are rigid bodies with true mass (wraith 0.55 ->
+  Vesper 9), the knight is a heavy body the crowd presses against,
+  walls/rubble/barricades/towers are statics. The hand-rolled jostle
+  loop and tile collision are gone — replaced by collision solving.
+- What the engine buys: crowds COMPRESS and queue at doorways instead
+  of sliding through each other; brutes plough lanes through husks;
+  bolt knockback chains through a pack by momentum; wall SLAMS and
+  brute crashes and boss-rubble smashing now come from real
+  collisionStart impact speeds; corpses are debris bodies for their
+  first 1.5s (kicked, spun, smeared), then freeze into the floor.
+- Pathfinding iteration: wraiths are sensor-ghosts (they cross walls,
+  as before) and now FLANK — their heading bends toward the knight's
+  sides until dive range. The stuck failsafe teleports bodies too.
+- The map is GENERATED per Vigil (3 archetypes: colonnades, cloister
+  ring, broken-cross chapels): north/south door walls with two-tile
+  doors, rubble choking some doors, fog banks in the outer dark. The
+  consecrated circle is cleared through every layout (breaching the
+  cloister ring where the light touches), braziers get alcoves, and a
+  layout only ships if BFS proves every floor tile can reach the
+  circle — otherwise it regenerates, with the old hand map as fallback.
+- The death scene rides the engine now (slowed stepping, body shove).
+  Also fixed a silent v15 bug found by grep, not by tests: the dying
+  gather read e.spd (undefined — the field is e.speed), so enemies
+  farther than 42px from the corpse were NaN-vanishing instead of
+  gathering. The close ones froze in place, which is all the testers
+  ever saw. Fields verified against balance.js this time.

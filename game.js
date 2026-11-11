@@ -131,7 +131,8 @@
     enemies = []; bolts = []; ebolts = []; towers = []; shards = []; zones = []; parts = []; texts = []; decals = []; zaps = []; corpses = []; embers = []; dying = null; deathEyes = [];
     for (let i = 0; i < 26; i++) embers.push({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - 0.5) * 9, vy: -6 - Math.random() * 12, ph: Math.random() * 6.28 });
     titheId = null; tonightTithe = null; $("tithe-box").classList.add("hidden"); $("pack-prompt").classList.add("hidden");
-    buildGrid(); placingBarrier = false;
+    MW.clear(world, false); staticBodies.clear(); physAcc = 0;
+    buildGrid(); buildStatics(); makePlayerBody(); placingBarrier = false;
     wave = 0; spawnQueue = []; waveActive = false; runTime = 0; hitStop = 0;
     ashes = 0; kills = 0; streak = 0; packsOpened = 0; packCost = G.PACK.baseCost; freePacks = 1; dryPacks = 0;
     hand = {}; placedCount = {}; collection = []; owned = {};
@@ -800,8 +801,188 @@
   function barrierAt(c, r) { return barriers.find(b => b.c === c && b.r === r) || null; }
   function moveBlocked(c, r) { const ch = charAt(c, r); return ch === '#' || ch === 'r' || !!barrierAt(c, r); }
   function boltBlocked(c, r) { return charAt(c, r) === '#' || !!barrierAt(c, r); }
+
+  // ================= PHYSICS (Matter.js) =================
+  // Steering proposes a velocity; the engine disposes. Bodies give the
+  // dead real mass: crowds compress at doors, brutes plough lanes,
+  // knockback chains through a pack, corpses get kicked around.
+  const MB = Matter.Bodies, MV = Matter.Body, ME = Matter.Engine, MW = Matter.Composite, MEV = Matter.Events;
+  const engine = ME.create({ enableSleeping: false });
+  engine.gravity.y = 0; engine.gravity.x = 0;
+  const world = engine.world;
+  const STEP_MS = 1000 / 60;
+  let physAcc = 0;
+  const staticBodies = new Map(); // "c,r" -> body (walls, rubble, barricades)
+  const pendingSlams = [];
+  function bodyDensity(mass, r) { return mass / (Math.PI * r * r); }
+  function addStaticBody(c, r, kind) {
+    const key = c + "," + r;
+    if (staticBodies.has(key)) return;
+    const b = MB.rectangle(c * TILE + 20, r * TILE + 20, TILE, TILE, { isStatic: true, friction: 0, label: "static" });
+    b.plugin.grim = { kind, c, r };
+    staticBodies.set(key, b); MW.add(world, b);
+  }
+  function removeStaticBody(c, r) {
+    const key = c + "," + r, b = staticBodies.get(key);
+    if (b) { MW.remove(world, b); staticBodies.delete(key); }
+  }
+  function buildStatics() {
+    for (const b of staticBodies.values()) MW.remove(world, b);
+    staticBodies.clear();
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      const ch = grid[r][c];
+      if (ch === '#') addStaticBody(c, r, "wall");
+      else if (ch === 'r') addStaticBody(c, r, "rubble");
+    }
+    for (const b of barriers) addStaticBody(b.c, b.r, "barrier");
+  }
+  function makeEnemyBody(e) {
+    const r = Math.max(6, e.r * 0.85), m = massOf(e);
+    const b = MB.circle(e.x, e.y, r, {
+      friction: 0, frictionAir: 0.012, restitution: 0.08, inertia: Infinity,
+      density: bodyDensity(m, r), label: "enemy", isSensor: e.type === "wraith"
+    });
+    b.plugin.grim = { e };
+    e.body = b; MW.add(world, b);
+  }
+  function makePlayerBody() {
+    const b = MB.circle(player.x, player.y, 17, { friction: 0, frictionAir: 0, restitution: 0, inertia: Infinity, density: bodyDensity(16, 17), label: "player" });
+    player.body = b; MW.add(world, b);
+  }
+  MEV.on(engine, "collisionStart", ev => {
+    for (const pair of ev.pairs) {
+      const a = pair.bodyA, b2 = pair.bodyB;
+      const en = a.label === "enemy" ? a : b2.label === "enemy" ? b2 : null;
+      if (!en || en.isSensor) continue;
+      const other = en === a ? b2 : a;
+      const e = en.plugin.grim && en.plugin.grim.e;
+      if (!e || e.dead) continue;
+      const n = pair.collision.normal;
+      const impact = Math.abs(((en.velocity.x - other.velocity.x) * n.x + (en.velocity.y - other.velocity.y) * n.y) * 60);
+      if (other.label === "static") {
+        const g = other.plugin.grim || {};
+        if (e.type === "brute" && impact > 120) pendingSlams.push({ brute: e, c: g.c, r: g.r, kind: g.kind });
+        else if (impact > 175) pendingSlams.push({ slam: e, impact });
+        if (e.boss && g.kind === "rubble") pendingSlams.push({ bossRubble: g });
+      } else if (other.label === "enemy" && !other.isSensor) {
+        if (impact > 230) pendingSlams.push({ jostle: [e, other.plugin.grim && other.plugin.grim.e] });
+      }
+    }
+  });
+  function processSlams() {
+    for (const s of pendingSlams) {
+      if (s.slam && !s.slam.dead) {
+        damageEnemy(s.slam, (s.impact - 175) / 13, false, true);
+        s.slam.staggerT = Math.max(s.slam.staggerT || 0, 0.35);
+        burst(s.slam.x, s.slam.y, "#8a7f6a", 6);
+        if (s.impact > 260) floatText(s.slam.x, s.slam.y - s.slam.r - 8, "SLAM", "#e8e2d4");
+      } else if (s.brute && !s.brute.dead) {
+        s.brute.staggerT = Math.max(s.brute.staggerT || 0, 1.1);
+        damageEnemy(s.brute, 10, false, true);
+        if ((s.kind === "rubble" || s.kind === "barrier") && s.c != null) damageBlocker(s.c, s.r, 45);
+        burst(s.brute.x, s.brute.y, "#8a7f6a", 10); playSnd("hit", 0.3, 0.1);
+      } else if (s.bossRubble) {
+        damageBlocker(s.bossRubble.c, s.bossRubble.r, 34);
+      } else if (s.jostle) {
+        for (const e of s.jostle) if (e && !e.dead) e.staggerT = Math.max(e.staggerT || 0, 0.3);
+      }
+    }
+    pendingSlams.length = 0;
+  }
+  function physStep(dt, scale) {
+    if (dt <= 0) return;
+    scale = scale || 1;
+    for (const e of enemies) {
+      if (e.dead || !e.body || e.body.isSensor) { if (e.body && e.body.isSensor && !e.dead) { /* sensors still steer */ } else continue; }
+      const b = e.body, v = b.velocity, kk = Math.min(1, (e.grip || 8.5) * dt);
+      MV.setVelocity(b, { x: v.x + ((e.steerX || 0) / 60 - v.x) * kk, y: v.y + ((e.steerY || 0) / 60 - v.y) * kk });
+    }
+    if (player.body) MV.setVelocity(player.body, { x: (player.steerX || 0) / 60, y: (player.steerY || 0) / 60 });
+    physAcc += dt * 1000 * scale;
+    let n = 0;
+    while (physAcc >= STEP_MS && n < 3) { ME.update(engine, STEP_MS); physAcc -= STEP_MS; n++; }
+    if (n === 3) physAcc = 0;
+    for (const e of enemies) {
+      if (!e.body) continue;
+      e.x = e.body.position.x; e.y = e.body.position.y;
+      e.vx = e.body.velocity.x * 60; e.vy = e.body.velocity.y * 60;
+    }
+    if (player.body) {
+      player.x = player.body.position.x; player.y = player.body.position.y;
+      player.vx = player.body.velocity.x * 60; player.vy = player.body.velocity.y * 60;
+      if (player.x < 18 || player.x > W - 18 || player.y < 18 || player.y > H - 18)
+        MV.setPosition(player.body, { x: Math.max(18, Math.min(W - 18, player.x)), y: Math.max(18, Math.min(H - 18, player.y)) });
+    }
+    for (const c of corpses) if (c.body) { c.x = c.body.position.x; c.y = c.body.position.y; c.spin = c.body.angle; }
+    for (const e of enemies) if (e.dead && e.body) { MW.remove(world, e.body); e.body = null; }
+    processSlams();
+  }
+
+  // ================= THE GENERATED CATHEDRAL =================
+  // Every Vigil raises a new cathedral: door walls north and south,
+  // colonnades, corner chapels, a cloister ring in one archetype —
+  // then the consecrated circle is cleared through it (breaching the
+  // ring where the light touches it), braziers get alcoves, fog pools
+  // in the outer dark, and rubble chokes some doors. A layout ships
+  // only if every floor tile can reach the circle on foot.
+  function mulberry32(a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  function genCathedral() {
+    for (let attempt = 0; attempt < 16; attempt++) {
+      const rng = mulberry32((Math.random() * 1e9) | 0);
+      const g = Array.from({ length: ROWS }, () => Array(COLS).fill('.'));
+      const set = (c, r, ch) => { if (c >= 1 && r >= 1 && c < COLS - 1 && r < ROWS - 1) g[r][c] = ch; };
+      const arch = attempt % 3;
+      const gapN = 10 + Math.floor(rng() * 3), gapS = 10 + Math.floor(rng() * 3);
+      // north & south door walls — two-tile doors at the gaps
+      for (let c = 6; c <= 17; c++) { if (Math.abs(c - gapN) > 0.6) set(c, 1, '#'); if (Math.abs(c - gapS) > 0.6) set(c, ROWS - 2, '#'); }
+      if (arch === 0) {
+        // colonnades down both aisles
+        for (const cc of [2, COLS - 3]) for (let r = 3; r <= ROWS - 4; r += 2) { set(cc, r, '#'); if (rng() < 0.3) set(cc, r + 1, '#'); }
+        for (const [c0, r0] of [[3, 2], [COLS - 6, 2], [3, ROWS - 5], [COLS - 6, ROWS - 5]]) { set(c0, r0, '#'); set(c0 + 1, r0, '#'); set(c0, r0 + 1, '#'); }
+      } else if (arch === 1) {
+        // the cloister ring — the circle's clearing breaches it N and S
+        for (let c = 4; c <= COLS - 5; c++) { set(c, 2, '#'); set(c, ROWS - 3, '#'); }
+        for (let r = 2; r <= ROWS - 3; r++) { set(4, r, '#'); set(COLS - 5, r, '#'); }
+        set(4, 7, '.'); set(4, 8, '.'); set(COLS - 5, 7, '.'); set(COLS - 5, 8, '.'); // side doors
+        for (const [c0, r0] of [[6, 4], [COLS - 8, 4], [6, ROWS - 6], [COLS - 8, ROWS - 6]]) set(c0, r0, '#');
+      } else {
+        // broken cross: quadrant chapels and lone pillars
+        for (const sx of [0, 1]) for (const sy of [0, 1]) {
+          const c0 = sx ? COLS - 6 : 3, r0 = sy ? ROWS - 5 : 2;
+          set(c0, r0, '#'); set(c0 + 1, r0, '#'); set(c0 + 2, r0, '#'); set(c0, r0 + 1, '#'); set(c0, r0 + 2, '#'); if (rng() < 0.5) set(c0 + 2, r0 + 2, '#');
+        }
+        set(5, 7, '#'); set(5, 8, '#'); set(COLS - 6, 7, '#'); set(COLS - 6, 8, '#');
+      }
+      // rubble: choked doors and scattered ruin
+      const rubbleSpots = [[gapN, 1], [gapS, ROWS - 2], [4, 7], [COLS - 5, 8]];
+      for (const [c, r] of rubbleSpots) if (rng() < 0.45 && g[r] && g[r][c] === '.') g[r][c] = 'r';
+      for (let i = 0; i < 7; i++) { const c = 1 + Math.floor(rng() * (COLS - 2)), r = 1 + Math.floor(rng() * (ROWS - 2)); if (g[r][c] === '.') g[r][c] = 'r'; }
+      // fog banks pool in the outer dark
+      let fogTiles = 0;
+      for (let b = 0; b < 3; b++) {
+        const ac = 1 + Math.floor(rng() * (COLS - 2)), ar = 1 + Math.floor(rng() * (ROWS - 2));
+        for (let i = 0; i < 6; i++) { const c = ac + Math.floor(rng() * 3) - 1, r = ar + Math.floor(rng() * 3) - 1; if (c >= 1 && r >= 1 && c < COLS - 1 && r < ROWS - 1 && g[r][c] === '.') { g[r][c] = 'f'; fogTiles++; } }
+      }
+      // the consecrated circle is cleared — nothing profanes it
+      for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+        if (Math.hypot(c * TILE + 20 - WORLD.circle.x, r * TILE + 20 - WORLD.circle.y) < WORLD.circle.r + 22) g[r][c] = '.';
+      }
+      // braziers stand in cleared alcoves
+      for (const bz of WORLD.braziers) { const [bc, br] = tileOf(bz.x, bz.y); if (g[br] && g[br][bc] !== '.') g[br][bc] = '.'; }
+      // validation: enough stone, some fog, and every floor tile reaches the circle
+      let walls = 0; for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (g[r][c] === '#') walls++;
+      if (walls < 16 || fogTiles < 3) continue;
+      const [cc0, cr0] = tileOf(WORLD.circle.x, WORLD.circle.y);
+      const seen = new Set([cc0 + "," + cr0]), q = [[cc0, cr0]];
+      while (q.length) { const [c, r] = q.pop(); for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nc = c + dc, nr = r + dr, k = nc + "," + nr; if (nc < 0 || nr < 0 || nc >= COLS || nr >= ROWS || seen.has(k) || g[nr][nc] === '#') continue; seen.add(k); q.push([nc, nr]); } }
+      let ok = true;
+      for (let r = 0; r < ROWS && ok; r++) for (let c = 0; c < COLS; c++) if (g[r][c] !== '#' && !seen.has(c + "," + r)) { ok = false; break; }
+      if (ok) return g;
+    }
+    return G.MAP.map(row => row.split(""));
+  }
   function buildGrid() {
-    grid = G.MAP.map(row => row.split("")); rubbleHp = {}; barriers = [];
+    grid = genCathedral(); rubbleHp = {}; barriers = [];
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (grid[r][c] === 'r') rubbleHp[c + "," + r] = G.TERRAIN.rubbleHp;
   }
   function buildFlow() {
@@ -837,7 +1018,8 @@
   function applyImpulse(e, ix, iy) {
     if (e.dead) return;
     const m = massOf(e);
-    e.vx = (e.vx || 0) + ix / m; e.vy = (e.vy || 0) + iy / m;
+    if (e.body) { const v = e.body.velocity; MV.setVelocity(e.body, { x: v.x + (ix / m) / 60, y: v.y + (iy / m) / 60 }); }
+    else { e.vx = (e.vx || 0) + ix / m; e.vy = (e.vy || 0) + iy / m; }
     const sp = Math.hypot(ix, iy) / m;
     if (sp > 150) e.staggerT = Math.max(e.staggerT || 0, Math.min(0.7, sp / 700));
   }
@@ -899,13 +1081,13 @@
     const b = barrierAt(c, r);
     if (b) {
       b.hp -= dmg; burst(c * TILE + 20, r * TILE + 20, "#a98a54", 3);
-      if (b.hp <= 0) { barriers = barriers.filter(x => x !== b); burst(c * TILE + 20, r * TILE + 20, "#a98a54", 16); SFX.place(); log("A barricade is smashed apart."); buildFlow(); }
+      if (b.hp <= 0) { barriers = barriers.filter(x => x !== b); removeStaticBody(c, r); burst(c * TILE + 20, r * TILE + 20, "#a98a54", 16); SFX.place(); log("A barricade is smashed apart."); buildFlow(); }
       return;
     }
     const k = c + "," + r;
     if (rubbleHp[k] != null) {
       rubbleHp[k] -= dmg; burst(c * TILE + 20, r * TILE + 20, "#8a7f6a", 3);
-      if (rubbleHp[k] <= 0) { delete rubbleHp[k]; grid[r][c] = '.'; burst(c * TILE + 20, r * TILE + 20, "#8a7f6a", 18); SFX.place(); buildFlow(); }
+      if (rubbleHp[k] <= 0) { delete rubbleHp[k]; grid[r][c] = '.'; removeStaticBody(c, r); burst(c * TILE + 20, r * TILE + 20, "#8a7f6a", 18); SFX.place(); buildFlow(); }
     }
   }
 
@@ -938,7 +1120,7 @@
       dmg: base.dmg * spec.dmgScale * diff.dmg * (elite ? 1.3 : 1), r: base.r * (elite ? 1.35 : 1), ash: base.ash * (elite ? 6 : 1),
       slowT: 0, slowF: 0, chillT: 0, burnT: 0, burnDps: 0, markT: 0, shockCd: 0, hitCd: 0, boss: isBoss, elite,
       summonCd: 4, tollCd: 6, img: IMG[type], wob: Math.random() * 6.28, flickerT: Math.random() * 2, enraged: false, exploded: false, lungeCd: 2 + Math.random() * 2, lungeT: 0, chargeCd: 3 + Math.random() * 3, chargeT: 0, windT: 0, animT: Math.random() * 6.28, vx: 0, vy: 0, atkPop: 0 };
-    enemies.push(e);
+    enemies.push(e); makeEnemyBody(e);
     if (isBoss) { bossRef = e; $("boss-name").textContent = type === "vesper" ? "VESPER, MOTHER OF BELLS" : "THE ABBOT"; SFX.toll(); setTimeout(() => SFX.toll(), 350); banner(type === "vesper" ? "☠ VESPER ☠" : "THE ABBOT TOLLS"); shake = 10; }
     return e;
   }
@@ -993,7 +1175,7 @@
       const a = Math.random() * 6.283, d = 130 + Math.random() * 330;
       deathEyes.push({ x: Math.max(24, Math.min(W - 24, player.x + Math.cos(a) * d)), y: Math.max(24, Math.min(H - 24, player.y + Math.sin(a) * d * 0.8)), s: 5 + Math.random() * 6, delay: 0.7 + i * 0.1 + Math.random() * 0.25, ph: Math.random() * 10 });
     }
-    for (const e of enemies) { if (e.dead) continue; const dx = e.x - player.x, dy = e.y - player.y, d = Math.max(20, Math.hypot(dx, dy)); if (d < 120) { e.kx = (e.kx || 0) + dx / d * 950; e.ky = (e.ky || 0) + dy / d * 950; } }
+    for (const e of enemies) { if (e.dead || !e.body) continue; const dx = e.x - player.x, dy = e.y - player.y, d = Math.max(20, Math.hypot(dx, dy)); if (d < 120) applyImpulse(e, dx / d * 950, dy / d * 950); }
     playSnd("toll", 0.4, 0.1);
     log("The knight falls.");
   }
@@ -1005,11 +1187,14 @@
     }
     for (const e of enemies) {
       if (e.dead) continue;
-      e.x += (e.kx || 0) * dt; e.y += (e.ky || 0) * dt; e.kx = (e.kx || 0) * 0.88; e.ky = (e.ky || 0) * 0.88;
       const dx = player.x - e.x, dy = player.y - e.y, d = Math.hypot(dx, dy);
-      if (d > 64 + e.r) { const sp = e.spd * 0.3; e.x += dx / d * sp * dt; e.y += dy / d * sp * dt; }
+      e.grip = 8.5;
+      if (d > 64 + e.r) { e.steerX = dx / d * e.speed * 0.3; e.steerY = dy / d * e.speed * 0.3; }
+      else { e.steerX = 0; e.steerY = 0; }
       e.flash = Math.max(0, (e.flash || 0) - dt);
     }
+    player.steerX = 0; player.steerY = 0;
+    physStep(dt, 0.35);
     for (const b of bolts) if (b.vx != null) { b.x += b.vx * dt * ts; b.y += b.vy * dt * ts; }
     for (const b of ebolts) if (b.vx != null) { b.x += b.vx * dt * ts; b.y += b.vy * dt * ts; }
     if (t >= 1.78 && !D.landed) { D.landed = 1; shake = Math.max(shake, 6); burst(player.x, player.y + 16, "#6b6257", 16); playSnd("toll", 0.55, 0.06); }
@@ -1063,7 +1248,13 @@
     if (!silent) floatText(e.x + (Math.random() * 16 - 8), e.y - e.r - 4, String(Math.round(dmg)), crit ? "#ffd94a" : "#e8e2d4");
     if (e.hp <= 0 && !e.dead) {
       e.dead = true; kills++; streak++; SFX.die();
-      corpses.push({ img: e.img, x: e.x, y: e.y, s: e.r * 3.4, t: 0, dir: Math.random() < 0.5 ? -1 : 1, boss: e.boss, vx: (e.vx || 0) * 1.2 + (e.lastKbX || 0), vy: (e.vy || 0) * 1.2 + (e.lastKbY || 0), spin: 0, av: (Math.random() - 0.5) * 3 + ((e.lastKbX || 0) * 0.004), smear: 0 }); if (corpses.length > 40) corpses.shift();
+      if (e.body) { MW.remove(world, e.body); e.body = null; }
+      const co = { img: e.img, x: e.x, y: e.y, s: e.r * 3.4, t: 0, dir: Math.random() < 0.5 ? -1 : 1, boss: e.boss, vx: 0, vy: 0, spin: 0, av: 0, smear: 0, px: e.x, py: e.y };
+      corpses.push(co); if (corpses.length > 40) { const old = corpses.shift(); if (old.body) MW.remove(world, old.body); }
+      co.body = MB.circle(e.x, e.y, Math.max(6, e.r * 0.8), { friction: 0.1, frictionAir: 0.055, restitution: 0.25, density: bodyDensity(0.7, Math.max(6, e.r * 0.8)), label: "corpse" });
+      MV.setVelocity(co.body, { x: ((e.vx || 0) * 1.2 + (e.lastKbX || 0)) / 60, y: ((e.vy || 0) * 1.2 + (e.lastKbY || 0)) / 60 });
+      MV.setAngularVelocity(co.body, (Math.random() - 0.5) * 0.09 + ((e.lastKbX || 0) * 0.00012));
+      MW.add(world, co.body);
       burst(e.x, e.y, e.type === "wraith" ? "#9fd8ff" : e.type === "plague" ? "#b6d94a" : "#c93b2e", e.boss ? 46 : 10);
       decals.push({ x: e.x, y: e.y, r: e.r * (0.8 + Math.random() * 0.7), a: 0.34 }); if (decals.length > 260) decals.shift();
       const ashN = Math.round(e.ash * (omen && omen.ashMult ? omen.ashMult : 1));
@@ -1079,7 +1270,7 @@
     burst(e.x, e.y, "#b6d94a", 22);
     const R = G.ENEMIES.plague.explodeR, D = G.ENEMIES.plague.explodeDmg;
     for (const o of [...enemies]) if (o !== e && !o.dead && Math.hypot(o.x - e.x, o.y - e.y) < R + o.r) { damageEnemy(o, D, false); if (!o.dead) { const dd = Math.max(20, Math.hypot(o.x - e.x, o.y - e.y)); applyImpulse(o, (o.x - e.x) / dd * 300, (o.y - e.y) / dd * 300); } }
-    for (const c of corpses) { const dd = Math.hypot(c.x - e.x, c.y - e.y); if (dd < R + 30) { const s = 320 * (1 - dd / (R + 30)) + 60; c.vx = (c.vx || 0) + (c.x - e.x) / Math.max(20, dd) * s; c.vy = (c.vy || 0) + (c.y - e.y) / Math.max(20, dd) * s; c.av = (c.av || 0) + (Math.random() - 0.5) * 7; } }
+    for (const c of corpses) { const dd = Math.hypot(c.x - e.x, c.y - e.y); if (dd < R + 30 && c.body) { const s = 320 * (1 - dd / (R + 30)) + 60; const cv = c.body.velocity; MV.setVelocity(c.body, { x: cv.x + (c.x - e.x) / Math.max(20, dd) * s / 60, y: cv.y + (c.y - e.y) / Math.max(20, dd) * s / 60 }); MV.setAngularVelocity(c.body, c.body.angularVelocity + (Math.random() - 0.5) * 0.2); } }
     if (Math.hypot(player.x - e.x, player.y - e.y) < R + player.r) { hurtPlayer(D * 0.8); const dd = Math.max(20, Math.hypot(player.x - e.x, player.y - e.y)), anch = inCircle(player.x, player.y) ? 0.5 : 1; player.kx = (player.kx || 0) + (player.x - e.x) / dd * 330 * anch; player.ky = (player.ky || 0) + (player.y - e.y) / dd * 330 * anch; }
     const [ec0, er0] = tileOf(e.x, e.y);
     for (let r = er0 - 3; r <= er0 + 3; r++) for (let c = ec0 - 3; c <= ec0 + 3; c++) {
@@ -1181,16 +1372,14 @@
     for (const em of embers) { em.x += (em.vx + Math.sin(runTime * 0.7 + em.ph) * 6) * dt; em.y += em.vy * dt; if (em.y < -8) { em.y = H + 8; em.x = Math.random() * W; } if (em.x < -8) em.x = W + 8; if (em.x > W + 8) em.x = -8; }
     for (const c of corpses) {
       c.t += dt;
-      if ((c.vx || 0) !== 0 || (c.vy || 0) !== 0) {
-        c.x += c.vx * dt; c.y += c.vy * dt;
-        const fr = Math.exp(-2.8 * dt); c.vx *= fr; c.vy *= fr;
-        c.spin = (c.spin || 0) + (c.av || 0) * dt; c.av *= Math.exp(-2.2 * dt);
-        c.smear = (c.smear || 0) + Math.hypot(c.vx, c.vy) * dt;
-        if (c.smear > 30 && Math.hypot(c.vx, c.vy) > 55) { c.smear = 0; decals.push({ x: c.x, y: c.y, r: c.s * 0.22, a: 0.3 }); if (decals.length > 260) decals.shift(); }
-        if (Math.hypot(c.vx, c.vy) < 4) { c.vx = 0; c.vy = 0; }
+      if (c.body) {
+        const moved = Math.hypot(c.x - c.px, c.y - c.py); c.px = c.x; c.py = c.y;
+        c.smear = (c.smear || 0) + moved;
+        if (c.smear > 30 && Math.hypot(c.body.velocity.x, c.body.velocity.y) * 60 > 55) { c.smear = 0; decals.push({ x: c.x, y: c.y, r: c.s * 0.22, a: 0.3 }); if (decals.length > 260) decals.shift(); }
+        if (c.t > 1.5) { MW.remove(world, c.body); c.body = null; }
       }
     }
-    corpses = corpses.filter(c => c.t < 3.4);
+    corpses = corpses.filter(c => { if (c.t >= 3.4 && c.body) { MW.remove(world, c.body); c.body = null; } return c.t < 3.4; });
     beams = beams.filter(b => (b.t += dt) < 0.85);
     if (hintT >= 0) hintT += dt;
     parts = parts.filter(p => p.t < p.life);
@@ -1204,9 +1393,9 @@
     let dy = (keys["s"] || keys["arrowdown"] ? 1 : 0) - (keys["w"] || keys["arrowup"] ? 1 : 0);
     if (touchTarget) { const tdx = touchTarget.x - player.x, tdy = touchTarget.y - player.y; if (Math.hypot(tdx, tdy) > 14) { dx = tdx; dy = tdy; } else { dx = 0; dy = 0; } }
     const dl = Math.hypot(dx, dy);
-    const px0 = player.x, py0 = player.y;
+    let pvx = 0, pvy = 0;
     if (player.dashT > 0) {
-      player.dashT -= dt; player.x += player.dashDx * 950 * dt; player.y += player.dashDy * 950 * dt;
+      player.dashT -= dt; pvx = player.dashDx * 950; pvy = player.dashDy * 950;
       for (const e of enemies) { if (e.dead || e.dashMark === player.dashId) continue; if (Math.hypot(e.x - player.x, e.y - player.y) < e.r + 34) { e.dashMark = player.dashId; applyImpulse(e, player.dashDx * 330, player.dashDy * 330); e.staggerT = Math.max(e.staggerT || 0, 0.22); burst(e.x, e.y, "#e8e2d4", 3); } }
       player.invuln = Math.max(player.invuln, 0.05);
       if (Math.random() < 0.8) parts.push({ x: player.x, y: player.y, vx: 0, vy: 0, life: 0.3, t: 0, color: "#d7263d", size: 3 });
@@ -1214,19 +1403,15 @@
       player.lastDx = dx / dl; player.lastDy = dy / dl;
       const [ptc, ptr] = tileOf(player.x, player.y);
       const vault = barrierAt(ptc, ptr) ? 0.55 : 1; // vaulting your own barricades costs speed
-      player.x += dx / dl * player.speed * vault * dt; player.y += dy / dl * player.speed * vault * dt;
+      pvx = dx / dl * player.speed * vault; pvy = dy / dl * player.speed * vault;
     }
-    player.x = Math.max(18, Math.min(W - 18, player.x)); player.y = Math.max(18, Math.min(H - 18, player.y));
-    collideTiles(player, true);
     if (player.kx || player.ky) {
-      player.x += player.kx * dt; player.y += player.ky * dt;
+      pvx += player.kx; pvy += player.ky;
       const kd = Math.exp(-5.5 * dt); player.kx *= kd; player.ky *= kd;
       if (Math.hypot(player.kx, player.ky) < 5) { player.kx = 0; player.ky = 0; }
-      player.x = Math.max(18, Math.min(W - 18, player.x)); player.y = Math.max(18, Math.min(H - 18, player.y));
-      collideTiles(player, true);
     }
+    player.steerX = pvx; player.steerY = pvy;
     flowTimer -= dt; if (flowTimer <= 0) { flowTimer = 0.35; buildFlow(); }
-    if (dt > 0) { player.vx = (player.x - px0) / dt; player.vy = (player.y - py0) / dt; }
     const spd = Math.hypot(player.vx, player.vy);
     player.walkPh += dt * (2 + spd / 22);
     // --- spawns ---
@@ -1442,19 +1627,19 @@
           }
         }
       }
-      // PHYSICS: steering proposes a desired velocity; mass and momentum dispose.
+      // PHYSICS (Matter): steering proposes a desired velocity; mass,
+      // momentum and the crowd dispose. Integration happens in physStep.
       if (e.staggerT > 0) { e.staggerT -= dt; mx = 0; my = 0; }
-      const grip = e.staggerT > 0 ? 2.4 : (e.type === "brute" || e.boss) ? 4.2 : 8.5;
-      const kk = Math.min(1, grip * dt);
-      e.vx = (e.vx || 0) + (mx - (e.vx || 0)) * kk;
-      e.vy = (e.vy || 0) + (my - (e.vy || 0)) * kk;
-      e.x += e.vx * dt; e.y += e.vy * dt;
-      e.x = Math.max(-70, Math.min(W + 70, e.x)); e.y = Math.max(-70, Math.min(H + 70, e.y));
-      // bodies jostle positionally; a hard enough shove staggers both
-      for (const o of enemies) { if (o === e || o.dead) continue; const d = Math.hypot(o.x - e.x, o.y - e.y), rr = e.r + o.r; if (d > 0.01 && d < rr) { const push = (rr - d) * 0.32, ux = (o.x - e.x) / d, uy = (o.y - e.y) / d; e.x -= ux * push; e.y -= uy * push;
-        const rel = Math.abs(((e.vx || 0) - (o.vx || 0)) * ux + ((e.vy || 0) - (o.vy || 0)) * uy);
-        if (rel > 230) { e.staggerT = Math.max(e.staggerT || 0, 0.3); o.staggerT = Math.max(o.staggerT || 0, 0.3); } } }
-      if (e.type !== "wraith") collideTiles(e, false);
+      e.grip = e.staggerT > 0 ? 2.4 : (e.type === "brute" || e.boss) ? 4.2 : 8.5;
+      // FLANKERS: wraiths peel around the knight's sides instead of
+      // joining the pour — their desired heading rotates toward a flank
+      // anchor until they are close enough to dive.
+      if (e.type === "wraith" && dp > 130) {
+        if (!e.flankSide) e.flankSide = Math.random() < 0.5 ? -1 : 1;
+        const pa = Math.atan2(player.y - e.y, player.x - e.x) + e.flankSide * 0.85 * Math.min(1, (dp - 130) / 260);
+        mx = Math.cos(pa) * sp; my = Math.sin(pa) * sp;
+      }
+      e.steerX = mx; e.steerY = my;
       // stuck failsafe: the cathedral rejects the wedged dead (displacement, not intent)
       if (waveActive && e.type !== "cultist") {
         if (e.markX == null) { e.markX = e.x; e.markY = e.y; e.markT = 0; }
@@ -1468,7 +1653,7 @@
             for (let dr = -1; dr <= 1 && !chewed; dr++) for (let dc = -1; dc <= 1; dc++) {
               if (charAt(ec2 + dc, er2 + dr) === 'r' || barrierAt(ec2 + dc, er2 + dr)) { damageBlocker(ec2 + dc, er2 + dr, e.dmg * 2); chewed = true; }
             }
-            if (!chewed) { const [mxp, myp] = nearestPassable((e.x + player.x) / 2, (e.y + player.y) / 2); e.x = mxp; e.y = myp; e.vx = 0; e.vy = 0; burst(e.x, e.y, "#8a7f6a", 6); }
+            if (!chewed) { const [mxp, myp] = nearestPassable((e.x + player.x) / 2, (e.y + player.y) / 2); e.x = mxp; e.y = myp; e.vx = 0; e.vy = 0; if (e.body) { MV.setPosition(e.body, { x: mxp, y: myp }); MV.setVelocity(e.body, { x: 0, y: 0 }); } burst(e.x, e.y, "#8a7f6a", 6); }
           }
           e.markX = e.x; e.markY = e.y; e.markT = 0;
         }
@@ -1479,6 +1664,7 @@
       if (Math.hypot(player.x - e.x, player.y - e.y) < e.r + player.r && e.hitCd <= 0) { e.hitCd = 0.85; e.atkPop = 0.22; const amb = e.ambushT > 0; hurtPlayer(e.dmg * (1 + 0.03 * deepenStacks) * (amb ? 1.5 : 1), e); if (amb) { e.ambushT = 0; floatText(player.x, player.y - 40, "AMBUSHED FROM THE FOG", "#c9d4e8"); } }
     }
     enemies = enemies.filter(e => !e.dead);
+    physStep(dt);
     // --- cultist fire: bolts for the knight, unless the fog hides him ---
     if (waveActive) for (const e of enemies) {
       if (e.type !== "cultist" || e.dead) continue;
@@ -1858,7 +2044,7 @@
       if (barriers.length >= G.TERRAIN.barrierMax) { log("The floor holds no more barricades."); placingBarrier = false; updateBarrierButton(); return; }
       if (ashes < G.TERRAIN.barrierCost) { log("Barricades cost 15 ash."); placingBarrier = false; updateBarrierButton(); return; }
       ashes -= G.TERRAIN.barrierCost;
-      barriers.push({ c, r, hp: G.TERRAIN.barrierHp, max: G.TERRAIN.barrierHp });
+      barriers.push({ c, r, hp: G.TERRAIN.barrierHp, max: G.TERRAIN.barrierHp }); addStaticBody(c, r, "barrier");
       SFX.place(); burst(c * TILE + 20, r * TILE + 20, "#a98a54", 10); buildFlow();
       log("Barricade raised. The dead must chew through it — or go around.");
       if (ashes < G.TERRAIN.barrierCost) placingBarrier = false;
@@ -1875,6 +2061,7 @@
       const h = hand[selectedHand];
       const tw = { type: selectedHand, x: p.x, y: p.y, level: 1, mult: h.bestMult, cd: 0, tollAnim: 0, recoil: 0, faceA: 0 };
       towers.push(tw); placedCount[selectedHand] = placedCount[selectedHand] || []; placedCount[selectedHand].push(tw);
+      tw.body = MB.circle(tw.x, tw.y, 20, { isStatic: true, friction: 0, label: "static" }); tw.body.plugin.grim = { kind: "tower" }; MW.add(world, tw.body);
       h.count--; if (h.count <= 0) selectedHand = null;
       SFX.place(); burst(p.x, p.y, "#e8e2d4", 8); renderHand(); return;
     }
@@ -1882,7 +2069,7 @@
     if (tw) { moveTower = moveTower === tw ? null : tw; log(moveTower ? `${CARDMAP[tw.type].name} lifted — click its new ground (or double-click it to overcharge: 20 ash).` : "Set down."); }
     else if (moveTower) {
       if (!placementOK(p.x, p.y)) { log("Not onto wall, rubble, fog or barricade."); return; }
-      moveTower.x = p.x; moveTower.y = p.y; SFX.place(); moveTower = null;
+      moveTower.x = p.x; moveTower.y = p.y; if (moveTower.body) MV.setPosition(moveTower.body, { x: p.x, y: p.y }); SFX.place(); moveTower = null;
     }
   });
   cv.addEventListener("dblclick", ev => {

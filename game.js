@@ -1513,6 +1513,9 @@
     // --- bolts ---
     for (const b of bolts) {
       if (b.homing && !b.homing.dead) { const a = Math.atan2(b.homing.y - b.y, b.homing.x - b.x), sp = Math.hypot(b.vx, b.vy); b.vx = Math.cos(a) * sp; b.vy = Math.sin(a) * sp; }
+      // v17: every bolt drags a fading trail; pyre embers ARC and smoke
+      b.trail = b.trail || []; b.trail.unshift({ x: b.x, y: b.y }); if (b.trail.length > 7) b.trail.pop();
+      if (b.kind === "ember") { b.vy += 300 * dt; if (Math.random() < 0.55) parts.push({ x: b.x, y: b.y - 2, vx: (Math.random() - 0.5) * 12, vy: -22 - Math.random() * 14, life: 0.55, t: 0, color: "#4a4238", size: 2.6 }); }
       b.x += b.vx * dt; b.y += b.vy * dt;
       if (pillarHit(b.x, b.y)) { b.dead = true; burst(b.x, b.y, "#8a7f6a", 3); continue; }
       for (const e of enemies) {
@@ -1523,6 +1526,7 @@
           if (!e.dead) { applyImpulse(e, b.vx * b.dmg * 0.042, b.vy * b.dmg * 0.042); e.lastKbX = b.vx * 0.5; e.lastKbY = b.vy * 0.5; }
           const drink = Math.min(0.45, massOf(e) * 0.13); b.vx *= (1 - drink); b.vy *= (1 - drink);
           if (!b.crit) SFX.hit();
+          burst(b.x, b.y, b.kind === "frost" ? "#a8dcff" : b.kind === "ember" ? "#ff9a3c" : b.kind === "spike" ? "#ffd94a" : "#e8e2d4", b.kind === "frost" || b.kind === "ember" ? 5 : 3);
           if (b.chillSecs) { const wasBurning = e.burnT > 0; e.slowT = Math.max(e.slowT, b.chillSecs); e.slowF = Math.max(e.slowF, b.chillSlow); e.chillT = Math.max(e.chillT, b.chillSecs); if (wasBurning) maybeShock(e, b.dmg); }
           if (b.mark) e.markT = G.TOWERS.gallows.markSecs;
           if (b.kind === "ember" && !b.zoned) { b.zoned = true; zones.push({ x: e.x, y: e.y, r: G.TOWERS.pyre.burnRadius, dps: b.zoneDps, ttl: G.TOWERS.pyre.burnSecs }); }
@@ -1557,7 +1561,7 @@
         if (e.summonCd <= 0 && enemies.length < 60) { e.summonCd = 7; for (let k = 0; k < 3; k++) { const w = spawnEnemy("wraith"); w.x = e.x + (Math.random() * 90 - 45); w.y = e.y + (Math.random() * 90 - 45); } }
       }
     }
-    for (const b of ebolts) { b.x += b.vx * dt; b.y += b.vy * dt; if (pillarHit(b.x, b.y)) { b.dead = true; continue; } if (Math.hypot(player.x - b.x, player.y - b.y) < player.r + b.r) { b.dead = true; hurtPlayer(b.dmg, null); } if (b.x < -20 || b.x > W + 20 || b.y < -20 || b.y > H + 20) b.dead = true; }
+    for (const b of ebolts) { b.x += b.vx * dt; b.y += b.vy * dt; b.wob = (b.wob || 0) + dt * 9; const wsp = Math.hypot(b.vx, b.vy) || 1, wpx = -b.vy / wsp, wpy = b.vx / wsp, woff = Math.sin(b.wob) * 3.5; b.rx = b.x + wpx * woff; b.ry = b.y + wpy * woff; if (pillarHit(b.x, b.y)) { b.dead = true; continue; } if (Math.hypot(player.x - b.x, player.y - b.y) < player.r + b.r) { b.dead = true; hurtPlayer(b.dmg, null); } if (b.x < -20 || b.x > W + 20 || b.y < -20 || b.y > H + 20) b.dead = true; }
     ebolts = ebolts.filter(b => !b.dead);
     // --- enemies ---
     for (const e of enemies) {
@@ -1590,6 +1594,26 @@
       else if (e.inFog) { e.inFog = false; e.ambushT = 1.0; }
       e.hiddenNow = fogNow;
       if (e.ambushT > 0) { e.ambushT -= dt; sp *= 1.35; }
+      // THE DEAD MOVE WRONG (v17): no gliding. Every corpse-thing lurches —
+      // a gait pulse per type (brutes haul, husks drag, cultists drift),
+      // stalling and surging instead of holding a constant speed. Wraiths
+      // are exempt: their smoothness is what makes them worse.
+      e.gaitT = (e.gaitT || 0) + dt;
+      if (e.type !== "wraith") {
+        const gf = e.type === "brute" || e.boss ? 1.5 : e.type === "cultist" ? 2.1 : e.type === "plague" ? 2.4 : 3.0;
+        const pulse = Math.pow(Math.max(0, Math.sin(e.gaitT * gf + e.wob)), 2);
+        sp *= (0.30 + 1.05 * pulse) * 1.6; // deep stalls, hard surges; the 1.6 keeps the night's average pace honest
+        if (e.hp < e.maxHp * 0.5) sp *= 0.85; // the wounded drag themselves
+      }
+      // twitches: brief, wrong little spasms (render reads twitchFx)
+      e.twitchT = e.twitchT == null ? 1 + Math.random() * 3.5 : e.twitchT - dt;
+      if (e.twitchT <= 0) { e.twitchT = 1.4 + Math.random() * 3.8; e.twitchFx = 0.16; }
+      if (e.twitchFx > 0) e.twitchFx -= dt;
+      // the wounded leak: a dotted blood trail behind anything half-dead
+      if (e.hp < e.maxHp * 0.5 && Math.hypot(e.vx || 0, e.vy || 0) > 12) {
+        e.dripT = (e.dripT || 0) - dt;
+        if (e.dripT <= 0) { e.dripT = 0.34; decals.push({ x: e.x + (Math.random() * 10 - 5), y: e.y + e.r * 0.7, r: 3.5 + Math.random() * 3, a: 0.20 }); if (decals.length > 260) decals.shift(); }
+      }
       const dpE = Math.hypot(player.x - e.x, player.y - e.y);
       let mx, my;
       if (e.type === "wraith") {
@@ -1862,12 +1886,25 @@
         continue;
       }
       shadow(e.x, e.y + e.r * 1.15, e.r * 1.05);
-      drawSpr(e.img, e.x, e.y + bob, sc, { rot: tilt, sx, sy, alpha: flick ? 0.25 : 0.98 });
+      const twJ = e.twitchFx > 0 ? Math.sin(performance.now() * 1.9) * 0.14 : 0;
+      const twX = e.twitchFx > 0 ? Math.sin(performance.now() * 2.3) * 1.6 : 0;
+      drawSpr(e.img, e.x + twX, e.y + bob, sc, { rot: tilt + twJ, sx, sy, alpha: flick ? 0.25 : 0.98 });
+      // EYES THAT WATCH (v17): two ember pupils that track the knight —
+      // they sit toward his side of the face and flare when the thing twitches
+      if (!flick) {
+        const fa = Math.atan2(player.y - e.y, player.x - e.x), fx = Math.cos(fa), fy = Math.sin(fa);
+        const ex = e.x + twX + fx * e.r * 0.34, ey = e.y + bob - e.r * 0.30 + fy * e.r * 0.16;
+        const px2 = -fy, py2 = fx, sep = e.r * 0.30, er = (e.boss || e.type === "brute") ? 2.6 : 1.9;
+        ctx.fillStyle = e.type === "cultist" ? "rgba(201,154,255,0.95)" : e.type === "wraith" ? "rgba(191,230,255,0.95)" : e.type === "plague" ? "rgba(182,217,74,0.95)" : e.boss ? "rgba(255,46,74,0.98)" : "rgba(255,74,46,0.92)";
+        ctx.globalAlpha = e.twitchFx > 0 ? 1 : 0.72 + Math.sin(performance.now() / 340 + e.wob) * 0.16;
+        ctx.beginPath(); ctx.arc(ex + px2 * sep, ey + py2 * sep, er, 0, 6.283); ctx.arc(ex - px2 * sep, ey - py2 * sep, er, 0, 6.283); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
       if (e.flash > 0) { ctx.fillStyle = `rgba(255,240,220,${e.flash * 5})`; ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, 6.283); ctx.fill(); }
       if (e.elite) { ctx.strokeStyle = "#ffd94a"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 5 + Math.sin(performance.now() / 200) * 1.5, 0, 6.283); ctx.stroke(); }
       if (e.enraged) { ctx.strokeStyle = "rgba(255,60,30,0.8)"; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 3, 0, 6.283); ctx.stroke(); }
       if (e.markT > 0) { ctx.fillStyle = "#ffd94a"; ctx.font = "bold 12px system-ui"; ctx.textAlign = "center"; ctx.fillText("✛", e.x, e.y - e.r - 14); }
-      if (e.type === "cultist") { ctx.fillStyle = "rgba(200,140,255,0.9)"; ctx.font = "bold 11px system-ui"; ctx.textAlign = "center"; ctx.fillText("✦", e.x, e.y - e.r - 13); }
+      if (e.type === "cultist") { const chg = e.fireT != null && e.fireT < 0.5 ? (0.5 - e.fireT) / 0.5 : 0; ctx.fillStyle = `rgba(200,140,255,${0.65 + chg * 0.35})`; ctx.font = `bold ${11 + chg * 13}px system-ui`; ctx.textAlign = "center"; ctx.shadowColor = "#b366ff"; ctx.shadowBlur = chg * 14; ctx.fillText("✦", e.x, e.y - e.r - 13 - chg * 4); ctx.shadowBlur = 0; }
       if (e.chillT > 0) { ctx.fillStyle = "rgba(160,220,255,0.85)"; ctx.font = "10px system-ui"; ctx.textAlign = "center"; ctx.fillText("❄", e.x + e.r, e.y - e.r); }
       if (e.burnT > 0) { ctx.fillStyle = "rgba(255,140,40,0.9)"; ctx.font = "10px system-ui"; ctx.textAlign = "center"; ctx.fillText("🔥", e.x - e.r, e.y - e.r); }
       if (e.hp < e.maxHp) {
@@ -1922,14 +1959,44 @@
       drawSpr(c.img, c.x, c.y + sink, c.s * 1.5, { rot, alpha: al });
       if (DEBUG) { ctx.strokeStyle = "rgba(120,255,90,0.95)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(c.x, c.y, c.s * 0.78, 0, 6.283); ctx.stroke(); }
     }
-    // bolts
+    // bolts — v17: comets, not scratches. A tapering trail behind a lit head;
+    // embers burn and flicker, spikes fly as darts, frost leaves a cold wake.
     for (const b of bolts) {
-      ctx.strokeStyle = b.kind === "frost" ? "#a8dcff" : b.kind === "ember" ? "#ff9a3c" : b.kind === "spike" ? "#e8e2d4" : "#ffd9c9";
-      ctx.lineWidth = b.kind === "spike" ? 3 : 2.4; ctx.beginPath();
-      ctx.moveTo(b.x - b.vx * 0.018, b.y - b.vy * 0.018); ctx.lineTo(b.x, b.y); ctx.stroke();
-      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(b.x, b.y, 2.2, 0, 6.283); ctx.fill();
+      const col = b.kind === "frost" ? "#a8dcff" : b.kind === "ember" ? "#ff9a3c" : b.kind === "spike" ? "#ffe9a8" : "#ffd9c9";
+      const tr = b.trail || [];
+      ctx.lineCap = "round";
+      for (let i = tr.length - 1; i >= 0; i--) {
+        const p = tr[i], q = i === 0 ? b : tr[i - 1], k = 1 - i / Math.max(1, tr.length);
+        ctx.strokeStyle = col; ctx.globalAlpha = 0.34 * k; ctx.lineWidth = 0.8 + 2.6 * k;
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      if (b.kind === "ember") {
+        const fl = 4.6 + Math.sin(performance.now() / 37 + b.x) * 1.3;
+        ctx.fillStyle = "#ff9a3c"; ctx.shadowColor = "#ff7a26"; ctx.shadowBlur = 13;
+        ctx.beginPath(); ctx.arc(b.x, b.y, fl, 0, 6.283); ctx.fill(); ctx.shadowBlur = 0;
+        ctx.fillStyle = "#ffe9a8"; ctx.beginPath(); ctx.arc(b.x, b.y, 1.9, 0, 6.283); ctx.fill();
+      } else if (b.kind === "spike") {
+        const a = Math.atan2(b.vy, b.vx);
+        ctx.fillStyle = "#fff3cf"; ctx.shadowColor = "#ffd94a"; ctx.shadowBlur = 7;
+        ctx.beginPath(); ctx.moveTo(b.x + Math.cos(a) * 8, b.y + Math.sin(a) * 8); ctx.lineTo(b.x + Math.cos(a + 2.5) * 4.4, b.y + Math.sin(a + 2.5) * 4.4); ctx.lineTo(b.x + Math.cos(a - 2.5) * 4.4, b.y + Math.sin(a - 2.5) * 4.4); ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0;
+      } else {
+        ctx.fillStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 8;
+        ctx.beginPath(); ctx.arc(b.x, b.y, 3.1, 0, 6.283); ctx.fill(); ctx.shadowBlur = 0;
+        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(b.x, b.y, 1.7, 0, 6.283); ctx.fill();
+      }
     }
-    for (const b of ebolts) { const hex = b.kind === "hex"; ctx.fillStyle = hex ? "#d9a5ff" : "#b9c6ff"; ctx.shadowColor = hex ? "#b366ff" : "#8fa2ff"; ctx.shadowBlur = 9; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 6.283); ctx.fill(); ctx.shadowBlur = 0; }
+    // enemy bolts — v17: they wobble as they come, breathing violet, with afterimages
+    for (const b of ebolts) {
+      const hex = b.kind === "hex", bx = b.rx != null ? b.rx : b.x, by = b.ry != null ? b.ry : b.y;
+      const pulse = 1 + Math.sin((b.wob || 0) * 1.7) * 0.22, wsp = Math.hypot(b.vx, b.vy) || 1, ux = b.vx / wsp, uy = b.vy / wsp;
+      ctx.fillStyle = hex ? "rgba(179,102,255,0.20)" : "rgba(143,162,255,0.20)";
+      ctx.beginPath(); ctx.arc(bx - ux * 13, by - uy * 13, b.r * 0.72 * pulse, 0, 6.283); ctx.fill();
+      ctx.beginPath(); ctx.arc(bx - ux * 6.5, by - uy * 6.5, b.r * 0.86 * pulse, 0, 6.283); ctx.fill();
+      ctx.fillStyle = hex ? "#d9a5ff" : "#b9c6ff"; ctx.shadowColor = hex ? "#b366ff" : "#8fa2ff"; ctx.shadowBlur = 11;
+      ctx.beginPath(); ctx.arc(bx, by, b.r * pulse, 0, 6.283); ctx.fill(); ctx.shadowBlur = 0;
+      ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.beginPath(); ctx.arc(bx, by, b.r * 0.34 * pulse, 0, 6.283); ctx.fill();
+    }
     // lightning
     for (const z of zaps) {
       ctx.strokeStyle = `rgba(255,233,168,${1 - z.t / z.ttl})`; ctx.lineWidth = 2;

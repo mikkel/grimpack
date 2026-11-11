@@ -515,3 +515,29 @@ interesting")
   no wedge-away case recurred; the gallows mark's ~4s expiry is
   consistent with observations (marked sets turn over) but was not
   frame-timed. Corpses and dash re-verified clean in both runs.
+
+## v17 (2026-11-11) — the dead move wrong; projectiles are comets
+Mikkel: "the enemies and projectiles need some help. iterate on them.
+again. unnerving."
+- Enemies no longer glide at constant speed. A per-type gait pulse
+  (brutes haul at 1.5Hz, husks drag at 3Hz, cultists drift) drives
+  deep stalls and hard surges — average pace re-based so the night is
+  not quietly easier. Wraiths keep their smooth glide on purpose:
+  the contrast is the horror. The half-dead slow down and LEAK —
+  dotted blood trails behind wounded enemies (also free information:
+  you can see what your towers have been chewing on).
+- Twitches: every enemy spasms briefly every few seconds (render
+  jitter + rotation snap), and its eyes flare when it does.
+- Eyes that watch: two ember pupils per enemy, coloured by type,
+  positioned toward the knight — they track you as you move. In fog
+  they were already all you could see; now they are always there.
+- Cultists telegraph: the ✦ above the head swells and glows violet
+  in the last half-second before a hex bolt leaves. A tell, and a
+  little ritual you learn to dread.
+- Projectiles rebuilt as comets: every bolt drags a tapering,
+  fading trail behind a lit head. Pyre embers now ARC under gravity
+  and trail smoke; gallows spikes fly as glowing darts; frost leaves
+  a cold wake; impacts burst in their kind's colour.
+- Enemy hex bolts wobble sideways as they come and pulse as they
+  breathe, with violet afterimages — straight lines were too honest
+  for something a cultist threw at you.

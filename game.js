@@ -993,6 +993,7 @@
       const a = Math.random() * 6.283, d = 130 + Math.random() * 330;
       deathEyes.push({ x: Math.max(24, Math.min(W - 24, player.x + Math.cos(a) * d)), y: Math.max(24, Math.min(H - 24, player.y + Math.sin(a) * d * 0.8)), s: 5 + Math.random() * 6, delay: 0.7 + i * 0.1 + Math.random() * 0.25, ph: Math.random() * 10 });
     }
+    for (const e of enemies) { if (e.dead) continue; const dx = e.x - player.x, dy = e.y - player.y, d = Math.max(20, Math.hypot(dx, dy)); if (d < 110) { e.kx = (e.kx || 0) + dx / d * 210; e.ky = (e.ky || 0) + dy / d * 210; } }
     playSnd("toll", 0.4, 0.1);
     log("The knight falls.");
   }
@@ -1006,18 +1007,18 @@
       if (e.dead) continue;
       e.x += (e.kx || 0) * dt; e.y += (e.ky || 0) * dt; e.kx = (e.kx || 0) * 0.88; e.ky = (e.ky || 0) * 0.88;
       const dx = player.x - e.x, dy = player.y - e.y, d = Math.hypot(dx, dy);
-      if (d > 42) { const sp = e.spd * 0.38; e.x += dx / d * sp * dt; e.y += dy / d * sp * dt; }
+      if (d > 64) { const sp = e.spd * 0.38; e.x += dx / d * sp * dt; e.y += dy / d * sp * dt; }
       e.flash = Math.max(0, (e.flash || 0) - dt);
     }
     for (const b of bolts) if (b.vx != null) { b.x += b.vx * dt * ts; b.y += b.vy * dt * ts; }
     for (const b of ebolts) if (b.vx != null) { b.x += b.vx * dt * ts; b.y += b.vy * dt * ts; }
-    if (t >= 1.6 && !D.landed) { D.landed = 1; shake = Math.max(shake, 6); burst(player.x, player.y + 16, "#6b6257", 16); playSnd("toll", 0.55, 0.06); }
-    if (t > 1.5 && t < 3.0 && parts.length < 440) for (let i = 0; i < 2; i++) {
-      const ph = t * 2.4 + i * 3.1;
-      parts.push({ wisp: true, x: player.x + Math.cos(ph) * 7, y: player.y + 4, vx: Math.cos(ph) * 9, vy: -30 - Math.random() * 14, life: 1.5, t: 0, color: "#cfe6ff", size: 2.4 });
+    if (t >= 1.78 && !D.landed) { D.landed = 1; shake = Math.max(shake, 6); burst(player.x, player.y + 16, "#6b6257", 16); playSnd("toll", 0.55, 0.06); }
+    if (t > 1.5 && t < 3.0 && parts.length < 440) for (let i = 0; i < 3; i++) {
+      const ph = t * 2.4 + i * 2.1;
+      parts.push({ wisp: true, x: player.x + Math.cos(ph) * 7, y: player.y + 4, vx: Math.cos(ph) * 9, vy: -44 - Math.random() * 12, life: 1.9, t: 0, color: "#d9ecff", size: 3.4 + Math.random() * 1.6 });
     }
     if (t >= 3.0 && !D.snatched) {
-      D.snatched = 1;
+      D.snatched = 1; D.snatchT = t;
       for (const p of parts) if (p.wisp) { p.vx = (player.x - p.x) * 2.4; p.vy = 400 + Math.random() * 140; p.life = p.t + 0.3; p.color = "#7fa8e8"; }
       burst(player.x, player.y + 10, "#05050c", 20); noiseBurst(0.5, 0.14); shake = Math.max(shake, 4);
     }
@@ -1704,7 +1705,7 @@
       let px = player.x, py = player.y + bobY, prot = lean;
       if (state === "dying" && dying) {
         const t = dying.t, fd = dying.fallDir;
-        const kneel = dSmooth((t - 0.45) / 0.6), fl = dClamp01((t - 1.05) / 0.55), fall = fl * fl;
+        const kneel = dSmooth((t - 0.45) / 0.6), fl = dClamp01((t - 1.05) / 0.7), fall = fl * fl;
         prot = Math.sin(Math.min(t, 0.55) * 34) * 0.07 * Math.max(0, 1 - t / 0.55) + kneel * 0.24 * fd + fall * 1.14 * fd;
         psx = 1 + kneel * 0.04; psy = 1 - kneel * 0.15 + fall * 0.05;
         px = player.x + fall * 11 * fd; py = player.y + kneel * 8 + fall * 15;
@@ -1735,7 +1736,7 @@
       ctx.lineTo(mx, my); ctx.lineTo(z.x2, z.y2); ctx.stroke();
     }
     // particles & texts
-    for (const p of parts) { ctx.globalAlpha = 1 - p.t / p.life; ctx.fillStyle = p.color; ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size); }
+    for (const p of parts) { const la = 1 - p.t / p.life; if (p.wisp) { ctx.globalAlpha = la * 0.15; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 3.4, 0, 6.283); ctx.fill(); } ctx.globalAlpha = la; ctx.fillStyle = p.color; ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size); }
     ctx.globalAlpha = 1;
     ctx.textAlign = "center";
     for (const t of texts) { ctx.globalAlpha = 1 - t.t / 0.9; ctx.fillStyle = t.color; ctx.font = "bold 12.5px system-ui"; ctx.fillText(t.txt, t.x, t.y); }
@@ -1755,6 +1756,18 @@
       ctx.fillStyle = vg2; ctx.fillRect(0, 0, W, H);
       const bh = 48 * dSmooth(t / 1.4);
       ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, bh); ctx.fillRect(0, H - bh, W, bh);
+      if (t > 1.45 && !D.snatched) {
+        const k = dClamp01((t - 1.45) / 1.55), oy = cy - (1 - Math.pow(1 - k, 2)) * 118;
+        D._orbY = oy;
+        const og = ctx.createRadialGradient(cx, oy, 0, cx, oy, 30);
+        og.addColorStop(0, "rgba(234,244,255,0.85)"); og.addColorStop(0.35, "rgba(160,200,255,0.28)"); og.addColorStop(1, "rgba(160,200,255,0)");
+        ctx.fillStyle = og; ctx.beginPath(); ctx.arc(cx, oy, 30, 0, 6.283); ctx.fill();
+        ctx.fillStyle = "#f4faff"; ctx.beginPath(); ctx.arc(cx, oy, 5 - 1.6 * k, 0, 6.283); ctx.fill();
+      }
+      if (D.snatched && D.snatchT && t < D.snatchT + 0.45) {
+        ctx.strokeStyle = `rgba(160,200,255,${0.5 * (1 - (t - D.snatchT) / 0.45)})`; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(cx, D._orbY != null ? D._orbY : cy - 118); ctx.lineTo(cx, cy + 6); ctx.stroke();
+      }
       for (const de of deathEyes) {
         const o = dClamp01((t - de.delay) / 0.6); if (o <= 0) continue;
         if (((t * 0.37 + de.ph) % 3.7) > 3.55) continue;

@@ -475,7 +475,7 @@
     if (!silent) floatText(e.x + (Math.random() * 16 - 8), e.y - e.r - 4, String(Math.round(dmg)), crit ? "#ffd94a" : "#e8e2d4");
     if (e.hp <= 0 && !e.dead) {
       e.dead = true; kills++; streak++; SFX.die();
-      corpses.push({ img: e.img, x: e.x, y: e.y, s: e.r * 3.4, t: 0, dir: Math.random() < 0.5 ? -1 : 1, boss: e.boss }); if (corpses.length > 40) corpses.shift();
+      corpses.push({ img: e.img, x: e.x, y: e.y, s: e.r * 3.4, t: 0, dir: Math.random() < 0.5 ? -1 : 1, boss: e.boss }); window.__corpsePushes = (window.__corpsePushes || 0) + 1; if (corpses.length > 40) corpses.shift();
       burst(e.x, e.y, e.type === "wraith" ? "#9fd8ff" : e.type === "plague" ? "#b6d94a" : "#c93b2e", e.boss ? 46 : 10);
       decals.push({ x: e.x, y: e.y, r: e.r * (0.8 + Math.random() * 0.7), a: 0.34 }); if (decals.length > 260) decals.shift();
       const ashN = Math.round(e.ash * (omen && omen.ashMult ? omen.ashMult : 1) * (tonightTithe === "hoard" ? 0.7 : 1));
@@ -897,6 +897,8 @@
       drawSprite(IMG["spr_" + type], mouse.x, mouse.y, 62, blockedSpot ? 0.35 : 0.65);
     }
     // the fallen: bodies topple, sink, and become the blood decals below them
+    ctx.fillStyle = "#00ff9a"; ctx.font = "bold 15px monospace"; ctx.textAlign = "left";
+    ctx.fillText("DBG corpses=" + corpses.length + " pushed=" + (window.__corpsePushes || 0) + " e0anim=" + (enemies[0] ? enemies[0].animT.toFixed(1) : "-"), 12, 22);
     for (const c of corpses) {
       const rot = c.dir * Math.min(1, c.t / 0.45) * 1.45;
       const sink = c.t > 1.2 ? (c.t - 1.2) * 9 : 0;

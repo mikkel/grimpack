@@ -426,7 +426,7 @@
   function ripState(raw) {
     let d = raw, strain = 0, stuckAt = -1;
     for (const c of CATCHES) {
-      if (raw > c && raw < c + 0.075) { d = c; strain = (raw - c) / 0.075; stuckAt = c; break; }
+      if (raw > c && raw < c + 0.095) { d = c; strain = (raw - c) / 0.095; stuckAt = c; break; }
     }
     return { d, strain, stuckAt };
   }
@@ -436,7 +436,7 @@
     if (rip.stuckPrev >= 0 && stuckAt < 0 && rip.raw > rip.stuckPrev) { snapRelease(); rip.stuckPrev = -1; }
     if (stuckAt >= 0) rip.stuckPrev = stuckAt;
     rip.d = d; rip.strain = strain;
-    const ang = -(d * 36 + strain * 13), tx = d * 20 - strain * 3, ty = -d * 12 - strain * 4;
+    const ang = -(d * 36 + strain * 17), tx = d * 20 - strain * 3, ty = -d * 12 - strain * 4;
     $("pack-flap").setAttribute("transform", `translate(${tx.toFixed(1)} ${ty.toFixed(1)}) rotate(${ang.toFixed(1)} 78 150)`);
     $("band-rect").setAttribute("height", (6 + d * 58).toFixed(1));
     $("rip-glow").setAttribute("opacity", (d * 0.9).toFixed(2));
@@ -508,7 +508,7 @@
     rip.drag.moved = Math.max(rip.drag.moved, Math.hypot(dx, dy));
     const proj = dx * -0.52 + dy * -0.86;
     const dist = Math.max(proj, Math.hypot(dx, dy) * 0.35);
-    rip.raw = Math.min(1, Math.max(rip.drag.raw0, rip.drag.raw0 + dist / 230));
+    rip.raw = Math.min(1, Math.max(rip.drag.raw0, rip.drag.raw0 + dist / 250));
     applyRip();
   });
   packSvg.addEventListener("pointerup", () => {

@@ -198,3 +198,25 @@ audio — use nano-gpt and make it good."
   (trimmed from 22s renders to their event windows), plus a new richer dirge.
   The WebAudio synth remains as a fallback understudy. v5 gen spend: $0.391.
 Total Nanoodle spend: $0.822 of $5.
+
+## v6 — PHYSICS (2026-11-10 late)
+Mikkel: "physics should matter and be real… interactions, graphics, all tied
+to behaviour." GRIMPACK now runs on momentum:
+- Every body has mass (husk 1, brute 3.4, bosses 7-9). Steering proposes a
+  desired velocity; velocity relaxes toward it at a mass-dependent grip —
+  light things dart, heavy things lumber and cannot be turned.
+- Bolts carry momentum: knockback scales with damage/mass; pierce shots lose
+  velocity inside heavy bodies (a bolt stops in a brute). Gallows rounds
+  launch husks. Fling anything into a wall at speed: SLAM damage + stagger.
+  Bodies shove bodies — hard collisions stagger both (bowling).
+- Brutes that charge into stone CRASH: stagger, self-damage, the blocker
+  (rubble/barricade) takes 45. The knight is shoved by hits — a charging
+  brute knocks him 470px/s — but consecrated ground anchors him (half
+  knockback in the circle). Dashing shoulder-checks the dead aside.
+- Corpses are bodies: they inherit the killing blow's momentum, slide with
+  friction, spin, and smear blood along their slide. Plague explosions fling
+  the living AND the dead — chain a bearer into a pack and the blast bowls it.
+- Fixes from the v5 verification: fog is now properly visible (denser heart,
+  drifting wisps, an upper veil); spawns can no longer land inside walls;
+  embedded bodies eject cleanly; a stuck-failsafe unwedges stragglers;
+  cultist bolts are unmistakably violet and their first shot comes sooner.

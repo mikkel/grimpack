@@ -56,13 +56,13 @@
   const PLAYER_BASE = { hp: 100, speed: 218, dmg: 13, rate: 2.0, proj: 1, pierce: 0, critC: 0.05, critM: 2.0, radius: 20, collectR: 52 };
 
   const ENEMIES = {
-    husk:    { hp: 22,  speed: 64,  dmg: 8,  r: 16, ash: 1 },
-    cultist: { hp: 16,  speed: 90,  dmg: 7,  r: 15, ash: 1 },
-    wraith:  { hp: 12,  speed: 140, dmg: 6,  r: 14, ash: 1 },
-    brute:   { hp: 100, speed: 35,  dmg: 16, r: 24, ash: 3 },
-    plague:  { hp: 30,  speed: 47,  dmg: 10, r: 18, ash: 2, explodeDmg: 26, explodeR: 66 },
-    abbot:   { hp: 2400, speed: 47, dmg: 18, r: 30, ash: 25 },
-    vesper:  { hp: 8500, speed: 40, dmg: 22, r: 38, ash: 100 },
+    husk:    { hp: 22,  speed: 64,  dmg: 8,  r: 16, ash: 1, mass: 1.0 },
+    cultist: { hp: 16,  speed: 90,  dmg: 7,  r: 15, ash: 1, mass: 0.9 },
+    wraith:  { hp: 12,  speed: 140, dmg: 6,  r: 14, ash: 1, mass: 0.55 },
+    brute:   { hp: 100, speed: 35,  dmg: 16, r: 24, ash: 3, mass: 3.4 },
+    plague:  { hp: 30,  speed: 47,  dmg: 10, r: 18, ash: 2, explodeDmg: 26, explodeR: 66, mass: 1.15 },
+    abbot:   { hp: 2400, speed: 47, dmg: 18, r: 30, ash: 25, mass: 7 },
+    vesper:  { hp: 8500, speed: 40, dmg: 22, r: 38, ash: 100, mass: 9 },
   };
 
   function waveSpec(w) {

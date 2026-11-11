@@ -100,7 +100,7 @@
     player = { x: W / 2, y: H / 2 + 60, hp: B.hp, maxHp: B.hp, dmg: B.dmg, rate: B.rate, proj: B.proj,
       pierce: B.pierce, critC: B.critC, critM: B.critM, speed: B.speed, collectR: B.collectR,
       regen: 0, shieldCd: 0, shieldMax: 0, shieldReady: false, revives: 0, wrathNext: false, wrathWave: false,
-      fireCd: 0, invuln: 0, r: B.radius, chillSlow: 0, chillSecs: 0, stormEvery: 0, hitCount: 0, vx: 0, vy: 0, walkPh: 0,
+      fireCd: 0, invuln: 0, r: B.radius, chillSlow: 0, chillSecs: 0, stormEvery: 0, hitCount: 0, vx: 0, vy: 0, walkPh: 0, kx: 0, ky: 0, dashId: 0,
       thorns: 0, brandPct: 0, dashCd: 0, dashT: 0, dashDx: 0, dashDy: 0, lastDx: 1, lastDy: 0 };
     enemies = []; bolts = []; ebolts = []; towers = []; shards = []; zones = []; parts = []; texts = []; decals = []; zaps = []; corpses = []; embers = [];
     for (let i = 0; i < 26; i++) embers.push({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - 0.5) * 9, vy: -6 - Math.random() * 12, ph: Math.random() * 6.28 });
@@ -433,19 +433,66 @@
     for (const bz of WORLD.braziers) if (Math.hypot(bz.x - x, bz.y - y) < WORLD.brazierR + 12) return false; // brazier light burns the fog off
     return true;
   }
+  function massOf(e) { return (G.ENEMIES[e.type].mass || 1) * (e.elite ? 1.6 : 1); }
+  function applyImpulse(e, ix, iy) {
+    if (e.dead) return;
+    const m = massOf(e);
+    e.vx = (e.vx || 0) + ix / m; e.vy = (e.vy || 0) + iy / m;
+    const sp = Math.hypot(ix, iy) / m;
+    if (sp > 150) e.staggerT = Math.max(e.staggerT || 0, Math.min(0.7, sp / 700));
+  }
   function collideTiles(ent, isPlayer) {
     const rr0 = ent.r * 0.85; // hitboxes run smaller than sprites: one-tile lanes stay passable
     const [c0, r0] = tileOf(ent.x, ent.y);
     for (let r = r0 - 1; r <= r0 + 1; r++) for (let c = c0 - 1; c <= c0 + 1; c++) {
-      const solid = charAt(c, r) === '#' || charAt(c, r) === 'r' || (!isPlayer && !!barrierAt(c, r));
+      const ch = charAt(c, r);
+      const solid = ch === '#' || ch === 'r' || (!isPlayer && !!barrierAt(c, r));
       if (!solid) continue;
       const nx = Math.max(c * TILE, Math.min(ent.x, c * TILE + TILE)), ny = Math.max(r * TILE, Math.min(ent.y, r * TILE + TILE));
       const dx = ent.x - nx, dy = ent.y - ny, d = Math.hypot(dx, dy);
-      if (d < rr0) {
-        if (d < 0.01) ent.x += (ent.x < c * TILE + TILE / 2 ? -1 : 1) * 2;
-        else { ent.x = nx + dx / d * rr0; ent.y = ny + dy / d * rr0; }
+      if (d >= rr0) continue;
+      if (d < 0.01) {
+        // embedded: eject along the tile's smallest exit
+        const exits = [[ent.x - c * TILE, -1, 0], [c * TILE + TILE - ent.x, 1, 0], [ent.y - r * TILE, 0, -1], [r * TILE + TILE - ent.y, 0, 1]].sort((a2, b2) => a2[0] - b2[0]);
+        ent.x += exits[0][1] * (exits[0][0] + rr0); ent.y += exits[0][2] * (exits[0][0] + rr0);
+        continue;
+      }
+      const ux = dx / d, uy = dy / d;
+      const vn = (ent.vx || 0) * ux + (ent.vy || 0) * uy; // velocity along the surface normal (negative = into)
+      ent.x = nx + ux * rr0; ent.y = ny + uy * rr0;
+      if (vn < 0) {
+        ent.vx -= vn * ux; ent.vy -= vn * uy; // inelastic: the wall takes the momentum
+        const impact = -vn;
+        if (!isPlayer && ent.type) {
+          if (ent.chargeT > 0 && impact > 120) {
+            // A CHARGING BRUTE MEETS STONE: crash — stagger, self-harm, the blocker suffers
+            ent.chargeT = 0; ent.staggerT = Math.max(ent.staggerT || 0, 1.1);
+            damageEnemySilent(ent, 10); shake = Math.max(shake, 6); burst(ent.x, ent.y, "#8a7f6a", 14); SFX.place();
+            floatText(ent.x, ent.y - 34, "CRASHED", "#ffd94a");
+            if (ch === 'r' || barrierAt(c, r)) damageBlocker(c, r, 45);
+          } else if (impact > 175) {
+            // SLAMMED: whatever was flung into this wall pays for it
+            const sd = (impact - 175) / 13;
+            damageEnemySilent(ent, sd); ent.staggerT = Math.max(ent.staggerT || 0, 0.45);
+            burst(ent.x, ent.y, "#8a7f6a", 7); if (Math.random() < 0.5) SFX.hit();
+            floatText(ent.x, ent.y - 30, "SLAMMED " + Math.round(sd), "#e8e2d4");
+          }
+        } else if (isPlayer && player.dashT > 0 && impact > 200) {
+          player.dashT = 0; shake = Math.max(shake, 3); SFX.hit(); burst(player.x, player.y, "#8a7f6a", 6);
+        }
       }
     }
+  }
+  function nearestPassable(x, y) {
+    const [c0, r0] = tileOf(x, y);
+    if (!moveBlocked(c0, r0)) return [x, y];
+    for (let rad = 1; rad <= 4; rad++)
+      for (let r = r0 - rad; r <= r0 + rad; r++) for (let c = c0 - rad; c <= c0 + rad; c++) {
+        if (Math.max(Math.abs(c - c0), Math.abs(r - r0)) !== rad) continue;
+        if (c < 0 || r < 0 || c >= COLS || r >= ROWS || moveBlocked(c, r)) continue;
+        const [cx2, cy2] = tileCenter(c, r); return [cx2, cy2];
+      }
+    return [x, y];
   }
   function damageBlocker(c, r, dmg) {
     const b = barrierAt(c, r);
@@ -485,6 +532,7 @@
     if (omen && omen.bruteHp && type === "brute") hp *= omen.bruteHp;
     const elite = !isBoss && Math.random() < 0.04 * (omen && omen.eliteMult ? omen.eliteMult : 1) * (tonightTithe === "crypts" ? 3 : 1);
     if (elite) hp *= 3.2;
+    if (type !== "wraith") { const [sx, sy] = nearestPassable(x, y); x = sx; y = sy; }
     const e = { type, x, y, hp, maxHp: hp, speed: base.speed * (0.9 + Math.random() * 0.2) * (omen && omen.enemySpeed ? omen.enemySpeed : 1) * (tonightTithe === "doors" ? 0.9 : 1),
       dmg: base.dmg * spec.dmgScale * diff.dmg * (elite ? 1.3 : 1), r: base.r * (elite ? 1.35 : 1), ash: base.ash * (elite ? 6 : 1),
       slowT: 0, slowF: 0, chillT: 0, burnT: 0, burnDps: 0, markT: 0, shockCd: 0, hitCd: 0, boss: isBoss, elite,
@@ -562,7 +610,7 @@
     if (!silent) floatText(e.x + (Math.random() * 16 - 8), e.y - e.r - 4, String(Math.round(dmg)), crit ? "#ffd94a" : "#e8e2d4");
     if (e.hp <= 0 && !e.dead) {
       e.dead = true; kills++; streak++; SFX.die();
-      corpses.push({ img: e.img, x: e.x, y: e.y, s: e.r * 3.4, t: 0, dir: Math.random() < 0.5 ? -1 : 1, boss: e.boss }); if (corpses.length > 40) corpses.shift();
+      corpses.push({ img: e.img, x: e.x, y: e.y, s: e.r * 3.4, t: 0, dir: Math.random() < 0.5 ? -1 : 1, boss: e.boss, vx: (e.vx || 0) * 1.2 + (e.lastKbX || 0), vy: (e.vy || 0) * 1.2 + (e.lastKbY || 0), spin: 0, av: (Math.random() - 0.5) * 3 + ((e.lastKbX || 0) * 0.004), smear: 0 }); if (corpses.length > 40) corpses.shift();
       burst(e.x, e.y, e.type === "wraith" ? "#9fd8ff" : e.type === "plague" ? "#b6d94a" : "#c93b2e", e.boss ? 46 : 10);
       decals.push({ x: e.x, y: e.y, r: e.r * (0.8 + Math.random() * 0.7), a: 0.34 }); if (decals.length > 260) decals.shift();
       const ashN = Math.round(e.ash * (omen && omen.ashMult ? omen.ashMult : 1) * (tonightTithe === "hoard" ? 0.7 : 1));
@@ -577,8 +625,9 @@
     e.exploded = true; SFX.boom(); shake = Math.max(shake, 7);
     burst(e.x, e.y, "#b6d94a", 22);
     const R = G.ENEMIES.plague.explodeR, D = G.ENEMIES.plague.explodeDmg;
-    for (const o of [...enemies]) if (o !== e && !o.dead && Math.hypot(o.x - e.x, o.y - e.y) < R + o.r) damageEnemy(o, D, false);
-    if (Math.hypot(player.x - e.x, player.y - e.y) < R + player.r) hurtPlayer(D * 0.8);
+    for (const o of [...enemies]) if (o !== e && !o.dead && Math.hypot(o.x - e.x, o.y - e.y) < R + o.r) { damageEnemy(o, D, false); if (!o.dead) { const dd = Math.max(20, Math.hypot(o.x - e.x, o.y - e.y)); applyImpulse(o, (o.x - e.x) / dd * 300, (o.y - e.y) / dd * 300); } }
+    for (const c of corpses) { const dd = Math.hypot(c.x - e.x, c.y - e.y); if (dd < R + 30) { const s = 320 * (1 - dd / (R + 30)) + 60; c.vx = (c.vx || 0) + (c.x - e.x) / Math.max(20, dd) * s; c.vy = (c.vy || 0) + (c.y - e.y) / Math.max(20, dd) * s; c.av = (c.av || 0) + (Math.random() - 0.5) * 7; } }
+    if (Math.hypot(player.x - e.x, player.y - e.y) < R + player.r) { hurtPlayer(D * 0.8); const dd = Math.max(20, Math.hypot(player.x - e.x, player.y - e.y)), anch = inCircle(player.x, player.y) ? 0.5 : 1; player.kx = (player.kx || 0) + (player.x - e.x) / dd * 330 * anch; player.ky = (player.ky || 0) + (player.y - e.y) / dd * 330 * anch; }
     const [ec0, er0] = tileOf(e.x, e.y);
     for (let r = er0 - 3; r <= er0 + 3; r++) for (let c = ec0 - 3; c <= ec0 + 3; c++) {
       const [cx2, cy2] = tileCenter(c, r);
@@ -595,6 +644,12 @@
       return;
     }
     player.hp -= dmg; player.invuln = 0.3; hitFlash = 0.25; shake = Math.max(shake, 5); streak = 0; SFX.hurt();
+    if (attacker && attacker.x != null) {
+      const dd = Math.max(16, Math.hypot(player.x - attacker.x, player.y - attacker.y));
+      const power = (attacker.chargeT > 0 ? 470 : attacker.boss ? 300 : 135) * (inCircle(player.x, player.y) ? 0.5 : 1);
+      player.kx = (player.kx || 0) + (player.x - attacker.x) / dd * power;
+      player.ky = (player.ky || 0) + (player.y - attacker.y) / dd * power;
+    }
     if (player.thorns > 0) for (const o of [...enemies]) if (!o.dead && Math.hypot(o.x - player.x, o.y - player.y) < 74 + o.r) damageEnemy(o, player.thorns * (0.5 + Math.random() * 0.5), false, true);
     if (player.hp <= 0) {
       if (player.revives > 0) { player.revives--; player.hp = player.maxHp * 0.5; player.invuln = 2; shake = 16; burst(player.x, player.y, "#ffd94a", 40); log("The Saint's Candle gutters — and holds. You rise at half strength."); SFX.toll(); }
@@ -625,7 +680,7 @@
     let dy = (keys["s"] || keys["arrowdown"] ? 1 : 0) - (keys["w"] || keys["arrowup"] ? 1 : 0);
     if (!dx && !dy) { dx = player.lastDx; dy = player.lastDy; }
     const l = Math.hypot(dx, dy) || 1;
-    player.dashDx = dx / l; player.dashDy = dy / l; player.dashT = 0.16; player.dashCd = 2.6; SFX.dash();
+    player.dashDx = dx / l; player.dashDy = dy / l; player.dashT = 0.16; player.dashCd = 2.6; player.dashId = (player.dashId || 0) + 1; SFX.dash();
   }
   function chainZap(from, firstHit, baseDmg) {
     const jumps = 2 + Math.max(0, player.proj - 1) * (hasSyn("stormtwin") ? 1 : 0);
@@ -668,7 +723,18 @@
     // embers, floating texts, zaps, blood never forgets
     for (const p of parts) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.92; p.vy *= 0.92; }
     for (const em of embers) { em.x += (em.vx + Math.sin(runTime * 0.7 + em.ph) * 6) * dt; em.y += em.vy * dt; if (em.y < -8) { em.y = H + 8; em.x = Math.random() * W; } if (em.x < -8) em.x = W + 8; if (em.x > W + 8) em.x = -8; }
-    for (const c of corpses) c.t += dt; corpses = corpses.filter(c => c.t < 2.6);
+    for (const c of corpses) {
+      c.t += dt;
+      if ((c.vx || 0) !== 0 || (c.vy || 0) !== 0) {
+        c.x += c.vx * dt; c.y += c.vy * dt;
+        const fr = Math.exp(-2.8 * dt); c.vx *= fr; c.vy *= fr;
+        c.spin = (c.spin || 0) + (c.av || 0) * dt; c.av *= Math.exp(-2.2 * dt);
+        c.smear = (c.smear || 0) + Math.hypot(c.vx, c.vy) * dt;
+        if (c.smear > 30 && Math.hypot(c.vx, c.vy) > 55) { c.smear = 0; decals.push({ x: c.x, y: c.y, r: c.s * 0.22, a: 0.3 }); if (decals.length > 260) decals.shift(); }
+        if (Math.hypot(c.vx, c.vy) < 4) { c.vx = 0; c.vy = 0; }
+      }
+    }
+    corpses = corpses.filter(c => c.t < 2.6);
     parts = parts.filter(p => p.t < p.life);
     for (const t of texts) { t.t += dt; t.y -= 34 * dt; } texts = texts.filter(t => t.t < 0.9);
     for (const z of zaps) z.t += dt; zaps = zaps.filter(z => z.t < z.ttl);
@@ -683,6 +749,7 @@
     const px0 = player.x, py0 = player.y;
     if (player.dashT > 0) {
       player.dashT -= dt; player.x += player.dashDx * 950 * dt; player.y += player.dashDy * 950 * dt;
+      for (const e of enemies) { if (e.dead || e.dashMark === player.dashId) continue; if (Math.hypot(e.x - player.x, e.y - player.y) < e.r + 34) { e.dashMark = player.dashId; applyImpulse(e, player.dashDx * 330, player.dashDy * 330); e.staggerT = Math.max(e.staggerT || 0, 0.22); burst(e.x, e.y, "#e8e2d4", 3); } }
       player.invuln = Math.max(player.invuln, 0.05);
       if (Math.random() < 0.8) parts.push({ x: player.x, y: player.y, vx: 0, vy: 0, life: 0.3, t: 0, color: "#d7263d", size: 3 });
     } else if (dl > 0) {
@@ -693,6 +760,13 @@
     }
     player.x = Math.max(18, Math.min(W - 18, player.x)); player.y = Math.max(18, Math.min(H - 18, player.y));
     collideTiles(player, true);
+    if (player.kx || player.ky) {
+      player.x += player.kx * dt; player.y += player.ky * dt;
+      const kd = Math.exp(-5.5 * dt); player.kx *= kd; player.ky *= kd;
+      if (Math.hypot(player.kx, player.ky) < 5) { player.kx = 0; player.ky = 0; }
+      player.x = Math.max(18, Math.min(W - 18, player.x)); player.y = Math.max(18, Math.min(H - 18, player.y));
+      collideTiles(player, true);
+    }
     flowTimer -= dt; if (flowTimer <= 0) { flowTimer = 0.35; buildFlow(); }
     if (dt > 0) { player.vx = (player.x - px0) / dt; player.vy = (player.y - py0) / dt; }
     const spd = Math.hypot(player.vx, player.vy);
@@ -799,6 +873,8 @@
         if (!e.hiddenNow && Math.hypot(e.x - b.x, e.y - b.y) < e.r + 5) {
           b.hits.add(e);
           damageEnemy(e, b.dmg, b.crit);
+          if (!e.dead) { applyImpulse(e, b.vx * b.dmg * 0.011, b.vy * b.dmg * 0.011); e.lastKbX = b.vx * 0.35; e.lastKbY = b.vy * 0.35; }
+          const drink = Math.min(0.45, massOf(e) * 0.13); b.vx *= (1 - drink); b.vy *= (1 - drink);
           if (!b.crit) SFX.hit();
           if (b.chillSecs) { const wasBurning = e.burnT > 0; e.slowT = Math.max(e.slowT, b.chillSecs); e.slowF = Math.max(e.slowF, b.chillSlow); e.chillT = Math.max(e.chillT, b.chillSecs); if (wasBurning) maybeShock(e, b.dmg); }
           if (b.mark) e.markT = G.TOWERS.gallows.markSecs;
@@ -908,11 +984,29 @@
           }
         }
       }
-      for (const o of enemies) { if (o === e || o.dead) continue; const d = Math.hypot(o.x - e.x, o.y - e.y), rr = e.r + o.r; if (d > 0.01 && d < rr) { mx -= (o.x - e.x) / d * (rr - d) * 3.2; my -= (o.y - e.y) / d * (rr - d) * 3.2; } }
-      e.vx = dt > 0 ? mx : 0; e.vy = dt > 0 ? my : 0;
-      e.x += mx * dt; e.y += my * dt;
+      // PHYSICS: steering proposes a desired velocity; mass and momentum dispose.
+      if (e.staggerT > 0) { e.staggerT -= dt; mx = 0; my = 0; }
+      const grip = e.staggerT > 0 ? 2.4 : (e.type === "brute" || e.boss) ? 4.2 : 8.5;
+      const kk = Math.min(1, grip * dt);
+      e.vx = (e.vx || 0) + (mx - (e.vx || 0)) * kk;
+      e.vy = (e.vy || 0) + (my - (e.vy || 0)) * kk;
+      e.x += e.vx * dt; e.y += e.vy * dt;
+      // bodies jostle positionally; a hard enough shove staggers both
+      for (const o of enemies) { if (o === e || o.dead) continue; const d = Math.hypot(o.x - e.x, o.y - e.y), rr = e.r + o.r; if (d > 0.01 && d < rr) { const push = (rr - d) * 0.32, ux = (o.x - e.x) / d, uy = (o.y - e.y) / d; e.x -= ux * push; e.y -= uy * push;
+        const rel = Math.abs(((e.vx || 0) - (o.vx || 0)) * ux + ((e.vy || 0) - (o.vy || 0)) * uy);
+        if (rel > 230) { e.staggerT = Math.max(e.staggerT || 0, 0.3); o.staggerT = Math.max(o.staggerT || 0, 0.3); } } }
       if (e.type !== "wraith") collideTiles(e, false);
-      e.animT += dt * (2.2 + Math.hypot(mx, my) / 26);
+      // stuck failsafe: the cathedral rejects the wedged dead
+      const spdNow = Math.hypot(e.vx, e.vy);
+      if (waveActive && spdNow < 9 && !(e.staggerT > 0) && e.type !== "cultist") {
+        e.stuckT = (e.stuckT || 0) + dt;
+        if (e.stuckT > 2.6) {
+          let [px2, py2] = nearestPassable(e.x, e.y);
+          if (Math.hypot(px2 - e.x, py2 - e.y) < 4) { const [mxp, myp] = nearestPassable((e.x + player.x) / 2, (e.y + player.y) / 2); px2 = mxp; py2 = myp; }
+          e.x = px2; e.y = py2; e.stuckT = 0; burst(e.x, e.y, "#8a7f6a", 6);
+        }
+      } else e.stuckT = 0;
+      e.animT += dt * (2.2 + Math.hypot(e.vx, e.vy) / 26);
       if (e.atkPop > 0) e.atkPop -= dt;
       e.hitCd -= dt;
       if (Math.hypot(player.x - e.x, player.y - e.y) < e.r + player.r && e.hitCd <= 0) { e.hitCd = 0.85; e.atkPop = 0.22; const amb = e.ambushT > 0; hurtPlayer(e.dmg * (1 + 0.03 * deepenStacks) * (amb ? 1.5 : 1), e); if (amb) { e.ambushT = 0; floatText(player.x, player.y - 40, "AMBUSHED FROM THE FOG", "#c9d4e8"); } }
@@ -921,12 +1015,12 @@
     // --- cultist fire: bolts for the knight, unless the fog hides him ---
     if (waveActive) for (const e of enemies) {
       if (e.type !== "cultist" || e.dead) continue;
-      e.fireT = (e.fireT == null ? 1 + Math.random() : e.fireT) - dt;
+      e.fireT = (e.fireT == null ? 0.6 + Math.random() * 0.7 : e.fireT) - dt;
       const dp = Math.hypot(player.x - e.x, player.y - e.y);
       if (e.fireT <= 0 && dp < 235 && !losBlocked(e.x, e.y, player.x, player.y) && !inFogAt(player.x, player.y)) {
         e.fireT = 2.3;
         const a = Math.atan2(player.y - e.y, player.x - e.x);
-        ebolts.push({ x: e.x, y: e.y, vx: Math.cos(a) * 245, vy: Math.sin(a) * 245, r: 6, dmg: e.dmg });
+        ebolts.push({ x: e.x, y: e.y, vx: Math.cos(a) * 245, vy: Math.sin(a) * 245, r: 6, dmg: e.dmg, kind: "hex" });
         burst(e.x, e.y - 10, "#b48be0", 3);
       }
     }
@@ -988,9 +1082,13 @@
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
       if (!grid[r] || grid[r][c] !== 'f') continue;
       const x = c * TILE + 18, y = r * TILE + 18, ph = Math.sin(performance.now() / 1400 + c * 1.7 + r * 2.3) * 0.5 + 0.5;
-      const gr = ctx.createRadialGradient(x, y, 2, x, y, TILE * 0.85);
-      gr.addColorStop(0, `rgba(168,180,198,${0.16 + ph * 0.07})`); gr.addColorStop(1, "rgba(168,180,198,0)");
-      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, TILE * 0.85, 0, 6.283); ctx.fill();
+      const gr = ctx.createRadialGradient(x, y, 2, x, y, TILE * 0.95);
+      gr.addColorStop(0, `rgba(183,196,216,${0.34 + ph * 0.10})`); gr.addColorStop(0.55, `rgba(163,178,200,${0.20 + ph * 0.06})`); gr.addColorStop(1, "rgba(163,178,200,0)");
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, TILE * 0.95, 0, 6.283); ctx.fill();
+      const wx = x + Math.sin(performance.now() / 2100 + c * 3.1 + r) * 9, wy = y + Math.cos(performance.now() / 2600 + r * 2.2) * 6;
+      const wg = ctx.createRadialGradient(wx, wy, 1, wx, wy, 15);
+      wg.addColorStop(0, "rgba(210,220,238,0.20)"); wg.addColorStop(1, "rgba(210,220,238,0)");
+      ctx.fillStyle = wg; ctx.beginPath(); ctx.arc(wx, wy, 15, 0, 6.283); ctx.fill();
     }
     for (const em of embers) { const tw2 = 0.35 + Math.sin(performance.now() / 300 + em.ph) * 0.2; ctx.fillStyle = `rgba(255,150,60,${tw2})`; ctx.fillRect(em.x - 1.2, em.y - 1.2, 2.4, 2.4); }
     if (state === "wave") for (const bz of WORLD.braziers) {
@@ -1078,7 +1176,7 @@
     }
     // the fallen: bodies topple, sink, and become the blood decals below them
     for (const c of corpses) {
-      const rot = c.dir * Math.min(1, c.t / 0.45) * 1.45;
+      const rot = c.dir * Math.min(1, c.t / 0.45) * 1.45 + (c.spin || 0);
       const sink = c.t > 1.6 ? (c.t - 1.6) * 8 : 0;
       const al = c.t < 1.7 ? 0.97 : Math.max(0, 0.97 - (c.t - 1.7) * 1.1);
       shadow(c.x, c.y + c.s * 0.42, c.s * 0.5);
@@ -1112,6 +1210,14 @@
         ctx.fillStyle = e.boss ? "#d7263d" : "#c93b2e"; ctx.fillRect(e.x - e.r, e.y - e.r - 9, e.r * 2 * Math.max(0, e.hp / e.maxHp), 4);
       }
     }
+    // mist wraps the figures too (thin upper veil over anything standing in fog)
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      if (!grid[r] || grid[r][c] !== 'f') continue;
+      const x = c * TILE + 18, y = r * TILE + 18;
+      const gr = ctx.createRadialGradient(x, y, 2, x, y, TILE * 0.8);
+      gr.addColorStop(0, "rgba(190,203,224,0.13)"); gr.addColorStop(1, "rgba(190,203,224,0)");
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, TILE * 0.8, 0, 6.283); ctx.fill();
+    }
     // player
     if (state !== "over") {
       if (player.shieldReady) { ctx.strokeStyle = "rgba(170,200,255,0.7)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(player.x, player.y, 30 + Math.sin(performance.now() / 300) * 2, 0, 6.283); ctx.stroke(); }
@@ -1133,7 +1239,7 @@
       ctx.moveTo(b.x - b.vx * 0.018, b.y - b.vy * 0.018); ctx.lineTo(b.x, b.y); ctx.stroke();
       ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(b.x, b.y, 2.2, 0, 6.283); ctx.fill();
     }
-    for (const b of ebolts) { ctx.fillStyle = "#b9c6ff"; ctx.shadowColor = "#8fa2ff"; ctx.shadowBlur = 8; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 6.283); ctx.fill(); ctx.shadowBlur = 0; }
+    for (const b of ebolts) { const hex = b.kind === "hex"; ctx.fillStyle = hex ? "#d9a5ff" : "#b9c6ff"; ctx.shadowColor = hex ? "#b366ff" : "#8fa2ff"; ctx.shadowBlur = 9; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 6.283); ctx.fill(); ctx.shadowBlur = 0; }
     // lightning
     for (const z of zaps) {
       ctx.strokeStyle = `rgba(255,233,168,${1 - z.t / z.ttl})`; ctx.lineWidth = 2;

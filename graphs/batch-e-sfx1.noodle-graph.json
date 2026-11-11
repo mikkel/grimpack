@@ -1,0 +1,263 @@
+{
+ "v": 1,
+ "nodes": [
+  {
+   "id": "c1",
+   "type": "comment",
+   "name": "GRIMPACK sfx 1",
+   "x": 40,
+   "y": -260,
+   "w": 700,
+   "fields": {
+    "text": "GRIMPACK sfx 1"
+   }
+  },
+  {
+   "id": "t1",
+   "type": "text",
+   "name": "sfx-shoot",
+   "x": 40,
+   "y": 300,
+   "w": 340,
+   "fields": {
+    "text": "A single heavy crossbow shot: sharp wooden snap, string twang and a fast whoosh. Video game sound effect, dry studio recording, no music, no voices."
+   }
+  },
+  {
+   "id": "m1",
+   "type": "music",
+   "name": "sfx-shoot",
+   "x": 460,
+   "y": 300,
+   "w": 300,
+   "fields": {
+    "model": "stable-audio-3/small/music/text-to-audio",
+    "response_format": "mp3"
+   }
+  },
+  {
+   "id": "t2",
+   "type": "text",
+   "name": "sfx-hit",
+   "x": 40,
+   "y": 560,
+   "w": 340,
+   "fields": {
+    "text": "A crossbow bolt punching into bone and dry flesh: a meaty thunk with a brittle crack. Video game sound effect, dry studio recording, no music, no voices."
+   }
+  },
+  {
+   "id": "m2",
+   "type": "music",
+   "name": "sfx-hit",
+   "x": 460,
+   "y": 560,
+   "w": 300,
+   "fields": {
+    "model": "stable-audio-3/small/music/text-to-audio",
+    "response_format": "mp3"
+   }
+  },
+  {
+   "id": "t3",
+   "type": "text",
+   "name": "sfx-die",
+   "x": 40,
+   "y": 820,
+   "w": 340,
+   "fields": {
+    "text": "A skeleton warrior collapsing into a pile of clattering bones and dust. Video game sound effect, dry studio recording, no music, no voices."
+   }
+  },
+  {
+   "id": "m3",
+   "type": "music",
+   "name": "sfx-die",
+   "x": 460,
+   "y": 820,
+   "w": 300,
+   "fields": {
+    "model": "stable-audio-3/small/music/text-to-audio",
+    "response_format": "mp3"
+   }
+  },
+  {
+   "id": "t4",
+   "type": "text",
+   "name": "sfx-hurt",
+   "x": 40,
+   "y": 1080,
+   "w": 340,
+   "fields": {
+    "text": "A knight in plate armor being struck: metal clang, leather creak and a short grunt of pain. Video game sound effect, dry studio recording, no music, no voices."
+   }
+  },
+  {
+   "id": "m4",
+   "type": "music",
+   "name": "sfx-hurt",
+   "x": 460,
+   "y": 1080,
+   "w": 300,
+   "fields": {
+    "model": "stable-audio-3/small/music/text-to-audio",
+    "response_format": "mp3"
+   }
+  },
+  {
+   "id": "t5",
+   "type": "text",
+   "name": "sfx-toll",
+   "x": 40,
+   "y": 1340,
+   "w": 340,
+   "fields": {
+    "text": "One deep toll of a great cathedral bell, long decay, ominous. Video game sound effect, dry studio recording, no music, no voices."
+   }
+  },
+  {
+   "id": "m5",
+   "type": "music",
+   "name": "sfx-toll",
+   "x": 460,
+   "y": 1340,
+   "w": 300,
+   "fields": {
+    "model": "stable-audio-3/small/music/text-to-audio",
+    "response_format": "mp3"
+   }
+  },
+  {
+   "id": "t6",
+   "type": "text",
+   "name": "sfx-rip",
+   "x": 40,
+   "y": 1600,
+   "w": 340,
+   "fields": {
+    "text": "A wax-sealed paper booster pack being torn open: thick foil and paper ripping. Video game sound effect, dry studio recording, no music, no voices."
+   }
+  },
+  {
+   "id": "m6",
+   "type": "music",
+   "name": "sfx-rip",
+   "x": 460,
+   "y": 1600,
+   "w": 300,
+   "fields": {
+    "model": "stable-audio-3/small/music/text-to-audio",
+    "response_format": "mp3"
+   }
+  },
+  {
+   "id": "t7",
+   "type": "text",
+   "name": "sfx-flip",
+   "x": 40,
+   "y": 1860,
+   "w": 340,
+   "fields": {
+    "text": "A heavy tarot card flipping over onto a stone table with a soft magical shimmer. Video game sound effect, dry studio recording, no music, no voices."
+   }
+  },
+  {
+   "id": "m7",
+   "type": "music",
+   "name": "sfx-flip",
+   "x": 460,
+   "y": 1860,
+   "w": 300,
+   "fields": {
+    "model": "stable-audio-3/small/music/text-to-audio",
+    "response_format": "mp3"
+   }
+  }
+ ],
+ "links": [
+  {
+   "id": "l1",
+   "from": {
+    "node": "t1",
+    "port": "text"
+   },
+   "to": {
+    "node": "m1",
+    "port": "prompt"
+   }
+  },
+  {
+   "id": "l2",
+   "from": {
+    "node": "t2",
+    "port": "text"
+   },
+   "to": {
+    "node": "m2",
+    "port": "prompt"
+   }
+  },
+  {
+   "id": "l3",
+   "from": {
+    "node": "t3",
+    "port": "text"
+   },
+   "to": {
+    "node": "m3",
+    "port": "prompt"
+   }
+  },
+  {
+   "id": "l4",
+   "from": {
+    "node": "t4",
+    "port": "text"
+   },
+   "to": {
+    "node": "m4",
+    "port": "prompt"
+   }
+  },
+  {
+   "id": "l5",
+   "from": {
+    "node": "t5",
+    "port": "text"
+   },
+   "to": {
+    "node": "m5",
+    "port": "prompt"
+   }
+  },
+  {
+   "id": "l6",
+   "from": {
+    "node": "t6",
+    "port": "text"
+   },
+   "to": {
+    "node": "m6",
+    "port": "prompt"
+   }
+  },
+  {
+   "id": "l7",
+   "from": {
+    "node": "t7",
+    "port": "text"
+   },
+   "to": {
+    "node": "m7",
+    "port": "prompt"
+   }
+  }
+ ],
+ "nid": 99,
+ "lid": 99,
+ "view": {
+  "panX": 30,
+  "panY": 280,
+  "scale": 0.6
+ }
+}

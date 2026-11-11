@@ -55,3 +55,7 @@ took the job). Running Nanoodle total for GRIMPACK: **$0.420** ($0.286 + $0.110
 
 ## v4 hero replacement (batch hero2, $0.011)
 - spr/spr-hero.webp — solid plate-armored knight (the v1 hero was a wispy ink ghost; it read as transparent in-game). Keyed on max-channel flood fill.
+
+## v5 (batch e, $0.391)
+- terrain: wall.jpg (stone block tile), spr-rubble.webp, spr-barricade.webp (center-cross crop, keyed)
+- audio: 14 SFX in assets/sfx/*.mp3 (Stable Audio, onset-trimmed) + assets/dirge2.mp3 (richer loop)

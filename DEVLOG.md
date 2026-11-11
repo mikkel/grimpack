@@ -172,3 +172,29 @@ Five more notes, five answers:
   knight too (+20% damage inside it) and consecration rose 1.30 → 1.45 —
   placement and positioning are real decisions with visible numbers.
 Total Nanoodle spend: $0.431 of $5.
+
+## v5 — THE FLOOR IS THE GAME (2026-11-10 late)
+Mikkel: "the map should really matter… impassible things, places enemies can
+hide, pathfinding, placeable barriers… everything interconnects… and the
+audio — use nano-gpt and make it good."
+- The cathedral is now a 25x21 tile floor (balance.js MAP): 38 wall tiles
+  (impassable, block bolts and sight), 6 rubble piles (impassable until
+  smashed — bolts fly over), 32 grave-fog tiles.
+- Enemies navigate by a BFS flow-field toward the knight, refreshed ~3x/s;
+  when their way is blocked they chew through rubble and barricades (brutes
+  are siege engines, 2.5x blocker damage). Wraiths ignore the floor entirely.
+- GRAVE-FOG hides: towers and the knight's auto-fire cannot target anything
+  inside it; cultists cannot see a knight standing in it; brazier light burns
+  fog off nearby; anything bursting OUT of fog gets an ambush (speed +35%,
+  first bite +50%). All you see of the hidden is two red eyes in the mist.
+- BARRICADES: 15 ash, bought in build phase, placed on the floor (max 8).
+  They block movement, bolts and sight; enemies path around or chew through
+  (130 HP); the knight vaults his own at 55% speed. Plague-bearer explosions
+  crack them (and clear rubble) — every system touches every other.
+- Cultists finally shoot (they never actually did before v5 — the v4 release
+  note claiming otherwise was wrong): they hold at range and fire bolts,
+  unless the fog hides their target.
+- AUDIO: all 14 sound effects are now real NanoGPT/Stable Audio generations
+  (trimmed from 22s renders to their event windows), plus a new richer dirge.
+  The WebAudio synth remains as a fallback understudy. v5 gen spend: $0.391.
+Total Nanoodle spend: $0.822 of $5.

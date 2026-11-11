@@ -138,7 +138,7 @@ function playRun(diff) {
           const elite = !boss && Math.random() < 0.04 * (omen.eliteMult || 1); if (elite) hp *= 3.2;
           enemies.push({ type, boss, elite, x: ringA != null ? P.x + Math.cos(ringA) * 330 : (edge < 2 ? Math.random() * W : (edge === 2 ? -30 : W + 30)),
             y: ringA != null ? P.y + Math.sin(ringA) * 330 : (edge < 2 ? (edge === 0 ? -30 : H + 30) : Math.random() * H), hp, maxHp: hp,
-            speed: base.speed * (0.9 + Math.random() * 0.2) * (omen.enemySpeed || 1), dmg: base.dmg * spec.dmgScale * diff.dmg * (elite ? 1.3 : 1),
+            speed: base.speed * (0.9 + Math.random() * 0.2) * (omen.enemySpeed || 1) * 0.95, dmg: base.dmg * spec.dmgScale * diff.dmg * (elite ? 1.3 : 1), // x0.95: pathing tax, lanes wind now
             r: base.r * (elite ? 1.35 : 1), ash: base.ash * (elite ? 6 : 1), slowT: 0, slowF: 0, chillT: 0, burnT: 0, burnDps: 0, burnAcc: 0,
             markT: 0, hitCd: 0, flickerT: Math.random() * 2, enraged: false, tollCd: 6, summonCd: 7, lungeCd: 2 + Math.random() * 2, lungeT: 0, chargeCd: 3 + Math.random() * 3, chargeT: 0, windT: 0, ringA: null });
         }
@@ -240,6 +240,8 @@ function playRun(diff) {
         e.x += mx2 * dt; e.y += my2 * dt;
         e.hitCd -= dt;
         if (dist(P, e) < e.r + P.r && e.hitCd <= 0) { e.hitCd = 0.85; damagePlayer(e.dmg * (1 + 0.03 * Math.floor(t / 20)), e); }
+        // cultist bolts (v5): ranged pressure, DPS form, bot dodges some
+        if (e.type === "cultist" && dist(P, e) < 235 && !losBlocked(e.x, e.y, P.x, P.y)) damagePlayer(e.dmg * dt / 2.3 * 0.6, e);
       }
       // deaths
       for (const e of [...enemies]) if (e.hp <= 0) {

@@ -17,6 +17,7 @@
   loadImg("wraith", "assets/spr/spr-wraith.webp"); loadImg("brute", "assets/spr/spr-brute.webp");
   loadImg("plague", "assets/spr/spr-plague.webp"); loadImg("abbot", "assets/spr/spr-abbot.webp");
   loadImg("vesper", "assets/spr/spr-vesper.webp");
+  loadImg("wall", "assets/wall.jpg"); loadImg("rubble", "assets/spr/spr-rubble.webp"); loadImg("barricade", "assets/spr/spr-barricade.webp");
   const SPR_TOWER = { spire: "spr-spire", bell: "spr-bell", pyre: "spr-pyre", frost: "spr-frost", gallows: "spr-gallows", font: "spr-font" };
   for (const [id, f] of Object.entries(SPR_TOWER)) loadImg("spr_" + id, "assets/spr/" + f + ".webp");
   const CARDMAP = {}; for (const c of G.CARDS) { CARDMAP[c.id] = c; loadImg("card_" + c.id, c.art); }
@@ -47,21 +48,34 @@
       s.connect(f).connect(g).connect(a.destination); s.start();
     } catch (e) {}
   }
+  const SND = {};
+  for (const n of ["shoot", "hit", "die", "hurt", "toll", "rip", "flip", "ash", "place", "dash", "boom", "shock", "win", "lose"]) {
+    const a = new Audio("assets/sfx/" + n + ".mp3"); a.preload = "auto"; SND[n] = a;
+  }
+  function playSnd(name, vol, rateJitter) {
+    if (muted) return false;
+    const a = SND[name];
+    if (!a || a.readyState < 2) return false;
+    const c = a.cloneNode();
+    c.volume = vol; c.playbackRate = 1 + (Math.random() - 0.5) * (rateJitter || 0);
+    c.play().catch(() => {});
+    return true;
+  }
   const SFX = {
-    shoot: () => tone(720 + Math.random() * 120, 0.06, "square", 0.016, 240),
-    hit:   () => tone(190 + Math.random() * 60, 0.05, "sawtooth", 0.02, 90),
-    die:   () => tone(140, 0.16, "sawtooth", 0.035, 45),
-    hurt:  () => { tone(110, 0.2, "sawtooth", 0.07, 60); noiseBurst(0.12, 0.08); },
-    toll:  () => { tone(196, 0.9, "sine", 0.10); tone(98, 1.1, "sine", 0.07); },
-    rip:   () => noiseBurst(0.35, 0.16),
-    flip:  r => tone(420 + r * 130, 0.22, "triangle", 0.06, 900 + r * 260),
-    ash:   () => tone(1250 + Math.random() * 300, 0.07, "sine", 0.02, 1800),
-    place: () => tone(150, 0.14, "triangle", 0.07, 70),
-    dash:  () => noiseBurst(0.14, 0.05),
-    boom:  () => { tone(70, 0.4, "sawtooth", 0.12, 34); noiseBurst(0.3, 0.14); },
-    shock: () => tone(1400, 0.12, "square", 0.03, 300),
-    win:   () => { [392, 523, 659, 784].forEach((f, i) => setTimeout(() => tone(f, 0.35, "triangle", 0.06), i * 140)); },
-    lose:  () => { [330, 262, 196, 131].forEach((f, i) => setTimeout(() => tone(f, 0.4, "triangle", 0.06), i * 170)); },
+    shoot: () => { if (!playSnd("shoot", 0.40, 0.18)) tone(720 + Math.random() * 120, 0.06, "square", 0.016, 240); },
+    hit:   () => { if (!playSnd("hit", 0.42, 0.2)) tone(190 + Math.random() * 60, 0.05, "sawtooth", 0.02, 90); },
+    die:   () => { if (!playSnd("die", 0.5, 0.25)) tone(140, 0.16, "sawtooth", 0.035, 45); },
+    hurt:  () => { if (!playSnd("hurt", 0.75, 0.1)) { tone(110, 0.2, "sawtooth", 0.07, 60); noiseBurst(0.12, 0.08); } },
+    toll:  () => { if (!playSnd("toll", 0.85, 0.04)) { tone(196, 0.9, "sine", 0.10); tone(98, 1.1, "sine", 0.07); } },
+    rip:   () => { if (!playSnd("rip", 0.8, 0.1)) noiseBurst(0.35, 0.16); },
+    flip:  r => { if (!playSnd("flip", 0.65, 0.1)) tone(420 + r * 130, 0.22, "triangle", 0.06, 900 + r * 260); },
+    ash:   () => { if (!playSnd("ash", 0.36, 0.22)) tone(1250 + Math.random() * 300, 0.07, "sine", 0.02, 1800); },
+    place: () => { if (!playSnd("place", 0.7, 0.08)) tone(150, 0.14, "triangle", 0.07, 70); },
+    dash:  () => { if (!playSnd("dash", 0.45, 0.15)) noiseBurst(0.14, 0.05); },
+    boom:  () => { if (!playSnd("boom", 0.85, 0.1)) { tone(70, 0.4, "sawtooth", 0.12, 34); noiseBurst(0.3, 0.14); } },
+    shock: () => { if (!playSnd("shock", 0.5, 0.2)) tone(1400, 0.12, "square", 0.03, 300); },
+    win:   () => { if (!playSnd("win", 0.8, 0)) [392, 523, 659, 784].forEach((f, i) => setTimeout(() => tone(f, 0.35, "triangle", 0.06), i * 140)); },
+    lose:  () => { if (!playSnd("lose", 0.8, 0)) [330, 262, 196, 131].forEach((f, i) => setTimeout(() => tone(f, 0.4, "triangle", 0.06), i * 170)); },
   };
   function setMusic(on) { if (!dirge) return; dirge.volume = 0.42; if (on && !muted) dirge.play().catch(() => {}); else dirge.pause(); }
 
@@ -74,6 +88,7 @@
   let hand = {}, placedCount = {}, collection = [], owned = {};
   let selectedHand = null, moveTower = null, mouse = { x: 0, y: 0 }, touchTarget = null;
   let bossRef = null, shake = 0, hitFlash = 0, waveTime = 0, deepenStacks = 0, deepenShown = 0;
+  let placingBarrier = false;
   let corpses = [], embers = [], titheId = null, tonightTithe = null, tithePending = false, beginArmed = false;
   let diff = G.DIFFS.vigil, omen = null, nextOmen = null;
   let packsThisBuild = 0, bonusCards = 0, emberTimer = 5, strikeWarn = null;
@@ -90,6 +105,7 @@
     enemies = []; bolts = []; ebolts = []; towers = []; shards = []; zones = []; parts = []; texts = []; decals = []; zaps = []; corpses = []; embers = [];
     for (let i = 0; i < 26; i++) embers.push({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - 0.5) * 9, vy: -6 - Math.random() * 12, ph: Math.random() * 6.28 });
     titheId = null; tonightTithe = null; tithePending = false; beginArmed = false; $("tithe-box").classList.add("hidden");
+    buildGrid(); placingBarrier = false;
     wave = 0; spawnQueue = []; waveActive = false; runTime = 0; hitStop = 0;
     ashes = 0; kills = 0; streak = 0; packsOpened = 0; packCost = G.PACK.baseCost; freePacks = 1; dryPacks = 0;
     hand = {}; placedCount = {}; collection = []; owned = {};
@@ -109,6 +125,7 @@
     $("hp-text").textContent = Math.ceil(player.hp) + "/" + player.maxHp;
     $("hud-wave").textContent = wave === 0 ? "—" : wave + " / 10" + (waveActive ? ` · ${enemies.length + spawnQueue.length} left` : "");
     $("hud-ashes").textContent = ashes;
+    updateBarrierButton();
     $("hud-kills").textContent = kills;
     $("hud-time").textContent = fmtTime(runTime);
     $("hud-dash").textContent = player.dashCd > 0 ? "↯ " + player.dashCd.toFixed(1) : "↯ ready";
@@ -361,19 +378,88 @@
     updatePackButton(); updateHUD();
   });
   $("btn-pack").addEventListener("click", openPack);
+  function updateBarrierButton() {
+    const b = $("btn-barrier");
+    if (state !== "build") { b.classList.add("hidden"); return; }
+    b.classList.remove("hidden");
+    b.textContent = placingBarrier ? "Click the floor to raise it (Esc to stop)" : `🧱 Raise Barricade — ${G.TERRAIN.barrierCost} ash (${barriers.length}/${G.TERRAIN.barrierMax})`;
+    b.disabled = !placingBarrier && (ashes < G.TERRAIN.barrierCost || barriers.length >= G.TERRAIN.barrierMax);
+  }
+  $("btn-barrier").addEventListener("click", () => { placingBarrier = !placingBarrier; selectedHand = null; renderHand(); updateBarrierButton(); });
 
   // ---------- world geometry ----------
+  function inCircle(x, y) { return Math.hypot(x - WORLD.circle.x, y - WORLD.circle.y) < WORLD.circle.r; }
+
+  // ---------- the cathedral floor: tiles, flow-field, fog ----------
+  const TILE = G.TILE, COLS = G.COLS, ROWS = G.ROWS;
+  let grid = [], rubbleHp = {}, barriers = [], flow = new Int32Array(COLS * ROWS), flowTimer = 0;
+  const tIdx = (c, r) => r * COLS + c;
+  const tileOf = (x, y) => [Math.max(0, Math.min(COLS - 1, Math.floor(x / TILE))), Math.max(0, Math.min(ROWS - 1, Math.floor(y / TILE)))];
+  const tileCenter = (c, r) => [c * TILE + TILE / 2, r * TILE + TILE / 2];
+  function charAt(c, r) { return (c < 0 || r < 0 || c >= COLS || r >= ROWS) ? '#' : grid[r][c]; }
+  function barrierAt(c, r) { return barriers.find(b => b.c === c && b.r === r) || null; }
+  function moveBlocked(c, r) { const ch = charAt(c, r); return ch === '#' || ch === 'r' || !!barrierAt(c, r); }
+  function boltBlocked(c, r) { return charAt(c, r) === '#' || !!barrierAt(c, r); }
+  function buildGrid() {
+    grid = G.MAP.map(row => row.split("")); rubbleHp = {}; barriers = [];
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (grid[r][c] === 'r') rubbleHp[c + "," + r] = G.TERRAIN.rubbleHp;
+  }
+  function buildFlow() {
+    flow.fill(1e9);
+    const [pc, pr] = tileOf(player.x, player.y);
+    const q = [[pc, pr]]; flow[tIdx(pc, pr)] = 0;
+    for (let h = 0; h < q.length; h++) {
+      const [c, r] = q[h], d = flow[tIdx(c, r)];
+      for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nc = c + dc, nr = r + dr;
+        if (nc < 0 || nr < 0 || nc >= COLS || nr >= ROWS) continue;
+        const i = tIdx(nc, nr);
+        if (flow[i] === 1e9 && !moveBlocked(nc, nr)) { flow[i] = d + 1; q.push([nc, nr]); }
+      }
+    }
+  }
   function losBlocked(x1, y1, x2, y2) {
-    for (const p of WORLD.pillars) {
-      const dx = x2 - x1, dy = y2 - y1, len2 = dx * dx + dy * dy || 1;
-      let t = ((p.x - x1) * dx + (p.y - y1) * dy) / len2; t = Math.max(0, Math.min(1, t));
-      const cx = x1 + t * dx, cy = y1 + t * dy;
-      if (Math.hypot(p.x - cx, p.y - cy) < p.r - 2) return true;
+    const d = Math.hypot(x2 - x1, y2 - y1), steps = Math.max(1, Math.floor(d / 9));
+    for (let i = 1; i < steps; i++) {
+      const [c, r] = tileOf(x1 + (x2 - x1) * i / steps, y1 + (y2 - y1) * i / steps);
+      if (boltBlocked(c, r)) return true;
     }
     return false;
   }
-  function inCircle(x, y) { return Math.hypot(x - WORLD.circle.x, y - WORLD.circle.y) < WORLD.circle.r; }
-  function pillarHit(x, y) { for (const p of WORLD.pillars) if (Math.hypot(p.x - x, p.y - y) < p.r) return true; return false; }
+  function pillarHit(x, y) { const [c, r] = tileOf(x, y); return boltBlocked(c, r); }
+  function inFogAt(x, y) {
+    const [c, r] = tileOf(x, y);
+    if (charAt(c, r) !== 'f') return false;
+    for (const bz of WORLD.braziers) if (Math.hypot(bz.x - x, bz.y - y) < WORLD.brazierR + 12) return false; // brazier light burns the fog off
+    return true;
+  }
+  function collideTiles(ent, isPlayer) {
+    const rr0 = ent.r * 0.85; // hitboxes run smaller than sprites: one-tile lanes stay passable
+    const [c0, r0] = tileOf(ent.x, ent.y);
+    for (let r = r0 - 1; r <= r0 + 1; r++) for (let c = c0 - 1; c <= c0 + 1; c++) {
+      const solid = charAt(c, r) === '#' || charAt(c, r) === 'r' || (!isPlayer && !!barrierAt(c, r));
+      if (!solid) continue;
+      const nx = Math.max(c * TILE, Math.min(ent.x, c * TILE + TILE)), ny = Math.max(r * TILE, Math.min(ent.y, r * TILE + TILE));
+      const dx = ent.x - nx, dy = ent.y - ny, d = Math.hypot(dx, dy);
+      if (d < rr0) {
+        if (d < 0.01) ent.x += (ent.x < c * TILE + TILE / 2 ? -1 : 1) * 2;
+        else { ent.x = nx + dx / d * rr0; ent.y = ny + dy / d * rr0; }
+      }
+    }
+  }
+  function damageBlocker(c, r, dmg) {
+    const b = barrierAt(c, r);
+    if (b) {
+      b.hp -= dmg; burst(c * TILE + 18, r * TILE + 18, "#a98a54", 3);
+      if (b.hp <= 0) { barriers = barriers.filter(x => x !== b); burst(c * TILE + 18, r * TILE + 18, "#a98a54", 16); SFX.place(); log("A barricade is smashed apart."); buildFlow(); }
+      return;
+    }
+    const k = c + "," + r;
+    if (rubbleHp[k] != null) {
+      rubbleHp[k] -= dmg; burst(c * TILE + 18, r * TILE + 18, "#8a7f6a", 3);
+      if (rubbleHp[k] <= 0) { delete rubbleHp[k]; grid[r][c] = '.'; burst(c * TILE + 18, r * TILE + 18, "#8a7f6a", 18); SFX.place(); buildFlow(); }
+    }
+  }
 
   // ---------- waves & combat ----------
   function buildSpawnQueue(w) {
@@ -409,6 +495,7 @@
   }
   function banner(txt) { const b = $("wave-banner"); b.textContent = txt; b.classList.remove("hidden"); setTimeout(() => b.classList.add("hidden"), 2600); }
   function beginWave() {
+    placingBarrier = false;
     if (state !== "build") return;
     if (tithePending && !beginArmed) { beginArmed = true; const b = $("tithe-box"); b.classList.add("flash"); setTimeout(() => b.classList.remove("flash"), 1100); log("The cathedral waits for an offering. Choose — or begin anyway (click Begin again)."); return; }
     if (freePacks > 0) log("You begin the night with an unopened pack. It will keep.");
@@ -492,6 +579,11 @@
     const R = G.ENEMIES.plague.explodeR, D = G.ENEMIES.plague.explodeDmg;
     for (const o of [...enemies]) if (o !== e && !o.dead && Math.hypot(o.x - e.x, o.y - e.y) < R + o.r) damageEnemy(o, D, false);
     if (Math.hypot(player.x - e.x, player.y - e.y) < R + player.r) hurtPlayer(D * 0.8);
+    const [ec0, er0] = tileOf(e.x, e.y);
+    for (let r = er0 - 3; r <= er0 + 3; r++) for (let c = ec0 - 3; c <= ec0 + 3; c++) {
+      const [cx2, cy2] = tileCenter(c, r);
+      if (Math.hypot(cx2 - e.x, cy2 - e.y) < R + 20 && (charAt(c, r) === 'r' || barrierAt(c, r))) damageBlocker(c, r, 60);
+    }
   }
   function damageEnemySilent(e, dmg) { damageEnemy(e, dmg, false, true); }
   function hurtPlayer(dmg, attacker) {
@@ -520,7 +612,7 @@
     if (e.key.toLowerCase() === "shift" && state === "wave") tryDash();
     if (e.key.toLowerCase() === "p" && (state === "wave" || state === "build")) togglePause();
     if (e.key.toLowerCase() === "m") toggleMute();
-    if (e.key === "Escape") { selectedHand = null; moveTower = null; renderHand(); }
+    if (e.key === "Escape") { selectedHand = null; moveTower = null; placingBarrier = false; updateBarrierButton(); renderHand(); }
   });
   addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
   function togglePause() { paused = !paused; $("pause-overlay").classList.toggle("hidden", !paused); }
@@ -595,9 +687,13 @@
       if (Math.random() < 0.8) parts.push({ x: player.x, y: player.y, vx: 0, vy: 0, life: 0.3, t: 0, color: "#d7263d", size: 3 });
     } else if (dl > 0) {
       player.lastDx = dx / dl; player.lastDy = dy / dl;
-      player.x += dx / dl * player.speed * dt; player.y += dy / dl * player.speed * dt;
+      const [ptc, ptr] = tileOf(player.x, player.y);
+      const vault = barrierAt(ptc, ptr) ? 0.55 : 1; // vaulting your own barricades costs speed
+      player.x += dx / dl * player.speed * vault * dt; player.y += dy / dl * player.speed * vault * dt;
     }
     player.x = Math.max(18, Math.min(W - 18, player.x)); player.y = Math.max(18, Math.min(H - 18, player.y));
+    collideTiles(player, true);
+    flowTimer -= dt; if (flowTimer <= 0) { flowTimer = 0.35; buildFlow(); }
     if (dt > 0) { player.vx = (player.x - px0) / dt; player.vy = (player.y - py0) / dt; }
     const spd = Math.hypot(player.vx, player.vy);
     player.walkPh += dt * (2 + spd / 22);
@@ -662,7 +758,7 @@
       for (const e of enemies) {
         if (e.dead || (e.type === "wraith" && e.flickerT % 2.6 > 1.9)) continue;
         const d = Math.hypot(e.x - tw.x, e.y - tw.y);
-        if (d < range && d < bd && !losBlocked(tw.x, tw.y, e.x, e.y)) { bd = d; tgt = e; }
+        if (d < range && d < bd && !e.hiddenNow && !losBlocked(tw.x, tw.y, e.x, e.y)) { bd = d; tgt = e; }
       }
       if (tgt && tw.cd <= 0) {
         tw.cd = 1 / towerFireRate(tw, def); tw.recoil = 1; tw.faceA = Math.atan2(tgt.y - tw.y, tgt.x - tw.x);
@@ -677,7 +773,7 @@
     player.fireCd -= dt;
     if (waveActive && player.fireCd <= 0) {
       let tgt = null, bd = 1e9;
-      for (const e of enemies) { if (e.dead || (e.type === "wraith" && e.flickerT % 2.6 > 1.9)) continue; const d = Math.hypot(e.x - player.x, e.y - player.y); if (d < bd) { bd = d; tgt = e; } }
+      for (const e of enemies) { if (e.dead || e.hiddenNow || (e.type === "wraith" && e.flickerT % 2.6 > 1.9)) continue; const d = Math.hypot(e.x - player.x, e.y - player.y); if (d < bd) { bd = d; tgt = e; } }
       if (tgt) {
         const rateMult = (inCircle(player.x, player.y) ? 1.15 : 1);
         player.fireCd = 1 / (player.rate * rateMult);
@@ -700,7 +796,7 @@
       if (pillarHit(b.x, b.y)) { b.dead = true; burst(b.x, b.y, "#8a7f6a", 3); continue; }
       for (const e of enemies) {
         if (e.dead || b.hits.has(e) || (e.type === "wraith" && e.flickerT % 2.6 > 1.9)) continue;
-        if (Math.hypot(e.x - b.x, e.y - b.y) < e.r + 5) {
+        if (!e.hiddenNow && Math.hypot(e.x - b.x, e.y - b.y) < e.r + 5) {
           b.hits.add(e);
           damageEnemy(e, b.dmg, b.crit);
           if (!b.crit) SFX.hit();
@@ -765,18 +861,75 @@
       for (const c of enemies) if (!c.dead && c.type === "cultist" && c !== e && Math.hypot(c.x - e.x, c.y - e.y) < 95) { sp *= 1.12; break; }
       // braziers burn what wanders close
       for (const bz of WORLD.braziers) if (Math.hypot(e.x - bz.x, e.y - bz.y) < WORLD.brazierR) { e.burnT = Math.max(e.burnT, 0.4); e.burnDps = Math.max(e.burnDps, WORLD.brazierDps * (tonightTithe === "braziers" ? 2 : 1)); break; }
-      const lead = 0.22; // the dead learn: they run at where you WILL be
-      const a = Math.atan2(player.y + player.vy * lead - e.y, player.x + player.vx * lead - e.x);
-      let mx = Math.cos(a) * sp, my = Math.sin(a) * sp;
+      // GRAVE-FOG: hidden inside it; bursting out of it is an ambush
+      const fogNow = inFogAt(e.x, e.y);
+      if (fogNow) e.inFog = true;
+      else if (e.inFog) { e.inFog = false; e.ambushT = 1.0; }
+      e.hiddenNow = fogNow;
+      if (e.ambushT > 0) { e.ambushT -= dt; sp *= 1.35; }
+      let mx, my;
+      if (e.type === "wraith") {
+        const a = Math.atan2(player.y + player.vy * 0.22 - e.y, player.x + player.vx * 0.22 - e.x);
+        mx = Math.cos(a) * sp; my = Math.sin(a) * sp;
+      } else {
+        // FLOW-FIELD: the dead pour through the cathedral's lanes toward the knight,
+        // and chew through whatever the knight puts in their way.
+        const [ec, er] = tileOf(e.x, e.y);
+        const curD = flow[tIdx(ec, er)];
+        let bd = curD, bx = null, by = null;
+        for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+          if (!dc && !dr) continue;
+          const nc = ec + dc, nr = er + dr;
+          if (nc < 0 || nr < 0 || nc >= COLS || nr >= ROWS || moveBlocked(nc, nr)) continue;
+          const d = flow[tIdx(nc, nr)] + ((dc && dr) ? 0.4 : 0);
+          if (d < bd) { bd = d; const [cx2, cy2] = tileCenter(nc, nr); bx = cx2; by = cy2; }
+        }
+        const dp = Math.hypot(player.x - e.x, player.y - e.y);
+        let tx, ty;
+        if (dp < 210 && !losBlocked(e.x, e.y, player.x, player.y)) { tx = player.x + player.vx * 0.22; ty = player.y + player.vy * 0.22; }
+        else if (bx !== null) { tx = bx; ty = by; }
+        else { tx = player.x; ty = player.y; }
+        const aa = Math.atan2(ty - e.y, tx - e.x);
+        mx = Math.cos(aa) * sp; my = Math.sin(aa) * sp;
+        if (e.type === "cultist" && dp < 205 && dp > 40 && !losBlocked(e.x, e.y, player.x, player.y)) { mx *= 0.08; my *= 0.08; } // hold and chant
+        e.atkBlkCd = (e.atkBlkCd || 0) - dt;
+        if (bx === null || bd >= curD) {
+          let blk = null;
+          for (let dr = -1; dr <= 1 && !blk; dr++) for (let dc = -1; dc <= 1; dc++) {
+            const nc = ec + dc, nr = er + dr;
+            if (charAt(nc, nr) === 'r' || barrierAt(nc, nr)) {
+              const [cx2, cy2] = tileCenter(nc, nr);
+              if (Math.hypot(cx2 - e.x, cy2 - e.y) < TILE * 1.4) { blk = [nc, nr]; break; }
+            }
+          }
+          if (blk) {
+            mx *= 0.12; my *= 0.12;
+            if (e.atkBlkCd <= 0) { e.atkBlkCd = 0.8; e.atkPop = 0.22; damageBlocker(blk[0], blk[1], e.dmg * (e.type === "brute" ? 2.5 : 1)); }
+          }
+        }
+      }
       for (const o of enemies) { if (o === e || o.dead) continue; const d = Math.hypot(o.x - e.x, o.y - e.y), rr = e.r + o.r; if (d > 0.01 && d < rr) { mx -= (o.x - e.x) / d * (rr - d) * 3.2; my -= (o.y - e.y) / d * (rr - d) * 3.2; } }
       e.vx = dt > 0 ? mx : 0; e.vy = dt > 0 ? my : 0;
       e.x += mx * dt; e.y += my * dt;
+      if (e.type !== "wraith") collideTiles(e, false);
       e.animT += dt * (2.2 + Math.hypot(mx, my) / 26);
       if (e.atkPop > 0) e.atkPop -= dt;
       e.hitCd -= dt;
-      if (Math.hypot(player.x - e.x, player.y - e.y) < e.r + player.r && e.hitCd <= 0) { e.hitCd = 0.85; e.atkPop = 0.22; hurtPlayer(e.dmg * (1 + 0.03 * deepenStacks), e); }
+      if (Math.hypot(player.x - e.x, player.y - e.y) < e.r + player.r && e.hitCd <= 0) { e.hitCd = 0.85; e.atkPop = 0.22; const amb = e.ambushT > 0; hurtPlayer(e.dmg * (1 + 0.03 * deepenStacks) * (amb ? 1.5 : 1), e); if (amb) { e.ambushT = 0; floatText(player.x, player.y - 40, "AMBUSHED FROM THE FOG", "#c9d4e8"); } }
     }
     enemies = enemies.filter(e => !e.dead);
+    // --- cultist fire: bolts for the knight, unless the fog hides him ---
+    if (waveActive) for (const e of enemies) {
+      if (e.type !== "cultist" || e.dead) continue;
+      e.fireT = (e.fireT == null ? 1 + Math.random() : e.fireT) - dt;
+      const dp = Math.hypot(player.x - e.x, player.y - e.y);
+      if (e.fireT <= 0 && dp < 235 && !losBlocked(e.x, e.y, player.x, player.y) && !inFogAt(player.x, player.y)) {
+        e.fireT = 2.3;
+        const a = Math.atan2(player.y - e.y, player.x - e.x);
+        ebolts.push({ x: e.x, y: e.y, vx: Math.cos(a) * 245, vy: Math.sin(a) * 245, r: 6, dmg: e.dmg });
+        burst(e.x, e.y - 10, "#b48be0", 3);
+      }
+    }
     // --- shards (Sanguine Font drinks them) ---
     const fontSyn = hasSyn("font-chalice");
     for (const s of shards) {
@@ -826,6 +979,19 @@
     ctx.save();
     if (shake > 0) { ctx.translate((Math.random() * 2 - 1) * shake, (Math.random() * 2 - 1) * shake); shake *= 0.88; if (shake < 0.4) shake = 0; }
     ctx.drawImage(IMG.arena, 0, 0, W, H);
+    // THE FLOOR ITSELF: walls, rubble, grave-fog
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      const ch = grid[r] ? grid[r][c] : '.';
+      if (ch === '#') { shadow(c * TILE + 18, r * TILE + 32, 20); ctx.drawImage(IMG.wall, c * TILE - 2, r * TILE - 2, TILE + 4, TILE + 4); }
+      else if (ch === 'r') { shadow(c * TILE + 18, r * TILE + 30, 19); drawSpr(IMG.rubble, c * TILE + 18, r * TILE + 18, TILE * 1.3, {}); const hpF = (rubbleHp[c + "," + r] || G.TERRAIN.rubbleHp) / G.TERRAIN.rubbleHp; if (hpF < 1) { ctx.fillStyle = `rgba(0,0,0,${(1 - hpF) * 0.45})`; ctx.fillRect(c * TILE + 3, r * TILE + 3, TILE - 6, TILE - 6); } }
+    }
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      if (!grid[r] || grid[r][c] !== 'f') continue;
+      const x = c * TILE + 18, y = r * TILE + 18, ph = Math.sin(performance.now() / 1400 + c * 1.7 + r * 2.3) * 0.5 + 0.5;
+      const gr = ctx.createRadialGradient(x, y, 2, x, y, TILE * 0.85);
+      gr.addColorStop(0, `rgba(168,180,198,${0.16 + ph * 0.07})`); gr.addColorStop(1, "rgba(168,180,198,0)");
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, TILE * 0.85, 0, 6.283); ctx.fill();
+    }
     for (const em of embers) { const tw2 = 0.35 + Math.sin(performance.now() / 300 + em.ph) * 0.2; ctx.fillStyle = `rgba(255,150,60,${tw2})`; ctx.fillRect(em.x - 1.2, em.y - 1.2, 2.4, 2.4); }
     if (state === "wave") for (const bz of WORLD.braziers) {
       const hot = enemies.some(e => Math.hypot(e.x - bz.x, e.y - bz.y) < WORLD.brazierR + 6);
@@ -869,6 +1035,15 @@
       ctx.beginPath(); ctx.arc(s.x, s.y, p, 0, 6.283); ctx.fill(); ctx.shadowBlur = 0;
     }
     // towers
+    for (const b of barriers) {
+      shadow(b.c * TILE + 18, b.r * TILE + 32, 20);
+      drawSpr(IMG.barricade, b.c * TILE + 18, b.r * TILE + 18, TILE * 1.35, {});
+      const f = b.hp / b.max;
+      if (f < 1) {
+        ctx.fillStyle = "rgba(6,5,8,0.7)"; ctx.fillRect(b.c * TILE + 4, b.r * TILE + TILE - 7, TILE - 8, 4);
+        ctx.fillStyle = f > 0.4 ? "#a98a54" : "#d7263d"; ctx.fillRect(b.c * TILE + 4, b.r * TILE + TILE - 7, (TILE - 8) * f, 4);
+      }
+    }
     for (const tw of towers) {
       const c = CARDMAP[tw.type], def = G.TOWERS[tw.type];
       if (tw.type === "bell") { ctx.fillStyle = "rgba(160,170,220,0.13)"; ctx.beginPath(); ctx.arc(tw.x, tw.y, def.auraRange, 0, 6.283); ctx.fill(); ctx.strokeStyle = "rgba(160,170,220,0.30)"; ctx.stroke(); }
@@ -888,12 +1063,18 @@
     // placement preview
     if (state === "build" && (selectedHand || moveTower) && mouse.inside) {
       const type = selectedHand || moveTower.type, def = G.TOWERS[type], rng = def.range || def.auraRange;
-      const blockedSpot = pillarHit(mouse.x, mouse.y);
+      const blockedSpot = !placementOK(mouse.x, mouse.y);
       ctx.fillStyle = blockedSpot ? "rgba(215,38,61,0.14)" : "rgba(255,255,255,0.10)";
       ctx.beginPath(); ctx.arc(mouse.x, mouse.y, rng, 0, 6.283); ctx.fill();
-      if (inCircle(mouse.x, mouse.y)) { ctx.fillStyle = "rgba(255,217,74,0.8)"; ctx.font = "bold 11px system-ui"; ctx.textAlign = "center"; ctx.fillText("CONSECRATED +30% DMG", mouse.x, mouse.y + 56); }
-      if (losBlocked(mouse.x, mouse.y, W / 2, H / 2)) { ctx.fillStyle = "rgba(255,120,120,0.85)"; ctx.font = "bold 10px system-ui"; ctx.textAlign = "center"; ctx.fillText("PILLARS BLIND THIS SPOT", mouse.x, mouse.y - 48); }
+      if (inCircle(mouse.x, mouse.y)) { ctx.fillStyle = "rgba(255,217,74,0.8)"; ctx.font = "bold 11px system-ui"; ctx.textAlign = "center"; ctx.fillText("CONSECRATED +45% DMG", mouse.x, mouse.y + 56); }
+      if (losBlocked(mouse.x, mouse.y, W / 2, H / 2)) { ctx.fillStyle = "rgba(255,120,120,0.85)"; ctx.font = "bold 10px system-ui"; ctx.textAlign = "center"; ctx.fillText("WALLS BLIND THIS SPOT", mouse.x, mouse.y - 48); }
       drawSprite(IMG["spr_" + type], mouse.x, mouse.y, 62, blockedSpot ? 0.35 : 0.65);
+    }
+    if (state === "build" && placingBarrier && mouse.inside) {
+      const [c, r] = tileOf(mouse.x, mouse.y);
+      ctx.fillStyle = charAt(c, r) === '#' || charAt(c, r) === 'r' || barrierAt(c, r) ? "rgba(215,38,61,0.35)" : "rgba(169,138,84,0.35)";
+      ctx.fillRect(c * TILE + 1, r * TILE + 1, TILE - 2, TILE - 2);
+      drawSprite(IMG.barricade, c * TILE + 18, r * TILE + 18, TILE * 1.35, 0.6);
     }
     // the fallen: bodies topple, sink, and become the blood decals below them
     for (const c of corpses) {
@@ -913,6 +1094,11 @@
       if (e.windT > 0) { sy *= 0.88; sx *= 1.1; }
       if (e.atkPop > 0) { const p = 1 + e.atkPop * 0.9; sx *= p; sy *= p; }
       const flick = e.type === "wraith" && e.flickerT % 2.6 > 1.9;
+      if (e.hiddenNow) {
+        ctx.fillStyle = "rgba(255,70,50,0.95)";
+        ctx.beginPath(); ctx.arc(e.x - 5, e.y - 2, 2.1, 0, 6.283); ctx.arc(e.x + 5, e.y - 2, 2.1, 0, 6.283); ctx.fill();
+        continue;
+      }
       shadow(e.x, e.y + e.r * 1.15, e.r * 1.05);
       drawSpr(e.img, e.x, e.y + bob, sc, { rot: tilt, sx, sy, alpha: flick ? 0.25 : 0.98 });
       if (e.flash > 0) { ctx.fillStyle = `rgba(255,240,220,${e.flash * 5})`; ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, 6.283); ctx.fill(); }
@@ -936,7 +1122,7 @@
       let psx = 1, psy = 1;
       if (player.dashT > 0) { const along = Math.abs(player.dashDx) >= Math.abs(player.dashDy); psx = along ? 1.22 : 0.86; psy = along ? 0.86 : 1.22; }
       shadow(player.x, player.y + 19, 22);
-      drawSpr(IMG.hero, player.x, player.y + bobY, 62, { rot: lean, sx: psx, sy: psy, alpha: player.invuln > 0 && state === "wave" ? 0.65 : 1 });
+      drawSpr(IMG.hero, player.x, player.y + bobY, 62, { rot: lean, sx: psx, sy: psy, alpha: (player.invuln > 0 && state === "wave" ? 0.65 : 1) * (inFogAt(player.x, player.y) ? 0.62 : 1) });
       ctx.fillStyle = "rgba(6,5,8,0.7)"; ctx.fillRect(player.x - 20, player.y + 30, 40, 5);
       ctx.fillStyle = "#7dff9a"; ctx.fillRect(player.x - 20, player.y + 30, 40 * Math.max(0, player.hp / player.maxHp), 5);
     }
@@ -973,11 +1159,29 @@
   function canvasPos(ev) { const r = cv.getBoundingClientRect(); return { x: (ev.clientX - r.left) * W / r.width, y: (ev.clientY - r.top) * H / r.height, inside: true }; }
   cv.addEventListener("mousemove", ev => { mouse = canvasPos(ev); });
   cv.addEventListener("mouseleave", () => mouse.inside = false);
+  function placementOK(x, y) {
+    const [c, r] = tileOf(x, y);
+    const ch = charAt(c, r);
+    return ch !== '#' && ch !== 'r' && ch !== 'f' && !barrierAt(c, r);
+  }
   cv.addEventListener("click", ev => {
     if (state !== "build") return;
     const p = canvasPos(ev);
+    if (placingBarrier) {
+      const [c, r] = tileOf(p.x, p.y), ch = charAt(c, r);
+      if (ch === '#' || ch === 'r' || barrierAt(c, r)) { log("No barricade stands there."); return; }
+      if (towers.some(t => { const [tc, tr] = tileOf(t.x, t.y); return tc === c && tr === r; })) { log("A tower holds that ground."); return; }
+      if (barriers.length >= G.TERRAIN.barrierMax) { log("The floor holds no more barricades."); placingBarrier = false; updateBarrierButton(); return; }
+      if (ashes < G.TERRAIN.barrierCost) { log("Barricades cost 15 ash."); placingBarrier = false; updateBarrierButton(); return; }
+      ashes -= G.TERRAIN.barrierCost;
+      barriers.push({ c, r, hp: G.TERRAIN.barrierHp, max: G.TERRAIN.barrierHp });
+      SFX.place(); burst(c * TILE + 18, r * TILE + 18, "#a98a54", 10); buildFlow();
+      log("Barricade raised. The dead must chew through it — or go around.");
+      if (ashes < G.TERRAIN.barrierCost) placingBarrier = false;
+      updateHUD(); updateBarrierButton(); return;
+    }
     if (selectedHand) {
-      if (pillarHit(p.x, p.y)) { log("The pillars swallow that spot. Choose open ground."); return; }
+      if (!placementOK(p.x, p.y)) { log("Nothing stands on wall, rubble, fog or barricade. Choose open ground."); return; }
       if (towers.length >= G.PACK.maxFieldTowers) { log(`The floor holds only ${G.PACK.maxFieldTowers} towers.`); return; }
       const h = hand[selectedHand];
       const tw = { type: selectedHand, x: p.x, y: p.y, level: 1, mult: h.bestMult, cd: 0, tollAnim: 0, recoil: 0, faceA: 0 };
@@ -988,7 +1192,7 @@
     const tw = towers.find(t => Math.hypot(t.x - p.x, t.y - p.y) < 32);
     if (tw) { moveTower = moveTower === tw ? null : tw; log(moveTower ? `${CARDMAP[tw.type].name} lifted — click its new ground (or double-click it to overcharge: 20 ash).` : "Set down."); }
     else if (moveTower) {
-      if (pillarHit(p.x, p.y)) { log("Not into a pillar."); return; }
+      if (!placementOK(p.x, p.y)) { log("Not onto wall, rubble, fog or barricade."); return; }
       moveTower.x = p.x; moveTower.y = p.y; SFX.place(); moveTower = null;
     }
   });

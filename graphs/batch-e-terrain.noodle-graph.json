@@ -1,0 +1,130 @@
+{
+ "v": 1,
+ "nodes": [
+  {
+   "id": "c1",
+   "type": "comment",
+   "name": "GRIMPACK v5 terrain sprites",
+   "x": 40,
+   "y": -260,
+   "w": 700,
+   "fields": {
+    "text": "GRIMPACK v5 terrain sprites"
+   }
+  },
+  {
+   "id": "t1",
+   "type": "text",
+   "name": "terrain-wall",
+   "x": 40,
+   "y": 300,
+   "w": 320,
+   "fields": {
+    "text": "Top-down square stone wall block for a gothic cathedral arena: a single massive cracked dark-grey stone block with beveled edges and a small brass cross inlay, viewed directly from above, fills the whole frame edge to edge, seamless tile. Dark gothic hand-painted 2D game art, deep black background, dramatic warm rim lighting, no text, no watermark."
+   }
+  },
+  {
+   "id": "i1",
+   "type": "image",
+   "name": "terrain-wall",
+   "x": 420,
+   "y": 300,
+   "w": 260,
+   "fields": {
+    "model": "meta/muse-image/text-to-image",
+    "size": "1:1",
+    "variations": "1"
+   }
+  },
+  {
+   "id": "t2",
+   "type": "text",
+   "name": "terrain-rubble",
+   "x": 40,
+   "y": 560,
+   "w": 320,
+   "fields": {
+    "text": "Top-down pile of broken cathedral rubble: shattered stone chunks, a snapped column drum and dust, viewed directly from above on a deep black background, a rough heap about as wide as it is tall. Dark gothic hand-painted 2D game art, deep black background, dramatic warm rim lighting, no text, no watermark."
+   }
+  },
+  {
+   "id": "i2",
+   "type": "image",
+   "name": "terrain-rubble",
+   "x": 420,
+   "y": 560,
+   "w": 260,
+   "fields": {
+    "model": "meta/muse-image/text-to-image",
+    "size": "1:1",
+    "variations": "1"
+   }
+  },
+  {
+   "id": "t3",
+   "type": "text",
+   "name": "terrain-barricade",
+   "x": 40,
+   "y": 820,
+   "w": 320,
+   "fields": {
+    "text": "Top-down gothic barricade: a heavy barrier of dark oak beams bound with black iron bands and brass crosses, consecrated war-fence, viewed directly from above on a deep black background, spans the full width of the frame. Dark gothic hand-painted 2D game art, deep black background, dramatic warm rim lighting, no text, no watermark."
+   }
+  },
+  {
+   "id": "i3",
+   "type": "image",
+   "name": "terrain-barricade",
+   "x": 420,
+   "y": 820,
+   "w": 260,
+   "fields": {
+    "model": "meta/muse-image/text-to-image",
+    "size": "1:1",
+    "variations": "1"
+   }
+  }
+ ],
+ "links": [
+  {
+   "id": "l1",
+   "from": {
+    "node": "t1",
+    "port": "text"
+   },
+   "to": {
+    "node": "i1",
+    "port": "prompt"
+   }
+  },
+  {
+   "id": "l2",
+   "from": {
+    "node": "t2",
+    "port": "text"
+   },
+   "to": {
+    "node": "i2",
+    "port": "prompt"
+   }
+  },
+  {
+   "id": "l3",
+   "from": {
+    "node": "t3",
+    "port": "text"
+   },
+   "to": {
+    "node": "i3",
+    "port": "prompt"
+   }
+  }
+ ],
+ "nid": 99,
+ "lid": 99,
+ "view": {
+  "panX": 30,
+  "panY": 280,
+  "scale": 0.6
+ }
+}

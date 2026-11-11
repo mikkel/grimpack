@@ -302,3 +302,12 @@ dawn and shoved the Begin button away.
   the stats are a fixed 3x2 grid with the consecration chip on its own
   permanent row; the tower shelf and phase text hold reserved heights.
   Values change. Layout doesn't.
+
+## v9.1 — the pack itself was still wearing its black box (Mikkel's
+screenshot). The booster-pack art is a product shot on pure black; it
+showed as a black square in the button, the title, and the ritual modal.
+Keyed like everything else — spr-pack.webp, transparent, flame intact.
+And the skeletal hand: my v9 aside had overflow:hidden, which guillotined
+the hand at the panel edge, and it hung too high (over the phase text).
+Overflow released; the hand now sits at the button's mid-height with its
+fingertip landing on the button's left edge, jabbing into it.

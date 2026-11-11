@@ -156,7 +156,7 @@ aside p{margin:4px 0 10px;font-size:14px;line-height:1.45}
 .pack-card{transition:none}
 /* v7.1 anchoring fixes */
 #pack-wrap{position:relative}
-#pack-hand{left:-104px;top:-22px;width:158px}
+#pack-hand{left:-148px;top:12px;width:158px}
 #pack-hand-label{margin:30px 0 2px 104px}
 
 /* ==== v8: dawn rewards, the circle speaks, THE RITUAL ==== */
@@ -187,7 +187,7 @@ aside p{margin:4px 0 10px;font-size:14px;line-height:1.45}
 .ember-p{position:fixed;width:5px;height:5px;border-radius:50%;background:#ff9d3c;box-shadow:0 0 7px 2px rgba(255,120,40,.65);pointer-events:none;z-index:96}
 
 /* ==== v9: ONE sidebar system, nothing moves ==== */
-aside#side{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:0;gap:0;overflow:hidden}
+aside#side{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:0;gap:0}
 aside section{background:transparent;border:none;border-radius:0;padding:14px 16px}
 aside section + section{border-top:1px solid var(--line)}
 aside h2{font-size:20px;margin:0 0 4px}

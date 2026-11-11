@@ -808,6 +808,7 @@
   // knockback chains through a pack, corpses get kicked around.
   const MB = Matter.Bodies, MV = Matter.Body, ME = Matter.Engine, MW = Matter.Composite, MEV = Matter.Events;
   const engine = ME.create({ enableSleeping: false });
+  engine.positionIterations = 8; engine.velocityIterations = 6;
   engine.gravity.y = 0; engine.gravity.x = 0;
   const world = engine.world;
   const STEP_MS = 1000 / 60;
@@ -837,9 +838,9 @@
     for (const b of barriers) addStaticBody(b.c, b.r, "barrier");
   }
   function makeEnemyBody(e) {
-    const r = Math.max(6, e.r * 0.85), m = massOf(e);
+    const r = Math.max(6, e.r * 0.92), m = massOf(e);
     const b = MB.circle(e.x, e.y, r, {
-      friction: 0, frictionAir: 0.012, restitution: 0.08, inertia: Infinity,
+      friction: 0, frictionAir: 0.02, restitution: 0.08, inertia: Infinity,
       density: bodyDensity(m, r), label: "enemy", isSensor: e.type === "wraith"
     });
     b.plugin.grim = { e };
@@ -1306,7 +1307,6 @@
   addEventListener("keydown", e => {
     if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(e.key.toLowerCase())) e.preventDefault();
     keys[e.key.toLowerCase()] = true;
-    if (e.key === " " && state === "build") { e.preventDefault(); beginWave(); }
     if (e.key === " " && state === "wave") { e.preventDefault(); tryDash(); }
     if (e.key.toLowerCase() === "shift" && state === "wave") tryDash();
     if (e.key.toLowerCase() === "p" && (state === "wave" || state === "build")) togglePause();
@@ -1396,7 +1396,7 @@
     let pvx = 0, pvy = 0;
     if (player.dashT > 0) {
       player.dashT -= dt; pvx = player.dashDx * 950; pvy = player.dashDy * 950;
-      for (const e of enemies) { if (e.dead || e.dashMark === player.dashId) continue; if (Math.hypot(e.x - player.x, e.y - player.y) < e.r + 34) { e.dashMark = player.dashId; applyImpulse(e, player.dashDx * 330, player.dashDy * 330); e.staggerT = Math.max(e.staggerT || 0, 0.22); burst(e.x, e.y, "#e8e2d4", 3); } }
+      for (const e of enemies) { if (e.dead || e.dashMark === player.dashId) continue; if (Math.hypot(e.x - player.x, e.y - player.y) < e.r + 34) { e.dashMark = player.dashId; applyImpulse(e, player.dashDx * 520, player.dashDy * 520); e.staggerT = Math.max(e.staggerT || 0, 0.22); burst(e.x, e.y, "#e8e2d4", 3); } }
       player.invuln = Math.max(player.invuln, 0.05);
       if (Math.random() < 0.8) parts.push({ x: player.x, y: player.y, vx: 0, vy: 0, life: 0.3, t: 0, color: "#d7263d", size: 3 });
     } else if (dl > 0) {
@@ -1516,7 +1516,7 @@
         if (!e.hiddenNow && Math.hypot(e.x - b.x, e.y - b.y) < e.r + 5) {
           b.hits.add(e);
           damageEnemy(e, b.dmg, b.crit);
-          if (!e.dead) { applyImpulse(e, b.vx * b.dmg * 0.030, b.vy * b.dmg * 0.030); e.lastKbX = b.vx * 0.5; e.lastKbY = b.vy * 0.5; }
+          if (!e.dead) { applyImpulse(e, b.vx * b.dmg * 0.042, b.vy * b.dmg * 0.042); e.lastKbX = b.vx * 0.5; e.lastKbY = b.vy * 0.5; }
           const drink = Math.min(0.45, massOf(e) * 0.13); b.vx *= (1 - drink); b.vy *= (1 - drink);
           if (!b.crit) SFX.hit();
           if (b.chillSecs) { const wasBurning = e.burnT > 0; e.slowT = Math.max(e.slowT, b.chillSecs); e.slowF = Math.max(e.slowF, b.chillSlow); e.chillT = Math.max(e.chillT, b.chillSecs); if (wasBurning) maybeShock(e, b.dmg); }

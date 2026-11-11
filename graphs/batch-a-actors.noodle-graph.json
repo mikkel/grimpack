@@ -1,0 +1,235 @@
+{
+  "v": 1,
+  "nodes": [
+    {
+      "id": "c1",
+      "type": "comment",
+      "name": "batch-a-actors",
+      "x": 40,
+      "y": -260,
+      "w": 700,
+      "fields": {
+        "text": "batch-a-actors: one text->image branch per game asset for GRIMPACK. Style-locked gothic prompts; outputs land as node-iN-image.png."
+      }
+    },
+    {
+      "id": "t1",
+      "type": "text",
+      "name": "hero",
+      "x": 40,
+      "y": 300,
+      "w": 320,
+      "fields": {
+        "text": "Full-body portrait of a lone grave-knight hero, hooded, cracked bone-white helm, tattered black cloak, holding a glowing hellfire-orange crossbow, standing ready. Dark gothic hand-painted 2D game art, deep black background, bone white, dried-blood red and hellfire orange accents, dramatic rim lighting, strong readable silhouette, no text, no letters, no watermark."
+      }
+    },
+    {
+      "id": "i1",
+      "type": "image",
+      "name": "hero",
+      "x": 420,
+      "y": 300,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t2",
+      "type": "text",
+      "name": "husk",
+      "x": 40,
+      "y": 600,
+      "w": 320,
+      "fields": {
+        "text": "Full-body shambling skeleton husk enemy, cracked yellowed bones, tattered burial rags, empty glowing red eye sockets, clawed hands reaching forward. Dark gothic hand-painted 2D game art, deep black background, bone white, dried-blood red and hellfire orange accents, dramatic rim lighting, strong readable silhouette, no text, no letters, no watermark."
+      }
+    },
+    {
+      "id": "i2",
+      "type": "image",
+      "name": "husk",
+      "x": 420,
+      "y": 600,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t3",
+      "type": "text",
+      "name": "cultist",
+      "x": 40,
+      "y": 900,
+      "w": 320,
+      "fields": {
+        "text": "Full-body hooded cultist enemy in a torn crimson robe, brass bell in one hand, iron dagger in the other, face hidden in shadow with two pale eyes. Dark gothic hand-painted 2D game art, deep black background, bone white, dried-blood red and hellfire orange accents, dramatic rim lighting, strong readable silhouette, no text, no letters, no watermark."
+      }
+    },
+    {
+      "id": "i3",
+      "type": "image",
+      "name": "cultist",
+      "x": 420,
+      "y": 900,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t4",
+      "type": "text",
+      "name": "wraith",
+      "x": 40,
+      "y": 1200,
+      "w": 320,
+      "fields": {
+        "text": "Full-body translucent wraith enemy, tattered grey spectral shroud, long clawed fingers, screaming hollow face, faint cold blue glow at its edges. Dark gothic hand-painted 2D game art, deep black background, bone white, dried-blood red and hellfire orange accents, dramatic rim lighting, strong readable silhouette, no text, no letters, no watermark."
+      }
+    },
+    {
+      "id": "i4",
+      "type": "image",
+      "name": "wraith",
+      "x": 420,
+      "y": 1200,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t5",
+      "type": "text",
+      "name": "brute",
+      "x": 40,
+      "y": 1500,
+      "w": 320,
+      "fields": {
+        "text": "Full-body hulking gargoyle brute enemy, massive stone-grey muscles, cracked skin with glowing orange fissures, small horned head, enormous fists. Dark gothic hand-painted 2D game art, deep black background, bone white, dried-blood red and hellfire orange accents, dramatic rim lighting, strong readable silhouette, no text, no letters, no watermark."
+      }
+    },
+    {
+      "id": "i5",
+      "type": "image",
+      "name": "brute",
+      "x": 420,
+      "y": 1500,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t6",
+      "type": "text",
+      "name": "boss",
+      "x": 40,
+      "y": 1800,
+      "w": 320,
+      "fields": {
+        "text": "Full-body terrifying demon matriarch boss, Vesper Mother of Bells: tall horned figure in a black ceremonial gown of chains and brass bells, crown of candles, glowing orange eyes, arms raised in a tolling gesture. Dark gothic hand-painted 2D game art, deep black background, bone white, dried-blood red and hellfire orange accents, dramatic rim lighting, strong readable silhouette, no text, no letters, no watermark."
+      }
+    },
+    {
+      "id": "i6",
+      "type": "image",
+      "name": "boss",
+      "x": 420,
+      "y": 1800,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    }
+  ],
+  "links": [
+    {
+      "id": "l1",
+      "from": {
+        "node": "t1",
+        "port": "text"
+      },
+      "to": {
+        "node": "i1",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l2",
+      "from": {
+        "node": "t2",
+        "port": "text"
+      },
+      "to": {
+        "node": "i2",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l3",
+      "from": {
+        "node": "t3",
+        "port": "text"
+      },
+      "to": {
+        "node": "i3",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l4",
+      "from": {
+        "node": "t4",
+        "port": "text"
+      },
+      "to": {
+        "node": "i4",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l5",
+      "from": {
+        "node": "t5",
+        "port": "text"
+      },
+      "to": {
+        "node": "i5",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l6",
+      "from": {
+        "node": "t6",
+        "port": "text"
+      },
+      "to": {
+        "node": "i6",
+        "port": "prompt"
+      }
+    }
+  ],
+  "nid": 8,
+  "lid": 8,
+  "view": {
+    "panX": 30,
+    "panY": 280,
+    "scale": 0.6
+  }
+}

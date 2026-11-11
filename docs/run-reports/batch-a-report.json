@@ -1,0 +1,120 @@
+{
+  "graph": "graphs/batch-a-actors.noodle-graph.json",
+  "outdir": "runs/batch-a",
+  "warnings": [],
+  "balance_before": 30.35362287,
+  "cost_usd": 0.06599999999999999,
+  "cost_exact": true,
+  "remaining_balance": 30.34262287,
+  "errors": [],
+  "nodes": {
+    "t1": {
+      "status": "done",
+      "cost_usd": null,
+      "out": {
+        "text": "Full-body portrait of a lone grave-knight hero, hooded, cracked bone-white helm, tattered black cloak, holding a glowing hellfire-orange crossbow, standing ready. Dark gothic hand-painted 2D game art, deep black background, bone white, dried-blood red and hellfire orange accents, dramatic rim lighting, strong readable silhouette, no text, no letters, no watermark."
+      }
+    },
+    "t2": {
+      "status": "done",
+      "cost_usd": null,
+      "out": {
+        "text": "Full-body shambling skeleton husk enemy, cracked yellowed bones, tattered burial rags, empty glowing red eye sockets, clawed hands reaching forward. Dark gothic hand-painted 2D game art, deep black background, bone white, dried-blood red and hellfire orange accents, dramatic rim lighting, strong readable silhouette, no text, no letters, no watermark."
+      }
+    },
+    "t3": {
+      "status": "done",
+      "cost_usd": null,
+      "out": {
+        "text": "Full-body hooded cultist enemy in a torn crimson robe, brass bell in one hand, iron dagger in the other, face hidden in shadow with two pale eyes. Dark gothic hand-painted 2D game art, deep black background, bone white, dried-blood red and hellfire orange accents, dramatic rim lighting, strong readable silhouette, no text, no letters, no watermark."
+      }
+    },
+    "t4": {
+      "status": "done",
+      "cost_usd": null,
+      "out": {
+        "text": "Full-body translucent wraith enemy, tattered grey spectral shroud, long clawed fingers, screaming hollow face, faint cold blue glow at its edges. Dark gothic hand-painted 2D game art, deep black background, bone white, dried-blood red and hellfire orange accents, dramatic rim lighting, strong readable silhouette, no text, no letters, no watermark."
+      }
+    },
+    "t5": {
+      "status": "done",
+      "cost_usd": null,
+      "out": {
+        "text": "Full-body hulking gargoyle brute enemy, massive stone-grey muscles, cracked skin with glowing orange fissures, small horned head, enormous fists. Dark gothic hand-painted 2D game art, deep black background, bone white, dried-blood red and hellfire orange accents, dramatic rim lighting, strong readable silhouette, no text, no letters, no watermark."
+      }
+    },
+    "t6": {
+      "status": "done",
+      "cost_usd": null,
+      "out": {
+        "text": "Full-body terrifying demon matriarch boss, Vesper Mother of Bells: tall horned figure in a black ceremonial gown of chains and brass bells, crown of candles, glowing orange eyes, arms raised in a tolling gesture. Dark gothic hand-painted 2D game art, deep black background, bone white, dried-blood red and hellfire orange accents, dramatic rim lighting, strong readable silhouette, no text, no letters, no watermark."
+      }
+    },
+    "i1": {
+      "status": "done",
+      "cost_usd": 0.011,
+      "out": {
+        "image": "runs/batch-a/node-i1-image.png",
+        "image_size": "1600x1600"
+      }
+    },
+    "i2": {
+      "status": "done",
+      "cost_usd": 0.011,
+      "out": {
+        "image": "runs/batch-a/node-i2-image.png",
+        "image_size": "1600x1600"
+      }
+    },
+    "i3": {
+      "status": "done",
+      "cost_usd": 0.011,
+      "out": {
+        "image": "runs/batch-a/node-i3-image.png",
+        "image_size": "1600x1600"
+      }
+    },
+    "i4": {
+      "status": "done",
+      "cost_usd": 0.011,
+      "out": {
+        "image": "runs/batch-a/node-i4-image.png",
+        "image_size": "1600x1600"
+      }
+    },
+    "i5": {
+      "status": "done",
+      "cost_usd": 0.011,
+      "out": {
+        "image": "runs/batch-a/node-i5-image.png",
+        "image_size": "1600x1600"
+      }
+    },
+    "i6": {
+      "status": "done",
+      "cost_usd": 0.011,
+      "out": {
+        "image": "runs/batch-a/node-i6-image.png",
+        "image_size": "1600x1600"
+      }
+    },
+    "c1": {
+      "status": "skipped",
+      "cost_usd": null
+    }
+  },
+  "outputs": {
+    "hero": "runs/batch-a/hero.png",
+    "i1": "runs/batch-a/i1.png",
+    "husk": "runs/batch-a/husk.png",
+    "i2": "runs/batch-a/i2.png",
+    "cultist": "runs/batch-a/cultist.png",
+    "i3": "runs/batch-a/i3.png",
+    "wraith": "runs/batch-a/wraith.png",
+    "i4": "runs/batch-a/i4.png",
+    "brute": "runs/batch-a/brute.png",
+    "i5": "runs/batch-a/i5.png",
+    "boss": "runs/batch-a/boss.png",
+    "i6": "runs/batch-a/i6.png"
+  }
+}

@@ -1,0 +1,222 @@
+{
+  "graph": "graphs/batch-c-icons.noodle-graph.json",
+  "outdir": "runs/batch-c",
+  "warnings": [],
+  "balance_before": 30.19962287,
+  "cost_usd": 0.13199999999999998,
+  "cost_exact": true,
+  "remaining_balance": 30.14462287,
+  "errors": [],
+  "nodes": {
+    "t1": {
+      "status": "done",
+      "cost_usd": null,
+      "out": {
+        "text": "A single flaming crossbow bolt wreathed in hellfire-orange flame, diagonal. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    "t2": {
+      "status": "done",
+      "cost_usd": null,
+      "out": {
+        "text": "Two crossed glowing crossbow bolts forming an X over a small bone seal ring. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    "t3": {
+      "status": "done",
+      "cost_usd": null,
+      "out": {
+        "text": "A war drum made of stretched pale hide and black wood with bone drumsticks, faint orange sound rings. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    "t4": {
+      "status": "done",
+      "cost_usd": null,
+      "out": {
+        "text": "A long iron spike piercing through a cracked bone-white rune tablet, orange glow in the cracks. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    "t5": {
+      "status": "done",
+      "cost_usd": null,
+      "out": {
+        "text": "A brutal executioner's axe with a black haft and a chipped steel head, dried blood on the edge. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    "t6": {
+      "status": "done",
+      "cost_usd": null,
+      "out": {
+        "text": "A pair of worn grave-digger boots with tattered grey wind wisps swirling around them. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    "t7": {
+      "status": "done",
+      "cost_usd": null,
+      "out": {
+        "text": "An ornate brass chalice filled with glowing crimson liquid, a single drop falling. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    "t8": {
+      "status": "done",
+      "cost_usd": null,
+      "out": {
+        "text": "A dark lodestone horseshoe magnet pulling small glowing orange ash sparks toward it. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    "t9": {
+      "status": "done",
+      "cost_usd": null,
+      "out": {
+        "text": "A bone-white shield with a burning white candle in its centre, protective pale glow. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    "t10": {
+      "status": "done",
+      "cost_usd": null,
+      "out": {
+        "text": "A small glass vial of glowing crimson blood, corked, with a bone stopper. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    "t11": {
+      "status": "done",
+      "cost_usd": null,
+      "out": {
+        "text": "A black iron flask wreathed in orange wrath flames, skull-shaped stopper. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    "t12": {
+      "status": "done",
+      "cost_usd": null,
+      "out": {
+        "text": "A tall white saint's candle with a halo of pale light and melted wax over a brass holder. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    "i1": {
+      "status": "done",
+      "cost_usd": 0.011,
+      "out": {
+        "image": "runs/batch-c/node-i1-image.png",
+        "image_size": "1600x1600"
+      }
+    },
+    "i2": {
+      "status": "done",
+      "cost_usd": 0.011,
+      "out": {
+        "image": "runs/batch-c/node-i2-image.png",
+        "image_size": "1600x1600"
+      }
+    },
+    "i3": {
+      "status": "done",
+      "cost_usd": 0.011,
+      "out": {
+        "image": "runs/batch-c/node-i3-image.png",
+        "image_size": "1600x1600"
+      }
+    },
+    "i4": {
+      "status": "done",
+      "cost_usd": 0.011,
+      "out": {
+        "image": "runs/batch-c/node-i4-image.png",
+        "image_size": "1600x1600"
+      }
+    },
+    "i5": {
+      "status": "done",
+      "cost_usd": 0.011,
+      "out": {
+        "image": "runs/batch-c/node-i5-image.png",
+        "image_size": "1600x1600"
+      }
+    },
+    "i6": {
+      "status": "done",
+      "cost_usd": 0.011,
+      "out": {
+        "image": "runs/batch-c/node-i6-image.png",
+        "image_size": "1600x1600"
+      }
+    },
+    "i7": {
+      "status": "done",
+      "cost_usd": 0.011,
+      "out": {
+        "image": "runs/batch-c/node-i7-image.png",
+        "image_size": "1600x1600"
+      }
+    },
+    "i8": {
+      "status": "done",
+      "cost_usd": 0.011,
+      "out": {
+        "image": "runs/batch-c/node-i8-image.png",
+        "image_size": "1600x1600"
+      }
+    },
+    "i9": {
+      "status": "done",
+      "cost_usd": 0.011,
+      "out": {
+        "image": "runs/batch-c/node-i9-image.png",
+        "image_size": "1600x1600"
+      }
+    },
+    "i10": {
+      "status": "done",
+      "cost_usd": 0.011,
+      "out": {
+        "image": "runs/batch-c/node-i10-image.png",
+        "image_size": "1600x1600"
+      }
+    },
+    "i11": {
+      "status": "done",
+      "cost_usd": 0.011,
+      "out": {
+        "image": "runs/batch-c/node-i11-image.png",
+        "image_size": "1600x1600"
+      }
+    },
+    "i12": {
+      "status": "done",
+      "cost_usd": 0.011,
+      "out": {
+        "image": "runs/batch-c/node-i12-image.png",
+        "image_size": "1600x1600"
+      }
+    },
+    "c1": {
+      "status": "skipped",
+      "cost_usd": null
+    }
+  },
+  "outputs": {
+    "icon-hellfire": "runs/batch-c/icon-hellfire.png",
+    "i1": "runs/batch-c/i1.png",
+    "icon-twin": "runs/batch-c/icon-twin.png",
+    "i2": "runs/batch-c/i2.png",
+    "icon-cadence": "runs/batch-c/icon-cadence.png",
+    "i3": "runs/batch-c/i3.png",
+    "icon-pierce": "runs/batch-c/icon-pierce.png",
+    "i4": "runs/batch-c/i4.png",
+    "icon-axe": "runs/batch-c/icon-axe.png",
+    "i5": "runs/batch-c/i5.png",
+    "icon-boots": "runs/batch-c/icon-boots.png",
+    "i6": "runs/batch-c/i6.png",
+    "icon-chalice": "runs/batch-c/icon-chalice.png",
+    "i7": "runs/batch-c/i7.png",
+    "icon-magnet": "runs/batch-c/icon-magnet.png",
+    "i8": "runs/batch-c/i8.png",
+    "icon-ward": "runs/batch-c/icon-ward.png",
+    "i9": "runs/batch-c/i9.png",
+    "icon-vial": "runs/batch-c/icon-vial.png",
+    "i10": "runs/batch-c/i10.png",
+    "icon-draught": "runs/batch-c/icon-draught.png",
+    "i11": "runs/batch-c/i11.png",
+    "icon-candle": "runs/batch-c/icon-candle.png",
+    "i12": "runs/batch-c/i12.png"
+  }
+}

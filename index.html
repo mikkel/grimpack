@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GRIMPACK — Crack the seal. Survive the night.</title>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="assets/pack.jpg">
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <div class="brand">GRIM<span>PACK</span></div>
+    <div id="hud">
+      <div class="hud-item hp"><label>HP</label><div class="bar"><div id="hp-fill"></div></div><b id="hp-text">100</b></div>
+      <div class="hud-item"><label>Night</label><b id="hud-wave">—</b></div>
+      <div class="hud-item"><label>Ashes</label><b id="hud-ashes">0</b></div>
+      <div class="hud-item"><label>Slain</label><b id="hud-kills">0</b></div>
+      <div class="hud-item"><label>Time</label><b id="hud-time">0:00</b></div>
+      <div class="hud-item"><button id="btn-mute" title="Mute (M)">🔊</button><button id="btn-pause" title="Pause (P)">⏸</button></div>
+    </div>
+  </header>
+
+  <main>
+    <div id="stage">
+      <canvas id="game" width="960" height="640"></canvas>
+
+      <div id="title-screen" class="overlay">
+        <img class="title-art" src="assets/title-art.jpg" alt="Grimpack key art">
+        <div class="title-shade"></div>
+        <div class="title-content">
+          <h1>GRIM<span>PACK</span></h1>
+          <p class="tagline">Crack the seal. Raise your towers. Survive the night.</p>
+          <p class="howto">
+            <b>WASD / arrows</b> — move &nbsp;·&nbsp; your crossbow <b>fires on its own</b><br>
+            Clear a wave → <b>tear open a booster pack</b> → place towers, stack weapons &amp; relics.<br>
+            Ten nights. The fifth tolls for <b>The Abbot</b>. The tenth, for <b>Vesper, Mother of Bells</b>.
+          </p>
+          <button id="btn-start" class="big-btn">Begin the Vigil</button>
+          <p class="fineprint">All art generated with Nanoodle → NanoGPT for $0.286. No install, no mercy.</p>
+        </div>
+      </div>
+
+      <div id="end-screen" class="overlay hidden">
+        <div class="title-content">
+          <h1 id="end-title">THE NIGHT TAKES YOU</h1>
+          <p id="end-stats" class="howto"></p>
+          <button id="btn-restart" class="big-btn">Another Vigil</button>
+        </div>
+      </div>
+
+      <div id="boss-bar" class="hidden"><label id="boss-name">VESPER</label><div class="bar"><div id="boss-fill"></div></div></div>
+      <div id="wave-banner" class="hidden"></div>
+    </div>
+
+    <aside id="side">
+      <section id="build-panel">
+        <h2 id="phase-title">The Vigil Begins</h2>
+        <p id="phase-text">Open your first pack, place what the dead provide, then begin the night.</p>
+        <button id="btn-pack" class="pack-btn">
+          <img src="assets/pack.jpg" alt="Booster pack">
+          <span id="pack-btn-label">Open Pack — FREE</span>
+        </button>
+        <div id="hand-wrap">
+          <h3> Towers in hand <span id="hand-hint">(click a tower, then click the arena)</span></h3>
+          <div id="hand"></div>
+        </div>
+        <button id="btn-begin" class="big-btn">Begin Night 1 ☾</button>
+      </section>
+
+      <section id="collection-wrap">
+        <h3>Your Grimmoire</h3>
+        <div id="collection"><p class="empty">Nothing pulled yet. The pack provides.</p></div>
+      </section>
+
+      <section id="log-wrap">
+        <h3>Chronicle</h3>
+        <div id="log"></div>
+      </section>
+    </aside>
+  </main>
+</div>
+
+<div id="pack-modal" class="hidden">
+  <div class="pack-stage">
+    <div id="pack-closed">
+      <img id="pack-img" src="assets/pack.jpg" alt="Sealed grimpack">
+      <p>Click the pack to tear the seal…</p>
+    </div>
+    <div id="pack-cards" class="hidden"></div>
+    <button id="btn-collect" class="big-btn hidden">Collect All</button>
+  </div>
+</div>
+
+<script src="balance.js"></script>
+<script src="game.js"></script>
+</body>
+</html>

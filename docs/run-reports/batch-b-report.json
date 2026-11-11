@@ -1,0 +1,154 @@
+{
+  "graph": "graphs/batch-b-scenes.noodle-graph.json",
+  "outdir": "runs/batch-b",
+  "warnings": [],
+  "balance_before": 30.28762287,
+  "cost_usd": 0.08799999999999998,
+  "cost_exact": true,
+  "remaining_balance": 30.27662287,
+  "errors": [],
+  "nodes": {
+    "t1": {
+      "status": "done",
+      "cost_usd": null,
+      "out": {
+        "text": "Top-down view of a ruined cathedral arena floor for a video game: cracked black stone tiles, a huge faded bone-white ritual circle in the centre, dried blood stains, scattered rubble and broken pillars at the edges, candles in the corners, moody and dark, no characters. Dark gothic hand-painted 2D game art, deep blacks, bone white and hellfire orange accents, no text."
+      }
+    },
+    "t2": {
+      "status": "done",
+      "cost_usd": null,
+      "out": {
+        "text": "A sealed trading-card booster pack product shot, ornate black wax-sealed foil pack with an embossed bone-white skull sigil and gold trim, torn slightly at one corner with hellfire-orange light leaking out, floating on black. Dark gothic hand-painted 2D game art, deep black background, bone white, dried-blood red and hellfire orange accents, dramatic rim lighting, strong readable silhouette, no text, no letters, no watermark."
+      }
+    },
+    "t3": {
+      "status": "done",
+      "cost_usd": null,
+      "out": {
+        "text": "The back of a gothic trading card: ornate black and gold filigree border, a bone-white pentacle sigil in the centre over deep crimson, worn and ominous, fills the whole frame, no text, no letters. Dark gothic hand-painted art."
+      }
+    },
+    "t4": {
+      "status": "done",
+      "cost_usd": null,
+      "out": {
+        "text": "A gothic defensive tower made of stacked bones and skulls, a bone spire turret with a glowing orange crystal at its tip, on a small round stone base, game asset. Dark gothic hand-painted 2D game art, deep black background, bone white, dried-blood red and hellfire orange accents, dramatic rim lighting, strong readable silhouette, no text, no letters, no watermark."
+      }
+    },
+    "t5": {
+      "status": "done",
+      "cost_usd": null,
+      "out": {
+        "text": "A gothic defensive tower: a crooked iron frame holding a huge cracked brass grave bell, chains and a small glowing crimson lantern, on a round stone base, game asset. Dark gothic hand-painted 2D game art, deep black background, bone white, dried-blood red and hellfire orange accents, dramatic rim lighting, strong readable silhouette, no text, no letters, no watermark."
+      }
+    },
+    "t6": {
+      "status": "done",
+      "cost_usd": null,
+      "out": {
+        "text": "A gothic defensive tower: a black iron brazier pyre with roaring hellfire-orange flames and floating embers, skulls around its base, on a round stone base, game asset. Dark gothic hand-painted 2D game art, deep black background, bone white, dried-blood red and hellfire orange accents, dramatic rim lighting, strong readable silhouette, no text, no letters, no watermark."
+      }
+    },
+    "t7": {
+      "status": "done",
+      "cost_usd": null,
+      "out": {
+        "text": "A gothic defensive tower: a jagged pale-blue frost obelisk crystal rising from a black stone base, cold mist and small icicles, faint blue glow, game asset. Dark gothic hand-painted 2D game art, deep black background, bone white, dried-blood red and hellfire orange accents, dramatic rim lighting, strong readable silhouette, no text, no letters, no watermark."
+      }
+    },
+    "t8": {
+      "status": "done",
+      "cost_usd": null,
+      "out": {
+        "text": "Epic wide dark gothic key art: a lone hooded grave-knight stands in a ruined cathedral holding a torn-open glowing booster pack, cards flying out of it turning into bone towers and hellfire bolts, an army of skeletons and wraiths closing in from the dark edges, a huge horned bell demon looming behind. Hand-painted 2D game art, deep blacks, bone white, dried-blood red, hellfire orange, no text, no letters."
+      }
+    },
+    "i1": {
+      "status": "done",
+      "cost_usd": 0.011,
+      "out": {
+        "image": "runs/batch-b/node-i1-image.png",
+        "image_size": "1600x1600"
+      }
+    },
+    "i2": {
+      "status": "done",
+      "cost_usd": 0.011,
+      "out": {
+        "image": "runs/batch-b/node-i2-image.png",
+        "image_size": "1600x1600"
+      }
+    },
+    "i3": {
+      "status": "done",
+      "cost_usd": 0.011,
+      "out": {
+        "image": "runs/batch-b/node-i3-image.png",
+        "image_size": "1600x1600"
+      }
+    },
+    "i4": {
+      "status": "done",
+      "cost_usd": 0.011,
+      "out": {
+        "image": "runs/batch-b/node-i4-image.png",
+        "image_size": "1600x1600"
+      }
+    },
+    "i5": {
+      "status": "done",
+      "cost_usd": 0.011,
+      "out": {
+        "image": "runs/batch-b/node-i5-image.png",
+        "image_size": "1600x1600"
+      }
+    },
+    "i6": {
+      "status": "done",
+      "cost_usd": 0.011,
+      "out": {
+        "image": "runs/batch-b/node-i6-image.png",
+        "image_size": "1600x1600"
+      }
+    },
+    "i7": {
+      "status": "done",
+      "cost_usd": 0.011,
+      "out": {
+        "image": "runs/batch-b/node-i7-image.png",
+        "image_size": "1600x1600"
+      }
+    },
+    "i8": {
+      "status": "done",
+      "cost_usd": 0.011,
+      "out": {
+        "image": "runs/batch-b/node-i8-image.png",
+        "image_size": "1600x1600"
+      }
+    },
+    "c1": {
+      "status": "skipped",
+      "cost_usd": null
+    }
+  },
+  "outputs": {
+    "arena": "runs/batch-b/arena.png",
+    "i1": "runs/batch-b/i1.png",
+    "pack": "runs/batch-b/pack.png",
+    "i2": "runs/batch-b/i2.png",
+    "card-back": "runs/batch-b/card-back.png",
+    "i3": "runs/batch-b/i3.png",
+    "tower-bone": "runs/batch-b/tower-bone.png",
+    "i4": "runs/batch-b/i4.png",
+    "tower-bell": "runs/batch-b/tower-bell.png",
+    "i5": "runs/batch-b/i5.png",
+    "tower-pyre": "runs/batch-b/tower-pyre.png",
+    "i6": "runs/batch-b/i6.png",
+    "tower-frost": "runs/batch-b/tower-frost.png",
+    "i7": "runs/batch-b/i7.png",
+    "title-art": "runs/batch-b/title-art.png",
+    "i8": "runs/batch-b/i8.png"
+  }
+}

@@ -1,0 +1,445 @@
+{
+  "v": 1,
+  "nodes": [
+    {
+      "id": "c1",
+      "type": "comment",
+      "name": "GRIMPACK batch C icons",
+      "x": 40,
+      "y": -260,
+      "w": 700,
+      "fields": {
+        "text": "Batch C: 12 card icons for GRIMPACK (weapons, relics, consumables)."
+      }
+    },
+    {
+      "id": "t1",
+      "type": "text",
+      "name": "icon-hellfire",
+      "x": 40,
+      "y": 300,
+      "w": 320,
+      "fields": {
+        "text": "A single flaming crossbow bolt wreathed in hellfire-orange flame, diagonal. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    {
+      "id": "i1",
+      "type": "image",
+      "name": "icon-hellfire",
+      "x": 420,
+      "y": 300,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t2",
+      "type": "text",
+      "name": "icon-twin",
+      "x": 40,
+      "y": 600,
+      "w": 320,
+      "fields": {
+        "text": "Two crossed glowing crossbow bolts forming an X over a small bone seal ring. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    {
+      "id": "i2",
+      "type": "image",
+      "name": "icon-twin",
+      "x": 420,
+      "y": 600,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t3",
+      "type": "text",
+      "name": "icon-cadence",
+      "x": 40,
+      "y": 900,
+      "w": 320,
+      "fields": {
+        "text": "A war drum made of stretched pale hide and black wood with bone drumsticks, faint orange sound rings. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    {
+      "id": "i3",
+      "type": "image",
+      "name": "icon-cadence",
+      "x": 420,
+      "y": 900,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t4",
+      "type": "text",
+      "name": "icon-pierce",
+      "x": 40,
+      "y": 1200,
+      "w": 320,
+      "fields": {
+        "text": "A long iron spike piercing through a cracked bone-white rune tablet, orange glow in the cracks. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    {
+      "id": "i4",
+      "type": "image",
+      "name": "icon-pierce",
+      "x": 420,
+      "y": 1200,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t5",
+      "type": "text",
+      "name": "icon-axe",
+      "x": 40,
+      "y": 1500,
+      "w": 320,
+      "fields": {
+        "text": "A brutal executioner's axe with a black haft and a chipped steel head, dried blood on the edge. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    {
+      "id": "i5",
+      "type": "image",
+      "name": "icon-axe",
+      "x": 420,
+      "y": 1500,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t6",
+      "type": "text",
+      "name": "icon-boots",
+      "x": 40,
+      "y": 1800,
+      "w": 320,
+      "fields": {
+        "text": "A pair of worn grave-digger boots with tattered grey wind wisps swirling around them. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    {
+      "id": "i6",
+      "type": "image",
+      "name": "icon-boots",
+      "x": 420,
+      "y": 1800,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t7",
+      "type": "text",
+      "name": "icon-chalice",
+      "x": 40,
+      "y": 2100,
+      "w": 320,
+      "fields": {
+        "text": "An ornate brass chalice filled with glowing crimson liquid, a single drop falling. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    {
+      "id": "i7",
+      "type": "image",
+      "name": "icon-chalice",
+      "x": 420,
+      "y": 2100,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t8",
+      "type": "text",
+      "name": "icon-magnet",
+      "x": 40,
+      "y": 2400,
+      "w": 320,
+      "fields": {
+        "text": "A dark lodestone horseshoe magnet pulling small glowing orange ash sparks toward it. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    {
+      "id": "i8",
+      "type": "image",
+      "name": "icon-magnet",
+      "x": 420,
+      "y": 2400,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t9",
+      "type": "text",
+      "name": "icon-ward",
+      "x": 40,
+      "y": 2700,
+      "w": 320,
+      "fields": {
+        "text": "A bone-white shield with a burning white candle in its centre, protective pale glow. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    {
+      "id": "i9",
+      "type": "image",
+      "name": "icon-ward",
+      "x": 420,
+      "y": 2700,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t10",
+      "type": "text",
+      "name": "icon-vial",
+      "x": 40,
+      "y": 3000,
+      "w": 320,
+      "fields": {
+        "text": "A small glass vial of glowing crimson blood, corked, with a bone stopper. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    {
+      "id": "i10",
+      "type": "image",
+      "name": "icon-vial",
+      "x": 420,
+      "y": 3000,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t11",
+      "type": "text",
+      "name": "icon-draught",
+      "x": 40,
+      "y": 3300,
+      "w": 320,
+      "fields": {
+        "text": "A black iron flask wreathed in orange wrath flames, skull-shaped stopper. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    {
+      "id": "i11",
+      "type": "image",
+      "name": "icon-draught",
+      "x": 420,
+      "y": 3300,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t12",
+      "type": "text",
+      "name": "icon-candle",
+      "x": 40,
+      "y": 3600,
+      "w": 320,
+      "fields": {
+        "text": "A tall white saint's candle with a halo of pale light and melted wax over a brass holder. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    {
+      "id": "i12",
+      "type": "image",
+      "name": "icon-candle",
+      "x": 420,
+      "y": 3600,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    }
+  ],
+  "links": [
+    {
+      "id": "l1",
+      "from": {
+        "node": "t1",
+        "port": "text"
+      },
+      "to": {
+        "node": "i1",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l2",
+      "from": {
+        "node": "t2",
+        "port": "text"
+      },
+      "to": {
+        "node": "i2",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l3",
+      "from": {
+        "node": "t3",
+        "port": "text"
+      },
+      "to": {
+        "node": "i3",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l4",
+      "from": {
+        "node": "t4",
+        "port": "text"
+      },
+      "to": {
+        "node": "i4",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l5",
+      "from": {
+        "node": "t5",
+        "port": "text"
+      },
+      "to": {
+        "node": "i5",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l6",
+      "from": {
+        "node": "t6",
+        "port": "text"
+      },
+      "to": {
+        "node": "i6",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l7",
+      "from": {
+        "node": "t7",
+        "port": "text"
+      },
+      "to": {
+        "node": "i7",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l8",
+      "from": {
+        "node": "t8",
+        "port": "text"
+      },
+      "to": {
+        "node": "i8",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l9",
+      "from": {
+        "node": "t9",
+        "port": "text"
+      },
+      "to": {
+        "node": "i9",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l10",
+      "from": {
+        "node": "t10",
+        "port": "text"
+      },
+      "to": {
+        "node": "i10",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l11",
+      "from": {
+        "node": "t11",
+        "port": "text"
+      },
+      "to": {
+        "node": "i11",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l12",
+      "from": {
+        "node": "t12",
+        "port": "text"
+      },
+      "to": {
+        "node": "i12",
+        "port": "prompt"
+      }
+    }
+  ],
+  "nid": 30,
+  "lid": 30,
+  "view": {
+    "panX": 30,
+    "panY": 280,
+    "scale": 0.6
+  }
+}

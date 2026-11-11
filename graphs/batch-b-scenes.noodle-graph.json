@@ -1,0 +1,305 @@
+{
+  "v": 1,
+  "nodes": [
+    {
+      "id": "c1",
+      "type": "comment",
+      "name": "batch-b-scenes",
+      "x": 40,
+      "y": -260,
+      "w": 700,
+      "fields": {
+        "text": "batch-b-scenes: one text->image branch per game asset for GRIMPACK. Style-locked gothic prompts; outputs land as node-iN-image.png."
+      }
+    },
+    {
+      "id": "t1",
+      "type": "text",
+      "name": "arena",
+      "x": 40,
+      "y": 300,
+      "w": 320,
+      "fields": {
+        "text": "Top-down view of a ruined cathedral arena floor for a video game: cracked black stone tiles, a huge faded bone-white ritual circle in the centre, dried blood stains, scattered rubble and broken pillars at the edges, candles in the corners, moody and dark, no characters. Dark gothic hand-painted 2D game art, deep blacks, bone white and hellfire orange accents, no text."
+      }
+    },
+    {
+      "id": "i1",
+      "type": "image",
+      "name": "arena",
+      "x": 420,
+      "y": 300,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t2",
+      "type": "text",
+      "name": "pack",
+      "x": 40,
+      "y": 600,
+      "w": 320,
+      "fields": {
+        "text": "A sealed trading-card booster pack product shot, ornate black wax-sealed foil pack with an embossed bone-white skull sigil and gold trim, torn slightly at one corner with hellfire-orange light leaking out, floating on black. Dark gothic hand-painted 2D game art, deep black background, bone white, dried-blood red and hellfire orange accents, dramatic rim lighting, strong readable silhouette, no text, no letters, no watermark."
+      }
+    },
+    {
+      "id": "i2",
+      "type": "image",
+      "name": "pack",
+      "x": 420,
+      "y": 600,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t3",
+      "type": "text",
+      "name": "card-back",
+      "x": 40,
+      "y": 900,
+      "w": 320,
+      "fields": {
+        "text": "The back of a gothic trading card: ornate black and gold filigree border, a bone-white pentacle sigil in the centre over deep crimson, worn and ominous, fills the whole frame, no text, no letters. Dark gothic hand-painted art."
+      }
+    },
+    {
+      "id": "i3",
+      "type": "image",
+      "name": "card-back",
+      "x": 420,
+      "y": 900,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t4",
+      "type": "text",
+      "name": "tower-bone",
+      "x": 40,
+      "y": 1200,
+      "w": 320,
+      "fields": {
+        "text": "A gothic defensive tower made of stacked bones and skulls, a bone spire turret with a glowing orange crystal at its tip, on a small round stone base, game asset. Dark gothic hand-painted 2D game art, deep black background, bone white, dried-blood red and hellfire orange accents, dramatic rim lighting, strong readable silhouette, no text, no letters, no watermark."
+      }
+    },
+    {
+      "id": "i4",
+      "type": "image",
+      "name": "tower-bone",
+      "x": 420,
+      "y": 1200,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t5",
+      "type": "text",
+      "name": "tower-bell",
+      "x": 40,
+      "y": 1500,
+      "w": 320,
+      "fields": {
+        "text": "A gothic defensive tower: a crooked iron frame holding a huge cracked brass grave bell, chains and a small glowing crimson lantern, on a round stone base, game asset. Dark gothic hand-painted 2D game art, deep black background, bone white, dried-blood red and hellfire orange accents, dramatic rim lighting, strong readable silhouette, no text, no letters, no watermark."
+      }
+    },
+    {
+      "id": "i5",
+      "type": "image",
+      "name": "tower-bell",
+      "x": 420,
+      "y": 1500,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t6",
+      "type": "text",
+      "name": "tower-pyre",
+      "x": 40,
+      "y": 1800,
+      "w": 320,
+      "fields": {
+        "text": "A gothic defensive tower: a black iron brazier pyre with roaring hellfire-orange flames and floating embers, skulls around its base, on a round stone base, game asset. Dark gothic hand-painted 2D game art, deep black background, bone white, dried-blood red and hellfire orange accents, dramatic rim lighting, strong readable silhouette, no text, no letters, no watermark."
+      }
+    },
+    {
+      "id": "i6",
+      "type": "image",
+      "name": "tower-pyre",
+      "x": 420,
+      "y": 1800,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t7",
+      "type": "text",
+      "name": "tower-frost",
+      "x": 40,
+      "y": 2100,
+      "w": 320,
+      "fields": {
+        "text": "A gothic defensive tower: a jagged pale-blue frost obelisk crystal rising from a black stone base, cold mist and small icicles, faint blue glow, game asset. Dark gothic hand-painted 2D game art, deep black background, bone white, dried-blood red and hellfire orange accents, dramatic rim lighting, strong readable silhouette, no text, no letters, no watermark."
+      }
+    },
+    {
+      "id": "i7",
+      "type": "image",
+      "name": "tower-frost",
+      "x": 420,
+      "y": 2100,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t8",
+      "type": "text",
+      "name": "title-art",
+      "x": 40,
+      "y": 2400,
+      "w": 320,
+      "fields": {
+        "text": "Epic wide dark gothic key art: a lone hooded grave-knight stands in a ruined cathedral holding a torn-open glowing booster pack, cards flying out of it turning into bone towers and hellfire bolts, an army of skeletons and wraiths closing in from the dark edges, a huge horned bell demon looming behind. Hand-painted 2D game art, deep blacks, bone white, dried-blood red, hellfire orange, no text, no letters."
+      }
+    },
+    {
+      "id": "i8",
+      "type": "image",
+      "name": "title-art",
+      "x": 420,
+      "y": 2400,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    }
+  ],
+  "links": [
+    {
+      "id": "l1",
+      "from": {
+        "node": "t1",
+        "port": "text"
+      },
+      "to": {
+        "node": "i1",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l2",
+      "from": {
+        "node": "t2",
+        "port": "text"
+      },
+      "to": {
+        "node": "i2",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l3",
+      "from": {
+        "node": "t3",
+        "port": "text"
+      },
+      "to": {
+        "node": "i3",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l4",
+      "from": {
+        "node": "t4",
+        "port": "text"
+      },
+      "to": {
+        "node": "i4",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l5",
+      "from": {
+        "node": "t5",
+        "port": "text"
+      },
+      "to": {
+        "node": "i5",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l6",
+      "from": {
+        "node": "t6",
+        "port": "text"
+      },
+      "to": {
+        "node": "i6",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l7",
+      "from": {
+        "node": "t7",
+        "port": "text"
+      },
+      "to": {
+        "node": "i7",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l8",
+      "from": {
+        "node": "t8",
+        "port": "text"
+      },
+      "to": {
+        "node": "i8",
+        "port": "prompt"
+      }
+    }
+  ],
+  "nid": 10,
+  "lid": 10,
+  "view": {
+    "panX": 30,
+    "panY": 280,
+    "scale": 0.6
+  }
+}

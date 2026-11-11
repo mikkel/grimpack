@@ -734,7 +734,7 @@
         if (Math.hypot(c.vx, c.vy) < 4) { c.vx = 0; c.vy = 0; }
       }
     }
-    corpses = corpses.filter(c => c.t < 2.6);
+    corpses = corpses.filter(c => c.t < 3.4);
     parts = parts.filter(p => p.t < p.life);
     for (const t of texts) { t.t += dt; t.y -= 34 * dt; } texts = texts.filter(t => t.t < 0.9);
     for (const z of zaps) z.t += dt; zaps = zaps.filter(z => z.t < z.ttl);
@@ -873,7 +873,7 @@
         if (!e.hiddenNow && Math.hypot(e.x - b.x, e.y - b.y) < e.r + 5) {
           b.hits.add(e);
           damageEnemy(e, b.dmg, b.crit);
-          if (!e.dead) { applyImpulse(e, b.vx * b.dmg * 0.011, b.vy * b.dmg * 0.011); e.lastKbX = b.vx * 0.35; e.lastKbY = b.vy * 0.35; }
+          if (!e.dead) { applyImpulse(e, b.vx * b.dmg * 0.030, b.vy * b.dmg * 0.030); e.lastKbX = b.vx * 0.5; e.lastKbY = b.vy * 0.5; }
           const drink = Math.min(0.45, massOf(e) * 0.13); b.vx *= (1 - drink); b.vy *= (1 - drink);
           if (!b.crit) SFX.hit();
           if (b.chillSecs) { const wasBurning = e.burnT > 0; e.slowT = Math.max(e.slowT, b.chillSecs); e.slowF = Math.max(e.slowF, b.chillSlow); e.chillT = Math.max(e.chillT, b.chillSecs); if (wasBurning) maybeShock(e, b.dmg); }
@@ -996,16 +996,24 @@
         const rel = Math.abs(((e.vx || 0) - (o.vx || 0)) * ux + ((e.vy || 0) - (o.vy || 0)) * uy);
         if (rel > 230) { e.staggerT = Math.max(e.staggerT || 0, 0.3); o.staggerT = Math.max(o.staggerT || 0, 0.3); } } }
       if (e.type !== "wraith") collideTiles(e, false);
-      // stuck failsafe: the cathedral rejects the wedged dead
-      const spdNow = Math.hypot(e.vx, e.vy);
-      if (waveActive && spdNow < 9 && !(e.staggerT > 0) && e.type !== "cultist") {
-        e.stuckT = (e.stuckT || 0) + dt;
-        if (e.stuckT > 2.6) {
-          let [px2, py2] = nearestPassable(e.x, e.y);
-          if (Math.hypot(px2 - e.x, py2 - e.y) < 4) { const [mxp, myp] = nearestPassable((e.x + player.x) / 2, (e.y + player.y) / 2); px2 = mxp; py2 = myp; }
-          e.x = px2; e.y = py2; e.stuckT = 0; burst(e.x, e.y, "#8a7f6a", 6);
+      // stuck failsafe: the cathedral rejects the wedged dead (displacement, not intent)
+      if (waveActive && e.type !== "cultist") {
+        if (e.markX == null) { e.markX = e.x; e.markY = e.y; e.markT = 0; }
+        e.markT += dt;
+        if (e.markT > 2.2) {
+          const moved = Math.hypot(e.x - e.markX, e.y - e.markY);
+          if (moved < 12 && !(e.staggerT > 0)) {
+            // pinned: chew an adjacent blocker if there is one, else the floor rejects it
+            let chewed = false;
+            const [ec2, er2] = tileOf(e.x, e.y);
+            for (let dr = -1; dr <= 1 && !chewed; dr++) for (let dc = -1; dc <= 1; dc++) {
+              if (charAt(ec2 + dc, er2 + dr) === 'r' || barrierAt(ec2 + dc, er2 + dr)) { damageBlocker(ec2 + dc, er2 + dr, e.dmg * 2); chewed = true; }
+            }
+            if (!chewed) { const [mxp, myp] = nearestPassable((e.x + player.x) / 2, (e.y + player.y) / 2); e.x = mxp; e.y = myp; e.vx = 0; e.vy = 0; burst(e.x, e.y, "#8a7f6a", 6); }
+          }
+          e.markX = e.x; e.markY = e.y; e.markT = 0;
         }
-      } else e.stuckT = 0;
+      }
       e.animT += dt * (2.2 + Math.hypot(e.vx, e.vy) / 26);
       if (e.atkPop > 0) e.atkPop -= dt;
       e.hitCd -= dt;
@@ -1078,17 +1086,6 @@
       const ch = grid[r] ? grid[r][c] : '.';
       if (ch === '#') { shadow(c * TILE + 18, r * TILE + 32, 20); ctx.drawImage(IMG.wall, c * TILE - 2, r * TILE - 2, TILE + 4, TILE + 4); }
       else if (ch === 'r') { shadow(c * TILE + 18, r * TILE + 30, 19); drawSpr(IMG.rubble, c * TILE + 18, r * TILE + 18, TILE * 1.3, {}); const hpF = (rubbleHp[c + "," + r] || G.TERRAIN.rubbleHp) / G.TERRAIN.rubbleHp; if (hpF < 1) { ctx.fillStyle = `rgba(0,0,0,${(1 - hpF) * 0.45})`; ctx.fillRect(c * TILE + 3, r * TILE + 3, TILE - 6, TILE - 6); } }
-    }
-    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
-      if (!grid[r] || grid[r][c] !== 'f') continue;
-      const x = c * TILE + 18, y = r * TILE + 18, ph = Math.sin(performance.now() / 1400 + c * 1.7 + r * 2.3) * 0.5 + 0.5;
-      const gr = ctx.createRadialGradient(x, y, 2, x, y, TILE * 0.95);
-      gr.addColorStop(0, `rgba(183,196,216,${0.34 + ph * 0.10})`); gr.addColorStop(0.55, `rgba(163,178,200,${0.20 + ph * 0.06})`); gr.addColorStop(1, "rgba(163,178,200,0)");
-      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, TILE * 0.95, 0, 6.283); ctx.fill();
-      const wx = x + Math.sin(performance.now() / 2100 + c * 3.1 + r) * 9, wy = y + Math.cos(performance.now() / 2600 + r * 2.2) * 6;
-      const wg = ctx.createRadialGradient(wx, wy, 1, wx, wy, 15);
-      wg.addColorStop(0, "rgba(210,220,238,0.20)"); wg.addColorStop(1, "rgba(210,220,238,0)");
-      ctx.fillStyle = wg; ctx.beginPath(); ctx.arc(wx, wy, 15, 0, 6.283); ctx.fill();
     }
     for (const em of embers) { const tw2 = 0.35 + Math.sin(performance.now() / 300 + em.ph) * 0.2; ctx.fillStyle = `rgba(255,150,60,${tw2})`; ctx.fillRect(em.x - 1.2, em.y - 1.2, 2.4, 2.4); }
     if (state === "wave") for (const bz of WORLD.braziers) {
@@ -1177,10 +1174,19 @@
     // the fallen: bodies topple, sink, and become the blood decals below them
     for (const c of corpses) {
       const rot = c.dir * Math.min(1, c.t / 0.45) * 1.45 + (c.spin || 0);
-      const sink = c.t > 1.6 ? (c.t - 1.6) * 8 : 0;
-      const al = c.t < 1.7 ? 0.97 : Math.max(0, 0.97 - (c.t - 1.7) * 1.1);
+      const sink = c.t > 2.3 ? (c.t - 2.3) * 8 : 0;
+      const al = c.t < 2.4 ? 0.97 : Math.max(0, 0.97 - (c.t - 2.4) * 0.95);
       shadow(c.x, c.y + c.s * 0.42, c.s * 0.5);
       drawSpr(c.img, c.x, c.y + sink, c.s * 1.5, { rot, alpha: al });
+    }
+    // GRAVE-FOG pools: filled mist with a silhouette — drawn late so nothing washes it out
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      if (!grid[r] || grid[r][c] !== 'f') continue;
+      const x = c * TILE + 18, y = r * TILE + 18, ph = Math.sin(performance.now() / 1500 + c * 1.7 + r * 2.3) * 0.5 + 0.5;
+      ctx.fillStyle = `rgba(169,184,206,${0.30 + ph * 0.08})`;
+      ctx.beginPath(); ctx.arc(x, y, 27, 0, 6.283); ctx.fill();
+      ctx.fillStyle = `rgba(198,210,228,${0.20 + ph * 0.07})`;
+      ctx.beginPath(); ctx.arc(x + Math.sin(performance.now() / 2300 + c * 3.1) * 6, y + Math.cos(performance.now() / 2700 + r * 2.2) * 4, 16, 0, 6.283); ctx.fill();
     }
     // enemies
     for (const e of enemies) {
@@ -1203,6 +1209,7 @@
       if (e.elite) { ctx.strokeStyle = "#ffd94a"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 5 + Math.sin(performance.now() / 200) * 1.5, 0, 6.283); ctx.stroke(); }
       if (e.enraged) { ctx.strokeStyle = "rgba(255,60,30,0.8)"; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 3, 0, 6.283); ctx.stroke(); }
       if (e.markT > 0) { ctx.fillStyle = "#ffd94a"; ctx.font = "bold 12px system-ui"; ctx.textAlign = "center"; ctx.fillText("✛", e.x, e.y - e.r - 14); }
+      if (e.type === "cultist") { ctx.fillStyle = "rgba(200,140,255,0.9)"; ctx.font = "bold 11px system-ui"; ctx.textAlign = "center"; ctx.fillText("✦", e.x, e.y - e.r - 13); }
       if (e.chillT > 0) { ctx.fillStyle = "rgba(160,220,255,0.85)"; ctx.font = "10px system-ui"; ctx.textAlign = "center"; ctx.fillText("❄", e.x + e.r, e.y - e.r); }
       if (e.burnT > 0) { ctx.fillStyle = "rgba(255,140,40,0.9)"; ctx.font = "10px system-ui"; ctx.textAlign = "center"; ctx.fillText("🔥", e.x - e.r, e.y - e.r); }
       if (e.hp < e.maxHp) {
@@ -1260,6 +1267,11 @@
     ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
     if (hitFlash > 0) { ctx.fillStyle = `rgba(215,38,61,${hitFlash * 0.30})`; ctx.fillRect(0, 0, W, H); }
     if (player.hp < player.maxHp * 0.30 && state === "wave") { const pulse = 0.10 + Math.sin(performance.now() / 240) * 0.05; ctx.fillStyle = `rgba(215,38,61,${pulse})`; ctx.fillRect(0, 0, W, H); }
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      if (!grid[r] || grid[r][c] !== 'f') continue;
+      ctx.fillStyle = "rgba(190,203,224,0.10)";
+      ctx.beginPath(); ctx.arc(c * TILE + 18, r * TILE + 18, 24, 0, 6.283); ctx.fill();
+    }
   }
   // ---------- input ----------
   function canvasPos(ev) { const r = cv.getBoundingClientRect(); return { x: (ev.clientX - r.left) * W / r.width, y: (ev.clientY - r.top) * H / r.height, inside: true }; }
@@ -1287,7 +1299,12 @@
       updateHUD(); updateBarrierButton(); return;
     }
     if (selectedHand) {
-      if (!placementOK(p.x, p.y)) { log("Nothing stands on wall, rubble, fog or barricade. Choose open ground."); return; }
+      if (!placementOK(p.x, p.y)) {
+        let snapped = null;
+        for (let rad = 8; rad <= 34 && !snapped; rad += 6) for (let a2 = 0; a2 < 6.28; a2 += 0.6) { const qx = p.x + Math.cos(a2) * rad, qy = p.y + Math.sin(a2) * rad; if (placementOK(qx, qy)) { snapped = { x: qx, y: qy }; break; } }
+        if (!snapped) { log("Nothing stands on wall, rubble, fog or barricade. Choose open ground."); return; }
+        p.x = snapped.x; p.y = snapped.y;
+      }
       if (towers.length >= G.PACK.maxFieldTowers) { log(`The floor holds only ${G.PACK.maxFieldTowers} towers.`); return; }
       const h = hand[selectedHand];
       const tw = { type: selectedHand, x: p.x, y: p.y, level: 1, mult: h.bestMult, cd: 0, tollAnim: 0, recoil: 0, faceA: 0 };

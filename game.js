@@ -116,6 +116,7 @@
   const dClamp01 = v => Math.max(0, Math.min(1, v));
   const dSmooth = v => { v = dClamp01(v); return v * v * (3 - 2 * v); };
   let corpses = [], embers = [], titheId = null, tonightTithe = null;
+  let dyingFx = []; // v18: the fall — enemies die over ~0.9s before they are corpses
   const DEBUG = new URLSearchParams(location.search).has("debug");
   const corpseStats = { spawned: 0, maxLive: 0 };
   let diff = G.DIFFS.vigil, omen = null, nextOmen = null;
@@ -130,7 +131,7 @@
       regen: 0, shieldCd: 0, shieldMax: 0, shieldReady: false, revives: 0, wrathNext: false, wrathWave: false,
       fireCd: 0, invuln: 0, r: B.radius, chillSlow: 0, chillSecs: 0, stormEvery: 0, hitCount: 0, vx: 0, vy: 0, walkPh: 0, kx: 0, ky: 0, dashId: 0,
       thorns: 0, brandPct: 0, dashCd: 0, dashT: 0, dashDx: 0, dashDy: 0, lastDx: 1, lastDy: 0 };
-    enemies = []; bolts = []; ebolts = []; towers = []; shards = []; zones = []; parts = []; texts = []; decals = []; zaps = []; corpses = []; embers = []; dying = null; deathEyes = [];
+    enemies = []; bolts = []; ebolts = []; towers = []; shards = []; zones = []; parts = []; texts = []; decals = []; zaps = []; corpses = []; embers = []; dying = null; deathEyes = []; dyingFx = [];
     corpseStats.spawned = 0; corpseStats.maxLive = 0;
     for (let i = 0; i < 26; i++) embers.push({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - 0.5) * 9, vy: -6 - Math.random() * 12, ph: Math.random() * 6.28 });
     titheId = null; tonightTithe = null; $("tithe-box").classList.add("hidden"); $("pack-prompt").classList.add("hidden");
@@ -1236,6 +1237,17 @@
     wonGame ? SFX.win() : SFX.lose(); updateHUD();
   }
   function burst(x, y, color, n) { for (let i = 0; i < n && parts.length < 460; i++) { const a = Math.random() * 6.28, s = 40 + Math.random() * 140; parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.4 + Math.random() * 0.4, t: 0, color, size: 1.5 + Math.random() * 2.5 }); } }
+  // Eye geometry per type, measured off the sprite art (v17.2). Shared by
+  // the living render and the v18 death fall — the eyes die last.
+  function eyeSpecFor(type) {
+    return type === "husk" ? { oy: -1.16, cx: -0.10, sep: 0.17, col: "#ff4a2e", er: 2.6 }
+      : type === "cultist" ? { oy: -1.02, cx: -0.09, sep: 0, col: "#e6ccff", er: 3.4 }
+      : type === "wraith" ? { oy: -1.22, cx: 0, sep: 0, col: "#dff4ff", er: 3.2 }
+      : type === "plague" ? { oy: -1.17, cx: -0.28, sep: 0, col: "#b6d94a", er: 2.6 }
+      : type === "brute" ? { oy: -1.05, cx: -0.03, sep: 0.13, col: "#ffb03a", er: 2.4 }
+      : type === "abbot" ? { oy: -0.68, cx: 0, sep: 0.05, col: "#ffb03a", er: 3.2 }
+      : { oy: -0.97, cx: 0.01, sep: 0.06, col: "#ff2e4a", er: 3.2 };
+  }
   function floatText(x, y, txt, color) { if (texts.length < 44) texts.push({ x, y, txt, color, t: 0 }); }
   function maybeShock(e, baseDmg) {
     if (!hasSyn("thermal") || e.shockCd > 0 || e.dead) return;
@@ -1253,14 +1265,18 @@
     if (e.hp <= 0 && !e.dead) {
       e.dead = true; kills++; streak++; SFX.die();
       if (e.body) { MW.remove(world, e.body); e.body = null; }
-      const co = { img: e.img, x: e.x, y: e.y, s: e.r * 3.4, t: 0, dir: Math.random() < 0.5 ? -1 : 1, boss: e.boss, vx: 0, vy: 0, spin: 0, av: 0, smear: 0, px: e.x, py: e.y };
-      corpses.push(co); corpseStats.spawned++; if (corpses.length > corpseStats.maxLive) corpseStats.maxLive = corpses.length; if (corpses.length > 40) { const old = corpses.shift(); if (old.body) MW.remove(world, old.body); }
-      co.body = MB.circle(e.x, e.y, Math.max(6, e.r * 0.8), { friction: 0.1, frictionAir: 0.055, restitution: 0.25, density: bodyDensity(0.7, Math.max(6, e.r * 0.8)), label: "corpse" });
-      MV.setVelocity(co.body, { x: ((e.vx || 0) * 1.2 + (e.lastKbX || 0)) / 60, y: ((e.vy || 0) * 1.2 + (e.lastKbY || 0)) / 60 });
-      MV.setAngularVelocity(co.body, (Math.random() - 0.5) * 0.09 + ((e.lastKbX || 0) * 0.00012));
-      MW.add(world, co.body);
-      burst(e.x, e.y, e.type === "wraith" ? "#9fd8ff" : e.type === "plague" ? "#b6d94a" : "#c93b2e", e.boss ? 46 : 10);
-      decals.push({ x: e.x, y: e.y, r: e.r * (0.8 + Math.random() * 0.7), a: 0.34 }); if (decals.length > 260) decals.shift();
+      // v18 THE FALL: no instant swap to a corpse (and never the old 1.5x
+      // corpse — the dead INFLATED, which is why death read as a cartoon).
+      // The enemy now dies over ~0.9s in dyingFx — jerk, spasm, collapse —
+      // and only then settles into a corpse, smaller than it lived.
+      const away = Math.max(14, Math.hypot(e.x - player.x, e.y - player.y));
+      dyingFx.push({ img: e.img, type: e.type, boss: e.boss, r: e.r, x: e.x, y: e.y,
+        vx: (e.vx || 0) * 1.15 + (e.lastKbX || 0) * 0.5, vy: (e.vy || 0) * 1.15 + (e.lastKbY || 0) * 0.5,
+        kbx: (e.x - player.x) / away, kby: (e.y - player.y) / away,
+        t: 0, dur: e.boss ? 1.5 : e.type === "brute" ? 1.05 : 0.85,
+        fallSide: ((e.x - player.x) * 0.7 + (e.vx || 0)) >= 0 ? 1 : -1, wob: e.wob || 0 });
+      if (dyingFx.length > 24) settleCorpse(dyingFx.shift());
+      burst(e.x, e.y, e.type === "wraith" ? "#9fd8ff" : e.type === "plague" ? "#b6d94a" : "#c93b2e", e.boss ? 46 : 7);
       const ashN = Math.round(e.ash * (omen && omen.ashMult ? omen.ashMult : 1));
       for (let i = 0; i < ashN; i++) shards.push({ x: e.x + (Math.random() * 24 - 12), y: e.y + (Math.random() * 24 - 12), vx: 0, vy: 0, t: Math.random() * 6, age: 0 });
       if (streak > 0 && streak % 25 === 0) { ashes += 5; floatText(player.x, player.y - 40, "RAMPAGE +5 ash", "#ff7a26"); log(`Rampage — ${streak} slain without a scratch. The dead provide (+5 ashes).`); updatePackButton(); }
@@ -1268,6 +1284,19 @@
       if (e.type === "plague" && !e.exploded) explodePlague(e);
       if (e.boss) { bossRef = null; shake = 14; hitStop = Math.max(hitStop, 0.12); log(e.type === "vesper" ? "VESPER FALLS." : "The Abbot is silenced. His ashes scatter — collect them."); }
     }
+  }
+  // v18: a finished fall becomes a corpse — folded (sy 0.60), a touch
+  // SMALLER than life (x0.94), holding its final tip, with one post-mortem
+  // jerk scheduled a half-second later. The blood decal lands here now,
+  // not at the killing blow.
+  function settleCorpse(d) {
+    const co = { img: d.img, x: d.x, y: d.y, s: d.r * 3.4, t: 0, dir: d.fallSide, boss: d.boss, vx: 0, vy: 0, spin: 0, av: 0, smear: 0, px: d.x, py: d.y, rotZ: d.fallSide * 1.35, sy: 0.60, jerkT: 0.45 + Math.random() * 0.9, jerk: 0 };
+    corpses.push(co); corpseStats.spawned++; if (corpses.length > corpseStats.maxLive) corpseStats.maxLive = corpses.length; if (corpses.length > 40) { const old = corpses.shift(); if (old.body) MW.remove(world, old.body); }
+    co.body = MB.circle(d.x, d.y, Math.max(6, d.r * 0.8), { friction: 0.1, frictionAir: 0.055, restitution: 0.25, density: bodyDensity(0.7, Math.max(6, d.r * 0.8)), label: "corpse" });
+    MV.setVelocity(co.body, { x: (d.vx || 0) / 60, y: (d.vy || 0) / 60 });
+    MV.setAngularVelocity(co.body, d.fallSide * 0.05);
+    MW.add(world, co.body);
+    decals.push({ x: d.x, y: d.y, r: d.r * (0.8 + Math.random() * 0.7), a: 0.34 }); if (decals.length > 260) decals.shift();
   }
   function explodePlague(e) {
     e.exploded = true; SFX.boom(); shake = Math.max(shake, 7);
@@ -1374,8 +1403,17 @@
     // embers, floating texts, zaps, blood never forgets
     for (const p of parts) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.92; p.vy *= 0.92; }
     for (const em of embers) { em.x += (em.vx + Math.sin(runTime * 0.7 + em.ph) * 6) * dt; em.y += em.vy * dt; if (em.y < -8) { em.y = H + 8; em.x = Math.random() * W; } if (em.x < -8) em.x = W + 8; if (em.x > W + 8) em.x = -8; }
+    // v18: tick the falls — slide decays, then the body settles as a corpse
+    for (const d of dyingFx) {
+      d.t += dt;
+      const dec = Math.max(0, 1 - 4.5 * dt); d.vx *= dec; d.vy *= dec;
+      d.x += d.vx * dt; d.y += d.vy * dt;
+    }
+    for (let i = dyingFx.length - 1; i >= 0; i--) if (dyingFx[i].t >= dyingFx[i].dur) { settleCorpse(dyingFx[i]); dyingFx.splice(i, 1); }
     for (const c of corpses) {
       c.t += dt;
+      if (c.jerkT && c.t >= c.jerkT) { c.jerk = 1; c.jerkT = 0; } // one post-mortem twitch, then stillness
+      if (c.jerk > 0) c.jerk = Math.max(0, c.jerk - dt * 3.2);
       if (c.body) {
         const moved = Math.hypot(c.x - c.px, c.y - c.py); c.px = c.x; c.py = c.y;
         c.smear = (c.smear || 0) + moved;
@@ -1910,13 +1948,7 @@
       // black hoods — so theirs float in the void where a face should be.
       // The plague mask gets a single sick glow in its one dark eye-hole.
       if (!flick) {
-        const EYE = e.type === "husk" ? { oy: -1.16, cx: -0.10, sep: 0.17, col: "#ff4a2e", er: 2.6 }
-          : e.type === "cultist" ? { oy: -1.02, cx: -0.09, sep: 0, col: "#e6ccff", er: 3.4 }
-          : e.type === "wraith" ? { oy: -1.22, cx: 0, sep: 0, col: "#dff4ff", er: 3.2 }
-          : e.type === "plague" ? { oy: -1.17, cx: -0.28, sep: 0, col: "#b6d94a", er: 2.6 }
-          : e.type === "brute" ? { oy: -1.05, cx: -0.03, sep: 0.13, col: "#ffb03a", er: 2.4 }
-          : e.type === "abbot" ? { oy: -0.68, cx: 0, sep: 0.05, col: "#ffb03a", er: 3.2 }
-          : { oy: -0.97, cx: 0.01, sep: 0.06, col: "#ff2e4a", er: 3.2 };
+        const EYE = eyeSpecFor(e.type);
         const ex = e.x + twX + EYE.cx * e.r, ey = e.y + bob + EYE.oy * e.r, sep = EYE.sep * e.r, er = EYE.er;
         ctx.fillStyle = EYE.col; ctx.shadowColor = EYE.col; ctx.shadowBlur = EYE.sep > 0 ? 8 : 13; // single hood-glows (cultist/wraith/plague) burn brighter — two pupils cannot fit a 5px hood void, so one light looks out instead
         ctx.globalAlpha = e.twitchFx > 0 ? 1 : 0.80 + Math.sin(performance.now() / 340 + e.wob) * 0.13;
@@ -1970,16 +2002,50 @@
         ctx.fillStyle = "#7dff9a"; ctx.fillRect(player.x - 20, player.y + 30, 40 * Math.max(0, player.hp / player.maxHp), 5);
       }
     }
+    // v18 THE FALL — enemies in the act of dying, drawn where the corpses
+    // lie: a jerk from the blow, a spasm with the eyes flaring, then the
+    // fold — losing height, light and ground. Nothing ever gets bigger.
+    for (const d of dyingFx) {
+      const t = d.t, dur = d.dur;
+      const jerkK = t < 0.1 ? 1 - t / 0.1 : 0;
+      const jx = d.x + d.kbx * 5 * jerkK, jy = d.y + d.kby * 5 * jerkK;
+      const spasm = t > 0.08 && t < 0.45 ? 1 - t / 0.45 : 0;
+      const rotJ = Math.sin(t * 55) * 0.16 * spasm, xJ = Math.sin(t * 61) * 1.8 * spasm;
+      const k = dSmooth((t - 0.35) / Math.max(0.05, dur - 0.35));
+      const sy = 1 - 0.42 * k, rot = d.fallSide * 1.35 * Math.pow(k, 1.3) + rotJ, sinkY = 7 * k, sc = d.r * 3.4;
+      const poolK = 0.3 + 0.7 * Math.min(1, t / (dur * 0.8));
+      ctx.fillStyle = "rgba(96,6,12,0.5)"; ctx.beginPath(); ctx.ellipse(jx, jy + sc * 0.30, sc * 0.55 * poolK, sc * 0.26 * poolK, rot * 0.4, 0, 6.283); ctx.fill();
+      shadow(jx, jy + sc * 0.42, sc * 0.5);
+      let al = 0.98; if (d.type === "wraith") al *= 1 - 0.45 * k;
+      ctx.save(); ctx.filter = `brightness(${1 - 0.38 * k})`;
+      drawSpr(d.img, jx + xJ, jy + sinkY, sc, { rot, alpha: al, sy, sx: 1 + (1 - sy) * 0.35 });
+      ctx.restore();
+      // the eyes die last: lit through the spasm, held into the fold,
+      // dark only when the collapse is nearly done
+      const eyeA = k < 0.75 ? (spasm > 0 ? 1 : 0.9) : Math.max(0, 1 - (k - 0.75) / 0.25);
+      if (eyeA > 0.02) {
+        const EYE = eyeSpecFor(d.type), cr = Math.cos(rot), sr = Math.sin(rot);
+        const lx0 = EYE.cx * d.r, ly0 = EYE.oy * d.r * sy, sep = EYE.sep * d.r;
+        ctx.fillStyle = EYE.col; ctx.shadowColor = EYE.col; ctx.shadowBlur = spasm > 0 ? 14 : 9;
+        ctx.globalAlpha = eyeA;
+        for (const sgn of (sep > 0 ? [1, -1] : [0])) {
+          const lx = lx0 + sgn * sep;
+          ctx.beginPath(); ctx.arc(jx + xJ + lx * cr - ly0 * sr, jy + sinkY + lx * sr + ly0 * cr, EYE.er, 0, 6.283); ctx.fill();
+        }
+        ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+      }
+    }
     // the fallen — drawn ABOVE the living on purpose (v16.2): two full
     // verification sweeps (~380 kills) never saw a corpse under the crowd,
     // so the dead now lie on top of everything that walks, in their own blood
     for (const c of corpses) {
-      const rot = c.dir * Math.min(1, c.t / 0.45) * 1.45 + (c.spin || 0);
+      const rot = (c.rotZ != null ? c.rotZ : c.dir * Math.min(1, c.t / 0.45) * 1.45) + (c.spin || 0) + (c.jerk || 0) * 0.10 * c.dir;
       const sink = c.t > 3.6 ? (c.t - 3.6) * 6 : 0;
       const al = c.t < 4 ? 0.97 : Math.max(0, 0.97 - (c.t - 4) * 0.95);
-      ctx.fillStyle = "rgba(96,6,12,0.5)"; ctx.beginPath(); ctx.ellipse(c.x, c.y + c.s * 0.30, c.s * 0.62, c.s * 0.30, rot * 0.4, 0, 6.283); ctx.fill();
+      const csy = c.sy || 1;
+      ctx.fillStyle = "rgba(96,6,12,0.5)"; ctx.beginPath(); ctx.ellipse(c.x, c.y + c.s * 0.30, c.s * 0.55, c.s * 0.26, rot * 0.4, 0, 6.283); ctx.fill();
       shadow(c.x, c.y + c.s * 0.42, c.s * 0.5);
-      drawSpr(c.img, c.x, c.y + sink, c.s * 1.5, { rot, alpha: al });
+      drawSpr(c.img, c.x, c.y + sink - (c.jerk || 0) * 2, c.s * 0.94, { rot, alpha: al, sy: csy, sx: 1 + (1 - csy) * 0.35 });
       if (DEBUG) { ctx.strokeStyle = "rgba(120,255,90,0.95)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(c.x, c.y, c.s * 0.78, 0, 6.283); ctx.stroke(); }
     }
     // bolts — v17: comets, not scratches. A tapering trail behind a lit head;

@@ -623,3 +623,25 @@ again. unnerving."
   construction. Cultist and wraith now get a SINGLE hood-glow:
   bigger, brighter, more blur. Something looking out of the dark
   with one light is the honest read at this scale — and creepier.
+
+## v18 (2026-11-11) — THE FALL: enemies die now
+Mikkel's playtest: "the enemies get bigger when they die, dont have
+death animation and its a bit comical instead of unsettling."
+He was literally right, in code: the corpse draw used c.s * 1.5 —
+the dead rendered 50% BIGGER than the living — and the swap to a
+corpse was instant, same frame as the killing blow, with a tip-over.
+- New dying phase (dyingFx, ~0.85s; brutes 1.05s, bosses 1.5s):
+  the blow jerks the body backward, then a SPASM — rotation snaps
+  and jitter while the eyes FLARE — then the COLLAPSE: squash down
+  to 0.58 height, tip to its side, sink 7px, darken 38%. The blood
+  pool SPREADS during the fall instead of appearing full-size.
+- The eyes die last: lit through the spasm and most of the fold,
+  dark only when the collapse is nearly done.
+- Settles into the corpse system SMALLER than life (x0.94, folded
+  at sy 0.60, final tip held), with ONE post-mortem jerk about a
+  half-second after settling. Kill burst trimmed 10 -> 7 particles
+  (less confetti). Wraiths unravel (extra fade) as they fold.
+- Every kill in the game routes through this now — bolts, towers,
+  DoT, thorns, plague chain-deaths included.
+Deploy note: GitHub Pages builds errored/stalled all afternoon
+(v68 never deployed; live site still serves v67). v69 supersedes.

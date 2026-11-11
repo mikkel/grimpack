@@ -1911,14 +1911,14 @@
       // The plague mask gets a single sick glow in its one dark eye-hole.
       if (!flick) {
         const EYE = e.type === "husk" ? { oy: -1.16, cx: -0.10, sep: 0.17, col: "#ff4a2e", er: 2.6 }
-          : e.type === "cultist" ? { oy: -1.02, cx: -0.09, sep: 0.12, col: "#e6ccff", er: 3.0 }
-          : e.type === "wraith" ? { oy: -1.22, cx: 0, sep: 0.11, col: "#dff4ff", er: 2.6 }
+          : e.type === "cultist" ? { oy: -1.02, cx: -0.09, sep: 0, col: "#e6ccff", er: 3.4 }
+          : e.type === "wraith" ? { oy: -1.22, cx: 0, sep: 0, col: "#dff4ff", er: 3.2 }
           : e.type === "plague" ? { oy: -1.17, cx: -0.28, sep: 0, col: "#b6d94a", er: 2.6 }
           : e.type === "brute" ? { oy: -1.05, cx: -0.03, sep: 0.13, col: "#ffb03a", er: 2.4 }
           : e.type === "abbot" ? { oy: -0.68, cx: 0, sep: 0.05, col: "#ffb03a", er: 3.2 }
           : { oy: -0.97, cx: 0.01, sep: 0.06, col: "#ff2e4a", er: 3.2 };
         const ex = e.x + twX + EYE.cx * e.r, ey = e.y + bob + EYE.oy * e.r, sep = EYE.sep * e.r, er = EYE.er;
-        ctx.fillStyle = EYE.col; ctx.shadowColor = EYE.col; ctx.shadowBlur = 8;
+        ctx.fillStyle = EYE.col; ctx.shadowColor = EYE.col; ctx.shadowBlur = EYE.sep > 0 ? 8 : 13; // single hood-glows (cultist/wraith/plague) burn brighter — two pupils cannot fit a 5px hood void, so one light looks out instead
         ctx.globalAlpha = e.twitchFx > 0 ? 1 : 0.80 + Math.sin(performance.now() / 340 + e.wob) * 0.13;
         ctx.beginPath(); ctx.arc(ex + sep, ey, er, 0, 6.283); if (sep > 0) ctx.arc(ex - sep, ey, er, 0, 6.283); ctx.fill();
         ctx.shadowBlur = 0; ctx.globalAlpha = 1;

@@ -609,3 +609,17 @@ again. unnerving."
   brute pupils separated (they merged into one dot). Comet trail
   shortened to 3 points so a stream of bolts segments into comets
   instead of fusing into one beam.
+
+## v17.4 (2026-11-11) — one light in the hood
+- v17.3's instrumented run SETTLED the gait question with 32 HUD
+  readings: crouch 10-18 px/s, shamble 44-58, lunge 70-171 (clean
+  husk 141, cultist 171), wraiths exempt and smooth at 124-128.
+  The lurch fires and swings real velocity ~10x; the earlier
+  "15 px/s" tracking was trough-sampling in crowds and slows.
+  Leak CONFIRMED in crops (bright dotted trails behind the wounded).
+- Cultist eyes were the last holdout: two crops showed one faint
+  smudge. The geometry is unforgiving — the hood void is ~5px wide
+  at sprite scale, so two 3px pupils 3.6px apart are one blob by
+  construction. Cultist and wraith now get a SINGLE hood-glow:
+  bigger, brighter, more blur. Something looking out of the dark
+  with one light is the honest read at this scale — and creepier.

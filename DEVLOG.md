@@ -139,3 +139,16 @@ consequences; sit-in-center-and-win. Answers:
 - Balance re-verified with playsim (bot takes no tithes, never roots): 96%
   bot wins, deaths at N10 — the new pressure is aimed at passive human play,
   which the bot never does.
+
+## v3 verification notes (2026-11-10 late)
+- The v3.1 verification round was polluted by the test browser's HTTP cache
+  (it ran v3.0 code and reported v3.1 features missing). Fix shipped: core
+  assets are cache-busted in index.html (?v=NN, bump per release).
+- Corpse mystery, resolved by instrumentation: pushes == kills exactly and
+  the corpse array aged correctly, yet screenshot review saw no bodies. A
+  magenta-marker build proved positions/timing right; a 2.6x test build
+  proved the rotated bodies render beautifully — at 1x (54px, dark on dark)
+  they were simply below screenshot legibility. Shipped at 1.5x / 2.6s.
+- Lesson: screenshot agents have limited acuity for small dark motion;
+  verify mechanics with counters, verify look with scale, let the human
+  judge motion in motion.

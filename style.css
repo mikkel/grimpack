@@ -154,3 +154,7 @@ aside p{margin:4px 0 10px;font-size:14px;line-height:1.45}
 .stat-chip.pulse{animation:statpulse .8s ease-out}
 @keyframes statpulse{0%{transform:scale(1.28);background:#5a0d16;border-color:#ff3b30;color:#fff}55%{background:#3d0f14}100%{transform:scale(1)}}
 .pack-card{transition:none}
+/* v7.1 anchoring fixes */
+#pack-wrap{position:relative}
+#pack-hand{left:-30px;top:-26px;width:158px}
+#pack-hand-label{margin:30px 0 2px 104px}

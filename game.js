@@ -98,6 +98,7 @@
     }
   }
   function setMusic(on) { musicOn = on; }
+  function kickMusic() { const t = musicTarget(); if (t && !muted) t.play().catch(() => {}); }
 
   // ---------- state ----------
   let state = "title";
@@ -419,16 +420,16 @@
     ghost.animate([
       { transform: "translate(0,0) rotate(0deg) scale(1)", opacity: 1 },
       { transform: `translate(${target.left + target.width / 2 - (r.left + r.width / 2)}px, ${target.top + target.height / 2 - (r.top + r.height / 2)}px) rotate(${Math.random() * 26 - 13}deg) scale(0.2)`, opacity: 0.2 }
-    ], { duration: 500, easing: "cubic-bezier(.5,-0.1,.3,1)" }).onfinish = () => ghost.remove();
+    ], { duration: 760, easing: "cubic-bezier(.5,-0.1,.3,1)" }).onfinish = () => ghost.remove();
   }
   $("btn-collect").addEventListener("click", () => {
     if (!currentPack) return;
     const pack = currentPack; currentPack = null;
     const els = [...$("pack-cards").children];
     pack.forEach((pull, i) => {
-      setTimeout(() => { if (els[i]) flyCard(els[i], pull); setTimeout(() => applyCard(pull), els[i] ? 460 : 0); }, i * 150);
+      setTimeout(() => { if (els[i]) flyCard(els[i], pull); setTimeout(() => applyCard(pull), els[i] ? 700 : 0); }, i * 210);
     });
-    setTimeout(() => { $("pack-modal").classList.add("hidden"); state = "build"; updatePackButton(); updateHUD(); }, pack.length * 150 + 560);
+    setTimeout(() => { $("pack-modal").classList.add("hidden"); state = "build"; updatePackButton(); updateHUD(); }, pack.length * 210 + 840);
   });
   $("btn-pack").addEventListener("click", openPack);
   function updateBarrierButton() {
@@ -600,7 +601,7 @@
     if (wave === 0) { hintT = 0; hintSlammed = false; }
     placingBarrier = false;
     if (state !== "build") return;
-    if (tithePending && !beginArmed) { beginArmed = true; const b = $("tithe-box"); b.classList.add("flash"); setTimeout(() => b.classList.remove("flash"), 1100); log("The cathedral waits for an offering. Choose — or begin anyway (click Begin again)."); return; }
+    if (tithePending && !beginArmed) { beginArmed = true; $("btn-begin").textContent = "Begin Anyway — Night " + (wave + 1) + " ☾"; const b = $("tithe-box"); b.classList.add("flash"); setTimeout(() => b.classList.remove("flash"), 1100); log("The cathedral waits for an offering. Choose — or begin anyway (click Begin again)."); return; }
     if (freePacks > 0) log("You begin the night with an unopened pack. It will keep.");
     selectedHand = null; moveTower = null; renderHand();
     wave++; waveActive = true; state = "wave"; packsThisBuild = 0; waveTime = 0; deepenStacks = 0; deepenShown = 0;
@@ -1354,13 +1355,14 @@
     const caps = [ { dx: 0, dy: -47, ch: "↑" }, { dx: -47, dy: 0, ch: "←" }, { dx: 0, dy: 0, ch: "↓", drip: true }, { dx: 47, dy: 0, ch: "→" } ];
     ctx.save();
     ctx.translate(cx, cy); ctx.scale(scale, scale); ctx.translate(-cx, -cy);
+    if (!dissolving) { ctx.globalAlpha = alpha * 0.62; ctx.fillStyle = "#06040c"; ctx.beginPath(); ctx.roundRect(-96, -84, 192, 178, 14); ctx.fill(); ctx.globalAlpha = alpha; }
     for (const c of caps) {
       const jx = t < 0.5 ? (Math.random() * 2 - 1) * (0.5 - t) * 7 : 0;
       const tw = Math.sin(performance.now() / 97 + c.dx * 3.7 + c.dy * 1.3) > 0.986 ? 1 : 0;
       const x = cx + c.dx + jx, y = cy + c.dy;
       ctx.save(); ctx.translate(x, y); ctx.rotate(tw * 0.045);
       if (dissolving) {
-        for (let s = 0; s < 4; s++) { ctx.fillStyle = s % 2 ? "#251c31" : "#1d1626"; ctx.globalAlpha = alpha; const off = (s - 1.5) * (t - 3.4) * 15; ctx.fillRect(-20 + off, -20 + s * 10, 40, 9); }
+        for (let s = 0; s < 4; s++) { ctx.fillStyle = s % 2 ? "#251c31" : "#1d1626"; ctx.globalAlpha = alpha; const off = (s - 1.5) * (t - 3.4) * 15, fall = Math.pow(t - 3.4, 2) * (26 + s * 17); ctx.fillRect(-20 + off, -20 + s * 10 + fall, 40, 9); }
         if (Math.random() < 0.55) parts.push({ x: x + (Math.random() * 36 - 18), y: y + (Math.random() * 36 - 18), vx: (Math.random() * 30 - 15), vy: 30 + Math.random() * 46, life: 0.9, t: 0, color: "#9a8fb5", size: 1.6 + Math.random() * 2 });
       } else {
         ctx.globalAlpha = alpha * (0.9 + Math.sin(performance.now() / 640 + c.dx) * 0.07);
@@ -1374,7 +1376,7 @@
     }
     // the dash cap
     ctx.save(); ctx.translate(cx, cy + 48);
-    if (dissolving) { for (let s = 0; s < 3; s++) { ctx.fillStyle = s % 2 ? "#251c31" : "#1d1626"; ctx.globalAlpha = alpha; ctx.fillRect(-66 + (s - 1) * (t - 3.4) * 15, -15 + s * 10, 132, 9); } }
+    if (dissolving) { for (let s = 0; s < 3; s++) { ctx.fillStyle = s % 2 ? "#251c31" : "#1d1626"; ctx.globalAlpha = alpha; ctx.fillRect(-66 + (s - 1) * (t - 3.4) * 15, -15 + s * 10 + Math.pow(t - 3.4, 2) * (26 + s * 17), 132, 9); } }
     else { ctx.globalAlpha = alpha * 0.94; ctx.fillStyle = "#1d1626"; ctx.strokeStyle = "#7a6896"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.roundRect(-66, -15, 132, 30, 7); ctx.fill(); ctx.stroke(); }
     ctx.globalAlpha = alpha; ctx.fillStyle = "#e8ddc4"; ctx.font = "bold 12.5px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText("SPACE — DASH ↯", 0, 1);
@@ -1442,7 +1444,7 @@
   cv.addEventListener("touchstart", ev => { const t = ev.touches[0]; touchTarget = canvasPos(t); }, { passive: true });
   cv.addEventListener("touchmove", ev => { const t = ev.touches[0]; touchTarget = canvasPos(t); }, { passive: true });
   cv.addEventListener("touchend", () => touchTarget = null);
-  $("btn-begin").addEventListener("click", () => { if (state === "build") beginWave(); });
+  $("btn-begin").addEventListener("click", () => { if (state === "build") { beginWave(); kickMusic(); } });
   document.addEventListener("click", e => { const b = e.target.closest("button"); if (b) b.blur(); });
   // ---------- title / difficulty / restart ----------
   function selectDiff(key2) {

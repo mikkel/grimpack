@@ -993,7 +993,7 @@
       const a = Math.random() * 6.283, d = 130 + Math.random() * 330;
       deathEyes.push({ x: Math.max(24, Math.min(W - 24, player.x + Math.cos(a) * d)), y: Math.max(24, Math.min(H - 24, player.y + Math.sin(a) * d * 0.8)), s: 5 + Math.random() * 6, delay: 0.7 + i * 0.1 + Math.random() * 0.25, ph: Math.random() * 10 });
     }
-    for (const e of enemies) { if (e.dead) continue; const dx = e.x - player.x, dy = e.y - player.y, d = Math.max(20, Math.hypot(dx, dy)); if (d < 110) { e.kx = (e.kx || 0) + dx / d * 210; e.ky = (e.ky || 0) + dy / d * 210; } }
+    for (const e of enemies) { if (e.dead) continue; const dx = e.x - player.x, dy = e.y - player.y, d = Math.max(20, Math.hypot(dx, dy)); if (d < 120) { e.kx = (e.kx || 0) + dx / d * 950; e.ky = (e.ky || 0) + dy / d * 950; } }
     playSnd("toll", 0.4, 0.1);
     log("The knight falls.");
   }
@@ -1007,7 +1007,7 @@
       if (e.dead) continue;
       e.x += (e.kx || 0) * dt; e.y += (e.ky || 0) * dt; e.kx = (e.kx || 0) * 0.88; e.ky = (e.ky || 0) * 0.88;
       const dx = player.x - e.x, dy = player.y - e.y, d = Math.hypot(dx, dy);
-      if (d > 64) { const sp = e.spd * 0.38; e.x += dx / d * sp * dt; e.y += dy / d * sp * dt; }
+      if (d > 64 + e.r) { const sp = e.spd * 0.3; e.x += dx / d * sp * dt; e.y += dy / d * sp * dt; }
       e.flash = Math.max(0, (e.flash || 0) - dt);
     }
     for (const b of bolts) if (b.vx != null) { b.x += b.vx * dt * ts; b.y += b.vy * dt * ts; }
@@ -1900,7 +1900,7 @@
   cv.addEventListener("touchend", () => touchTarget = null);
   $("btn-begin").addEventListener("click", () => { if (state === "build") { $("begin-wrap").classList.add("shut"); setTimeout(() => { $("begin-wrap").classList.remove("shut"); beginWave(); kickMusic(); }, 140); } });
   document.addEventListener("click", e => { const b = e.target.closest("button"); if (b) b.blur(); });
-  document.addEventListener("pointerdown", () => { if (state === "dying" && dying && dying.t > 1.2) finishDeath(); });
+  cv.addEventListener("pointerdown", () => { if (state === "dying" && dying && dying.t > 1.6) finishDeath(); });
   // ---------- title / difficulty / restart ----------
   function selectDiff(key2) {
     diff = G.DIFFS[key2];

@@ -445,6 +445,7 @@
     const rr0 = ent.r * 0.85; // hitboxes run smaller than sprites: one-tile lanes stay passable
     const [c0, r0] = tileOf(ent.x, ent.y);
     for (let r = r0 - 1; r <= r0 + 1; r++) for (let c = c0 - 1; c <= c0 + 1; c++) {
+      if (c < 0 || r < 0 || c >= COLS || r >= ROWS) continue; // no phantom walls beyond the floor: the dead spawn out there
       const ch = charAt(c, r);
       const solid = ch === '#' || ch === 'r' || (!isPlayer && !!barrierAt(c, r));
       if (!solid) continue;
@@ -991,6 +992,7 @@
       e.vx = (e.vx || 0) + (mx - (e.vx || 0)) * kk;
       e.vy = (e.vy || 0) + (my - (e.vy || 0)) * kk;
       e.x += e.vx * dt; e.y += e.vy * dt;
+      e.x = Math.max(-70, Math.min(W + 70, e.x)); e.y = Math.max(-70, Math.min(H + 70, e.y));
       // bodies jostle positionally; a hard enough shove staggers both
       for (const o of enemies) { if (o === e || o.dead) continue; const d = Math.hypot(o.x - e.x, o.y - e.y), rr = e.r + o.r; if (d > 0.01 && d < rr) { const push = (rr - d) * 0.32, ux = (o.x - e.x) / d, uy = (o.y - e.y) / d; e.x -= ux * push; e.y -= uy * push;
         const rel = Math.abs(((e.vx || 0) - (o.vx || 0)) * ux + ((e.vy || 0) - (o.vy || 0)) * uy);

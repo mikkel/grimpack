@@ -61,8 +61,14 @@ teaches movement while the build assembles.
 - Grave Bell aura ring + toll ripple, Widow's Ward ring on the player,
   burn-ground glow, hit flash, screen shake on boss death and player hurt,
   damage numbers (crits in gold), boss health bar, wave banners.
-- A real-browser smoke test of the full loop (title → pack → place → wave)
-  before shipping. *(result folded in here after the test)*
+- Verified with two real-browser smoke-test passes on the live GitHub Pages
+  build: title → vigil → pack (cards flipped, rarities correct, pity/stats
+  text right) → collect → Grimmoire/Chronicle updated → tower chip →
+  placement with range preview → Night 1 with movement, ash vacuum
+  (0 → 5 ashes), 22/22 slain, "Night 1 Survived", next pack awarded.
+  Zero console errors. The one soft spot — the Grave Bell's aura was hard
+  to *see* working in still frames — got a visibility buff (brighter aura
+  disc + toll ripple) in the final commit.
 
 ## Known limits (honest list)
 

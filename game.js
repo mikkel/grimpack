@@ -518,8 +518,8 @@
     // towers
     for (const t of towers) {
       const T = G.TOWERS[t.type];
-      if (t.type === "bell" && state === "wave") { ctx.beginPath(); ctx.arc(t.x, t.y, T.auraRange, 0, 6.283); ctx.fillStyle = "rgba(180,160,255,0.045)"; ctx.fill(); }
-      if (t.ring > 0) { ctx.beginPath(); ctx.arc(t.x, t.y, T.auraRange * (1 - t.ring / 0.5) + 10, 0, 6.283); ctx.strokeStyle = "rgba(200,180,255,0.5)"; ctx.stroke(); }
+      if (t.type === "bell" && state === "wave") { ctx.beginPath(); ctx.arc(t.x, t.y, T.auraRange, 0, 6.283); ctx.fillStyle = "rgba(180,160,255,0.075)"; ctx.fill(); ctx.strokeStyle = "rgba(180,160,255,0.28)"; ctx.stroke(); }
+      if (t.ring > 0) { ctx.beginPath(); ctx.arc(t.x, t.y, T.auraRange * (1 - t.ring / 0.5) + 10, 0, 6.283); ctx.strokeStyle = "rgba(210,195,255,0.75)"; ctx.lineWidth = 2; ctx.stroke(); ctx.lineWidth = 1; }
       drawToken(t.x, t.y, 24, IMG["card_" + t.type], moveTower === t ? "#ffd94a" : "#6b5a3e");
       ctx.fillStyle = "#ffd94a"; ctx.font = "11px Georgia"; ctx.textAlign = "center";
       if (t.level > 1) ctx.fillText("★".repeat(t.level), t.x, t.y + 38);

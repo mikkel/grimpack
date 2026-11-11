@@ -189,12 +189,12 @@
   // around Begin — blinking out of sync, glancing at the button, and now
   // and then one creeps closer. They snap shut when the night begins.
   const EYE_SPOTS = [
-    { l: "-8px", t: "-18px", s: 25, r: -8, dx: 0.3, dy: 1 },
-    { l: "33%", t: "-24px", s: 18, r: 5, dx: 0, dy: 1 },
-    { r: "4px", t: "-20px", s: 21, r: 9, dx: -0.3, dy: 1 },
-    { l: "16px", b: "-17px", s: 16, r: -14, dx: 0.4, dy: -1 },
-    { r: "28px", b: "-19px", s: 23, r: 6, dx: -0.2, dy: -1 },
-    { l: "57%", t: "-22px", s: 15, r: -4, dx: 0, dy: 1 }
+    { l: "-8px", t: "-18px", s: 25, rot: -8, dx: 0.3, dy: 1 },
+    { l: "33%", t: "-24px", s: 18, rot: 5, dx: 0, dy: 1 },
+    { r: "4px", t: "-20px", s: 21, rot: 9, dx: -0.3, dy: 1 },
+    { l: "16px", b: "-17px", s: 16, rot: -14, dx: 0.4, dy: -1 },
+    { r: "28px", b: "-19px", s: 23, rot: 6, dx: -0.2, dy: -1 },
+    { l: "57%", t: "-22px", s: 15, rot: -4, dx: 0, dy: 1 }
   ];
   const eyeEls = [];
   for (const spot of EYE_SPOTS) {
@@ -202,7 +202,7 @@
     e.style.width = spot.s + "px"; e.style.height = Math.round(spot.s * 0.55) + "px";
     if (spot.l) e.style.left = spot.l; if (spot.r) e.style.right = spot.r;
     if (spot.t) e.style.top = spot.t; if (spot.b) e.style.bottom = spot.b;
-    e.style.transform = `rotate(${spot.r}deg)`;
+    e.style.transform = `rotate(${spot.rot}deg)`;
     e.innerHTML = '<span class="lid"><i class="iris"></i></span>';
     const lid = e.querySelector(".lid");
     lid.style.animationDuration = (3.9 + Math.random() * 2.6).toFixed(2) + "s";

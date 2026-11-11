@@ -502,3 +502,16 @@ interesting")
 - Also: the wraith flanker read `dp` outside the block that declares
   it — hoisted to one dpE per enemy per frame. And dashT no longer
   drifts negative in the debug HUD.
+- Verification (2026-11-11): the first v16.3 test run silently played
+  a CACHED v16.2 (same browser profile, ~6 min gap, page URL not
+  cache-busted — the HUD had no maxStuck field, which exposed it).
+  Lesson: verification dispatches cache-bust the PAGE url and gate on
+  a build-specific HUD string before playing. The gated retest passed
+  the gate and confirmed the mechanism: maxStuck climbs steadily for
+  bunched enemies (0.5 -> 3.8 peak across five nights, never past the
+  4.0s window — the timer runs, evaluates, resets). Zero night-tail
+  stalls across both runs (worst tail: 9 enemies in ~11s), versus the
+  85s single-enemy stall on v16.2. No rescue teleport was witnessed —
+  no wedge-away case recurred; the gallows mark's ~4s expiry is
+  consistent with observations (marked sets turn over) but was not
+  frame-timed. Corpses and dash re-verified clean in both runs.

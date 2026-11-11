@@ -1460,7 +1460,7 @@
   $("btn-start").addEventListener("click", () => {
     ac(); reset(); state = "build";
     $("title-screen").classList.add("hidden");
-    setMusic(true);
+    setMusic(true); kickMusic();
     $("phase-title").textContent = "The Vigil Begins";
     log("Night approaches. Open your free pack, then begin.");
     updatePackButton();

@@ -99,7 +99,7 @@
       else if (goal === 0 && !el.paused) el.pause();
     }
   }
-  function setMusic(on) { musicOn = on; }
+  function setMusic(on) { musicOn = on; if (on) for (const k of Object.keys(TRACKS)) if (TRACKS[k]) TRACKS[k].playbackRate = 1; }
   function kickMusic() { const t = musicTarget(); if (t && !muted) t.play().catch(() => {}); }
 
   // ---------- state ----------
@@ -112,6 +112,9 @@
   let selectedHand = null, moveTower = null, mouse = { x: 0, y: 0 }, touchTarget = null;
   let bossRef = null, shake = 0, hitFlash = 0, waveTime = 0, deepenStacks = 0, deepenShown = 0;
   let placingBarrier = false;
+  let dying = null, deathEyes = [];
+  const dClamp01 = v => Math.max(0, Math.min(1, v));
+  const dSmooth = v => { v = dClamp01(v); return v * v * (3 - 2 * v); };
   let corpses = [], embers = [], titheId = null, tonightTithe = null;
   let diff = G.DIFFS.vigil, omen = null, nextOmen = null;
   let packsThisBuild = 0, bonusCards = 0, emberTimer = 5, strikeWarn = null;
@@ -125,7 +128,7 @@
       regen: 0, shieldCd: 0, shieldMax: 0, shieldReady: false, revives: 0, wrathNext: false, wrathWave: false,
       fireCd: 0, invuln: 0, r: B.radius, chillSlow: 0, chillSecs: 0, stormEvery: 0, hitCount: 0, vx: 0, vy: 0, walkPh: 0, kx: 0, ky: 0, dashId: 0,
       thorns: 0, brandPct: 0, dashCd: 0, dashT: 0, dashDx: 0, dashDy: 0, lastDx: 1, lastDy: 0 };
-    enemies = []; bolts = []; ebolts = []; towers = []; shards = []; zones = []; parts = []; texts = []; decals = []; zaps = []; corpses = []; embers = [];
+    enemies = []; bolts = []; ebolts = []; towers = []; shards = []; zones = []; parts = []; texts = []; decals = []; zaps = []; corpses = []; embers = []; dying = null; deathEyes = [];
     for (let i = 0; i < 26; i++) embers.push({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - 0.5) * 9, vy: -6 - Math.random() * 12, ph: Math.random() * 6.28 });
     titheId = null; tonightTithe = null; $("tithe-box").classList.add("hidden"); $("pack-prompt").classList.add("hidden");
     buildGrid(); placingBarrier = false;
@@ -973,6 +976,59 @@
     updatePackButton(); updateHUD();
     if (wave >= 1 && wave < 10) offerRewards();
   }
+
+  // ================= THE DEATH SEQUENCE =================
+  // Death is not a screen; it is a scene. Time dilates, the knight plays
+  // his fall in stages (stagger -> kneel -> topple), the dead keep coming
+  // while the world slows, blood pools, the soul rises and is SNATCHED
+  // back down, and the watchers open their eyes in the closing dark.
+  function startDeath() {
+    state = "dying";
+    dying = { t: 0, fallDir: (player.kx || 0) >= 0 ? 1 : -1, landed: 0, snatched: 0, _px: player.x, _py: player.y };
+    hitStop = 0.1; shake = Math.max(shake, 13); hitFlash = 0.7;
+    for (const k of Object.keys(TRACKS)) if (TRACKS[k]) TRACKS[k].playbackRate = 0.5;
+    setMusic(false);
+    deathEyes = [];
+    for (let i = 0; i < 26; i++) {
+      const a = Math.random() * 6.283, d = 130 + Math.random() * 330;
+      deathEyes.push({ x: Math.max(24, Math.min(W - 24, player.x + Math.cos(a) * d)), y: Math.max(24, Math.min(H - 24, player.y + Math.sin(a) * d * 0.8)), s: 5 + Math.random() * 6, delay: 0.7 + i * 0.1 + Math.random() * 0.25, ph: Math.random() * 10 });
+    }
+    playSnd("toll", 0.4, 0.1);
+    log("The knight falls.");
+  }
+  function updateDying(dt) {
+    const D = dying; D.t += dt; const t = D.t;
+    const ts = t < 0.9 ? 1 - 0.9 * (1 - Math.pow(1 - t / 0.9, 3)) : 0.1;
+    for (const [at, key] of [[0.2, "h1"], [1.15, "h2"], [2.3, "h3"]]) if (t >= at && !D[key]) {
+      D[key] = 1; tone(46, 0.16, "sine", 0.20); setTimeout(() => tone(42, 0.12, "sine", 0.10), 150);
+    }
+    for (const e of enemies) {
+      if (e.dead) continue;
+      e.x += (e.kx || 0) * dt; e.y += (e.ky || 0) * dt; e.kx = (e.kx || 0) * 0.88; e.ky = (e.ky || 0) * 0.88;
+      const dx = player.x - e.x, dy = player.y - e.y, d = Math.hypot(dx, dy);
+      if (d > 42) { const sp = e.spd * 0.38; e.x += dx / d * sp * dt; e.y += dy / d * sp * dt; }
+      e.flash = Math.max(0, (e.flash || 0) - dt);
+    }
+    for (const b of bolts) if (b.vx != null) { b.x += b.vx * dt * ts; b.y += b.vy * dt * ts; }
+    for (const b of ebolts) if (b.vx != null) { b.x += b.vx * dt * ts; b.y += b.vy * dt * ts; }
+    if (t >= 1.6 && !D.landed) { D.landed = 1; shake = Math.max(shake, 6); burst(player.x, player.y + 16, "#6b6257", 16); playSnd("toll", 0.55, 0.06); }
+    if (t > 1.5 && t < 3.0 && parts.length < 440) for (let i = 0; i < 2; i++) {
+      const ph = t * 2.4 + i * 3.1;
+      parts.push({ wisp: true, x: player.x + Math.cos(ph) * 7, y: player.y + 4, vx: Math.cos(ph) * 9, vy: -30 - Math.random() * 14, life: 1.5, t: 0, color: "#cfe6ff", size: 2.4 });
+    }
+    if (t >= 3.0 && !D.snatched) {
+      D.snatched = 1;
+      for (const p of parts) if (p.wisp) { p.vx = (player.x - p.x) * 2.4; p.vy = 400 + Math.random() * 140; p.life = p.t + 0.3; p.color = "#7fa8e8"; }
+      burst(player.x, player.y + 10, "#05050c", 20); noiseBurst(0.5, 0.14); shake = Math.max(shake, 4);
+    }
+    for (const p of parts) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.92; p.vy *= 0.92; }
+    parts = parts.filter(p => p.t < p.life);
+    for (const tx of texts) tx.t += dt;
+    texts = texts.filter(tx => tx.t < 0.9);
+    hitFlash = Math.max(0, hitFlash - dt * 1.4);
+    if (t >= 4.1) finishDeath();
+  }
+  function finishDeath() { if (!dying) return; dying = null; endRun(false); }
   function endRun(wonGame) {
     state = wonGame ? "win" : "over";
     setMusic(false);
@@ -985,7 +1041,8 @@
     $("end-stats").innerHTML = `${wonGame ? "Vesper is silent. The cathedral is yours." : "You fell on night " + wave + "."}<br>` +
       `Survived <b>${fmtTime(runTime)}</b> · Slain <b>${kills}</b> · Packs torn <b>${packsOpened}</b> · Cards pulled <b>${collection.length}</b><br>` +
       `<span style="opacity:.75">Best: ${best.nights} nights · ${best.kills} slain · ${best.wins} dawn(s)${best.bestTime ? " · fastest dawn " + fmtTime(best.bestTime) : ""}</span>`;
-    $("end-screen").classList.remove("hidden");
+    const esEl = $("end-screen"); esEl.style.opacity = "0"; esEl.classList.remove("hidden");
+    requestAnimationFrame(() => requestAnimationFrame(() => { esEl.style.opacity = "1"; }));
     wonGame ? SFX.win() : SFX.lose(); updateHUD();
   }
   function burst(x, y, color, n) { for (let i = 0; i < n && parts.length < 460; i++) { const a = Math.random() * 6.28, s = 40 + Math.random() * 140; parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.4 + Math.random() * 0.4, t: 0, color, size: 1.5 + Math.random() * 2.5 }); } }
@@ -1048,7 +1105,7 @@
     if (player.thorns > 0) for (const o of [...enemies]) if (!o.dead && Math.hypot(o.x - player.x, o.y - player.y) < 74 + o.r) damageEnemy(o, player.thorns * (0.5 + Math.random() * 0.5), false, true);
     if (player.hp <= 0) {
       if (player.revives > 0) { player.revives--; player.hp = player.maxHp * 0.5; player.invuln = 2; shake = 16; burst(player.x, player.y, "#ffd94a", 40); log("The Saint's Candle gutters — and holds. You rise at half strength."); SFX.toll(); }
-      else { player.hp = 0; endRun(false); }
+      else { player.hp = 0; startDeath(); }
     }
     updateHUD();
   }
@@ -1477,6 +1534,7 @@
     if (paused || state === "title" || state === "pack" || state === "win" || state === "over") { render(); return; }
     let dt = rawDt;
     if (hitStop > 0) { hitStop -= rawDt; dt = 0; }
+    if (state === "dying" && dying) { updateDying(rawDt); render(); return; }
     update(dt); render();
   }
   function render() {
@@ -1643,10 +1701,23 @@
       const lean = Math.max(-0.12, Math.min(0.12, player.vx * 0.0004));
       let psx = 1, psy = 1;
       if (player.dashT > 0) { const along = Math.abs(player.dashDx) >= Math.abs(player.dashDy); psx = along ? 1.22 : 0.86; psy = along ? 0.86 : 1.22; }
-      shadow(player.x, player.y + 19, 22);
-      drawSpr(IMG.hero, player.x, player.y + bobY, 62, { rot: lean, sx: psx, sy: psy, alpha: (player.invuln > 0 && state === "wave" ? 0.65 : 1) * (inFogAt(player.x, player.y) ? 0.62 : 1) });
-      ctx.fillStyle = "rgba(6,5,8,0.7)"; ctx.fillRect(player.x - 20, player.y + 30, 40, 5);
-      ctx.fillStyle = "#7dff9a"; ctx.fillRect(player.x - 20, player.y + 30, 40 * Math.max(0, player.hp / player.maxHp), 5);
+      let px = player.x, py = player.y + bobY, prot = lean;
+      if (state === "dying" && dying) {
+        const t = dying.t, fd = dying.fallDir;
+        const kneel = dSmooth((t - 0.45) / 0.6), fl = dClamp01((t - 1.05) / 0.55), fall = fl * fl;
+        prot = Math.sin(Math.min(t, 0.55) * 34) * 0.07 * Math.max(0, 1 - t / 0.55) + kneel * 0.24 * fd + fall * 1.14 * fd;
+        psx = 1 + kneel * 0.04; psy = 1 - kneel * 0.15 + fall * 0.05;
+        px = player.x + fall * 11 * fd; py = player.y + kneel * 8 + fall * 15;
+        dying._px = px; dying._py = py;
+        const pr = 47 * (1 - Math.pow(1 - dClamp01((t - 1.2) / 2.4), 3));
+        if (pr > 1) { ctx.fillStyle = "rgba(46,2,8,0.55)"; for (const [ox, oy, rr] of [[0, 0, 1], [-16, 3, 0.55], [15, 4, 0.62], [4, -4, 0.45]]) { ctx.beginPath(); ctx.ellipse(player.x + ox, player.y + 20 + oy, pr * rr, pr * rr * 0.36, 0, 0, 6.283); ctx.fill(); } }
+      }
+      shadow(px, player.y + 19, 22);
+      drawSpr(IMG.hero, px, py, 62, { rot: prot, sx: psx, sy: psy, alpha: (player.invuln > 0 && state === "wave" ? 0.65 : 1) * (inFogAt(player.x, player.y) ? 0.62 : 1) });
+      if (state !== "dying") {
+        ctx.fillStyle = "rgba(6,5,8,0.7)"; ctx.fillRect(player.x - 20, player.y + 30, 40, 5);
+        ctx.fillStyle = "#7dff9a"; ctx.fillRect(player.x - 20, player.y + 30, 40 * Math.max(0, player.hp / player.maxHp), 5);
+      }
     }
     // bolts
     for (const b of bolts) {
@@ -1676,6 +1747,27 @@
     ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
     if (hitFlash > 0) { ctx.fillStyle = `rgba(215,38,61,${hitFlash * 0.30})`; ctx.fillRect(0, 0, W, H); }
     if (player.hp < player.maxHp * 0.30 && state === "wave") { const pulse = 0.10 + Math.sin(performance.now() / 240) * 0.05; ctx.fillStyle = `rgba(215,38,61,${pulse})`; ctx.fillRect(0, 0, W, H); }
+    if (state === "dying" && dying) {
+      const t = dying.t, cx = dying._px, cy = dying._py;
+      const inner = 720 - 590 * dSmooth(t / 3.6);
+      const vg2 = ctx.createRadialGradient(cx, cy, Math.max(60, inner), cx, cy, Math.max(60, inner) + 400);
+      vg2.addColorStop(0, "rgba(2,0,2,0)"); vg2.addColorStop(1, `rgba(2,0,2,${0.97 * Math.min(1, 0.2 + t / 3.4)})`);
+      ctx.fillStyle = vg2; ctx.fillRect(0, 0, W, H);
+      const bh = 48 * dSmooth(t / 1.4);
+      ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, bh); ctx.fillRect(0, H - bh, W, bh);
+      for (const de of deathEyes) {
+        const o = dClamp01((t - de.delay) / 0.6); if (o <= 0) continue;
+        if (((t * 0.37 + de.ph) % 3.7) > 3.55) continue;
+        const grow = 1 + 0.3 * dClamp01((t - 2.2) / 1.4);
+        for (const sgn of [-1, 1]) {
+          const ex = de.x + sgn * de.s * grow, ey = de.y;
+          ctx.fillStyle = `rgba(224,52,31,${0.85 * o})`;
+          ctx.beginPath(); ctx.ellipse(ex, ey, 2.6 * grow, 1.7 * grow, 0, 0, 6.283); ctx.fill();
+          ctx.fillStyle = `rgba(255,179,92,${0.9 * o})`;
+          ctx.beginPath(); ctx.arc(ex, ey, 0.9 * grow, 0, 6.283); ctx.fill();
+        }
+      }
+    }
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
       if (!grid[r] || grid[r][c] !== 'f') continue;
       ctx.fillStyle = "rgba(190,203,224,0.10)";
@@ -1795,6 +1887,7 @@
   cv.addEventListener("touchend", () => touchTarget = null);
   $("btn-begin").addEventListener("click", () => { if (state === "build") { $("begin-wrap").classList.add("shut"); setTimeout(() => { $("begin-wrap").classList.remove("shut"); beginWave(); kickMusic(); }, 140); } });
   document.addEventListener("click", e => { const b = e.target.closest("button"); if (b) b.blur(); });
+  document.addEventListener("pointerdown", () => { if (state === "dying" && dying && dying.t > 1.2) finishDeath(); });
   // ---------- title / difficulty / restart ----------
   function selectDiff(key2) {
     diff = G.DIFFS[key2];

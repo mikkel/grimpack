@@ -391,3 +391,24 @@ of the pack. animation cool")
   above, and each card flies out of its mouth (measured live from the
   pack's rect) arcing into its fan slot, flipping as it lands. On the
   choice, the husk smoulders out with the burning cards.
+
+## v15 — DEATH IS A SCENE (Mikkel: "the death animation needs to be
+fluid. it needs to really grip and unnerve and really feel the horror")
+Before: hp hit 0 and the end screen simply appeared over four synth
+tones. Now a ~4.1s directed sequence (state "dying", click skips after
+1.2s):
+- Time dilates: bolts hang in the air (0.1x) while the DEAD keep
+  shambling at 38% speed — time does not hold them. They gather at the
+  body and stop at arm's length.
+- The fall is staged on the sprite: 0.55s trembling stagger, a kneel
+  (squash + slump toward the killing side), then an ease-in topple with
+  a dust burst and a low toll on landing.
+- A blood pool spreads in overlapping ellipses under the body.
+- The soul rises as a pale spiral wisp (1.5-3.0s) — then is SNATCHED
+  straight back down (velocities rewritten mid-flight, dark burst,
+  noise burst, shake).
+- 26 watcher eye-pairs open staggered in the dark beyond a tightening
+  vignette iris; after 2.2s they GROW — closing in. Letterbox bars ease
+  in. The music sags (playbackRate 0.5) as it fades.
+- Three heartbeats, slowing (0.2 / 1.15 / 2.3s), then none. The end
+  screen now fades in over 1.1s instead of popping.

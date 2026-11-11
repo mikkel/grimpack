@@ -905,6 +905,8 @@
       const al = c.t < 1.5 ? 0.95 : Math.max(0, 0.95 - (c.t - 1.5) * 1.2);
       shadow(c.x, c.y + c.s * 0.30, c.s * 0.34);
       drawSpr(c.img, c.x, c.y + sink, c.s, { rot, alpha: al });
+      ctx.strokeStyle = "#ff00ff"; ctx.lineWidth = 3; ctx.strokeRect(c.x - c.s / 2, c.y + sink - c.s / 2, c.s, c.s);
+      ctx.fillStyle = "#ff00ff"; ctx.font = "bold 11px monospace"; ctx.textAlign = "center"; ctx.fillText("CORPSE", c.x, c.y + sink - c.s / 2 - 4);
     }
     // enemies
     for (const e of enemies) {

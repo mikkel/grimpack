@@ -565,3 +565,28 @@ again. unnerving."
   enlarged with real glow, spike darts lengthened. Hex bolts slowed
   (245 -> 215) and thickened (r6 -> r7) so a human eye — or a camera —
   can actually catch one.
+
+## v17.2 (2026-11-11) — calibrated from the art, gait as theatre
+- v17.1 verification: the cultist fix held (modest ✦, ring present,
+  hex orb seen), and paired pupils were caught on ONE elite — but the
+  lurch still read as "mild unevenness," leaks pooled invisibly, and
+  the comet still photographed as a line. Diagnosis this time came
+  from READING THE SPRITES: the husk/brute/abbot/vesper art already
+  bakes in small glowing eyes; the wraith and cultist wear empty
+  black hoods; the plague mask has ONE dark eye-hole. My floating
+  pupils fought the art instead of amplifying it, and the wraith's
+  sat on its glowing chest (oy -0.55 vs the hood void at -1.22).
+- Eyes now anchor per sprite to the measured face (offsets in the
+  EYE table, in radii, from the baked features): they sit ON the
+  art's eyes and feed them light; hoods get floating eyes in the
+  void; the plague mask gets a single sick glow in its eye-hole.
+- Gait rebuilt as a three-beat cycle — crouch (x0.22, body slumped
+  to 0.86) -> lunge (x2.55, stretched to 1.10) -> shamble — so a
+  still frame can show the posture, not just the velocity. Twitches
+  now hitch the gait (x0.25 while one fires) and come twice as often.
+- Leak drops are displacement-gated: one drop per ~15px travelled,
+  so the trail is a spaced dotted line by construction.
+- Comet, third attempt: two-pass trail (9.5px halo at 0.15 alpha +
+  bright tapering core), 4-point trail, head radius 6.4 with a 3px
+  white core. Cultist ring got a faint full circle under the sweep
+  so the sweep has something to be compared against.

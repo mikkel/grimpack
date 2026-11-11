@@ -645,3 +645,28 @@ corpse was instant, same frame as the killing blow, with a tip-over.
   DoT, thorns, plague chain-deaths included.
 Deploy note: GitHub Pages builds errored/stalled all afternoon
 (v68 never deployed; live site still serves v67). v69 supersedes.
+
+## v19 (2026-11-11) — the small hours: circle + barricades rethought
+Mikkel: "the barricades need rethought. also the circle is so
+visually loud and its not really adding to gameplay."
+CIRCLE. It was a 450px-wide pulsing red-and-gold target painted
+over half the arena, paying a flat buff for standing in most of
+the map. Now: a sanctum of r118 — a place you CHOOSE to hold.
+Etched, not glowing: a dark groove in the stone, a bone hairline,
+twelve rune ticks that wake only while the knight stands inside.
+And it finally has a verb: every time the night deepens (20s),
+the circle WANES — 7px of holy ground eaten, floor 74, rim
+flaring red once as it goes. The buffs stay (+45% towers, the
+knight fed, knockback halved) but the ground they stand on is
+literally running out. Buff text unchanged; spawn still inside.
+BARRICADES. Were build-phase-only HP sponges that — worst of
+all — blocked your OWN bolts (rubble never did). Now:
+- Bolts fly over them, like rubble. Bodies stop; fire doesn't.
+- Placeable MID-NIGHT (button lives during the wave, ghost
+  preview too, enemy-occupied tiles refused): a combat verb,
+  not a dawn chore. Cost 15 -> 12.
+- THORNBACK: spiked with consecrated iron — chewing one returns
+  25% of every bite to the biter.
+- Damage you can read: they lean and slump as HP falls.
+- Death with a tail: a smashed barricade leaves WRECKAGE for
+  3.5s that slows the dead 45% as they pick through it.

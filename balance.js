@@ -85,7 +85,7 @@
   /* The arena art is gameplay: pillars block bolts, the ritual circle
      consecrates, the corner braziers burn. Positions match assets/arena.jpg. */
   const WORLD = {
-    circle: { x: 480, y: 312, r: 225 },
+    circle: { x: 480, y: 312, r: 118 },
     pillars: [
       { x: 346, y: 48, r: 30 }, { x: 622, y: 48, r: 30 },
       { x: 58, y: 232, r: 30 }, { x: 908, y: 238, r: 30 },
@@ -157,7 +157,7 @@
     "........#......#........",
     "........................",
   ];
-  const TERRAIN = { rubbleHp: 45, barrierCost: 15, barrierHp: 130, barrierMax: 8 };
+  const TERRAIN = { rubbleHp: 45, barrierCost: 12, barrierHp: 130, barrierMax: 8 };
   const api = { RARITIES, KIND_WEIGHTS, CARDS, TOWERS, PLAYER_BASE, ENEMIES, waveSpec, PACK, WORLD, OMENS, DIFFS, SYNERGIES, REWARDS, TILE, COLS, ROWS, MAP, TERRAIN };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   root.GRIM = api;

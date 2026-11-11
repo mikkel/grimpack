@@ -414,6 +414,7 @@
   // pack modal flow
   let currentPack = null, flipped = 0;
   let hintT = -1, hintSlammed = false, beams = [], wasInCircle = false, circleMsgCd = 0;
+  let circleRNow = 0, rimPulse = 0; // v19: the night eats the circle, ring by ring
   const statPrev = {};
   function openPack() {
     if (state !== "build") return;
@@ -785,7 +786,7 @@
   $("btn-pack").addEventListener("click", openPack);
   function updateBarrierButton() {
     const b = $("btn-barrier");
-    if (state !== "build") { b.classList.add("hidden"); return; }
+    if (state !== "build" && state !== "wave") { b.classList.add("hidden"); return; } // v19: barricades are a combat verb now — raisable mid-night, not just at dawn
     b.classList.remove("hidden");
     b.textContent = placingBarrier ? "Click the floor to raise it (Esc to stop)" : `🧱 Raise Barricade — ${G.TERRAIN.barrierCost} ash (${barriers.length}/${G.TERRAIN.barrierMax})`;
     b.disabled = !placingBarrier && (ashes < G.TERRAIN.barrierCost || barriers.length >= G.TERRAIN.barrierMax);
@@ -793,18 +794,18 @@
   $("btn-barrier").addEventListener("click", () => { placingBarrier = !placingBarrier; selectedHand = null; renderHand(); updateBarrierButton(); });
 
   // ---------- world geometry ----------
-  function inCircle(x, y) { return Math.hypot(x - WORLD.circle.x, y - WORLD.circle.y) < WORLD.circle.r; }
+  function inCircle(x, y) { return Math.hypot(x - WORLD.circle.x, y - WORLD.circle.y) < (circleRNow > 0 ? circleRNow : WORLD.circle.r); }
 
   // ---------- the cathedral floor: tiles, flow-field, fog ----------
   const TILE = G.TILE, COLS = G.COLS, ROWS = G.ROWS;
-  let grid = [], rubbleHp = {}, barriers = [], flow = new Int32Array(COLS * ROWS), flowTimer = 0;
+  let grid = [], rubbleHp = {}, barriers = [], wrecks = [], flow = new Int32Array(COLS * ROWS), flowTimer = 0;
   const tIdx = (c, r) => r * COLS + c;
   const tileOf = (x, y) => [Math.max(0, Math.min(COLS - 1, Math.floor(x / TILE))), Math.max(0, Math.min(ROWS - 1, Math.floor(y / TILE)))];
   const tileCenter = (c, r) => [c * TILE + TILE / 2, r * TILE + TILE / 2];
   function charAt(c, r) { return (c < 0 || r < 0 || c >= COLS || r >= ROWS) ? '#' : grid[r][c]; }
   function barrierAt(c, r) { return barriers.find(b => b.c === c && b.r === r) || null; }
   function moveBlocked(c, r) { const ch = charAt(c, r); return ch === '#' || ch === 'r' || !!barrierAt(c, r); }
-  function boltBlocked(c, r) { return charAt(c, r) === '#' || !!barrierAt(c, r); }
+  function boltBlocked(c, r) { return charAt(c, r) === '#'; } // v19: bolts fly OVER barricades, like rubble — a defense that blocks your own fire is a liability, not a wall
 
   // ================= PHYSICS (Matter.js) =================
   // Steering proposes a velocity; the engine disposes. Bodies give the
@@ -987,7 +988,7 @@
     return G.MAP.map(row => row.split(""));
   }
   function buildGrid() {
-    grid = genCathedral(); rubbleHp = {}; barriers = [];
+    grid = genCathedral(); rubbleHp = {}; barriers = []; wrecks = [];
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (grid[r][c] === 'r') rubbleHp[c + "," + r] = G.TERRAIN.rubbleHp;
   }
   function buildFlow() {
@@ -1086,7 +1087,13 @@
     const b = barrierAt(c, r);
     if (b) {
       b.hp -= dmg; burst(c * TILE + 20, r * TILE + 20, "#a98a54", 3);
-      if (b.hp <= 0) { barriers = barriers.filter(x => x !== b); removeStaticBody(c, r); burst(c * TILE + 20, r * TILE + 20, "#a98a54", 16); SFX.place(); log("A barricade is smashed apart."); buildFlow(); }
+      // v19 THORNBACK: the palisade is spiked with consecrated iron. Chewing
+      // it hurts — a quarter of every bite comes back on the biter.
+      { const cxp = c * TILE + 20, ryp = r * TILE + 20; let near = null, nd = 36;
+        for (const e of enemies) { if (e.dead) continue; const d = Math.hypot(e.x - cxp, e.y - ryp); if (d < nd) { nd = d; near = e; } }
+        if (near) damageEnemySilent(near, Math.max(2, dmg * 0.25)); }
+      if (b.hp <= 0) { barriers = barriers.filter(x => x !== b); removeStaticBody(c, r); burst(c * TILE + 20, r * TILE + 20, "#a98a54", 16); SFX.place(); log("A barricade is smashed apart."); buildFlow();
+        wrecks.push({ x: c * TILE + 20, y: r * TILE + 20, r: 32, ttl: 3.5, max: 3.5 }); } // and its wreckage keeps tripping the dead for a few seconds more
       return;
     }
     const k = c + "," + r;
@@ -1136,7 +1143,7 @@
     if (state !== "build") return;
     if (freePacks > 0) log("You begin the night with an unopened pack. It will keep.");
     selectedHand = null; moveTower = null; renderHand();
-    wave++; waveActive = true; state = "wave"; packsThisBuild = 0; waveTime = 0; deepenStacks = 0; deepenShown = 0;
+    wave++; waveActive = true; state = "wave"; packsThisBuild = 0; waveTime = 0; deepenStacks = 0; deepenShown = 0; circleRNow = WORLD.circle.r; rimPulse = 0;
     omen = nextOmen; nextOmen = G.OMENS[Math.floor(Math.random() * G.OMENS.length)];
     if (omen && omen.packBonus) bonusCards += omen.packBonus;
     spawnQueue = buildSpawnQueue(wave); spawnTimer = 0; emberTimer = 4;
@@ -1390,19 +1397,22 @@
     runTime += dt;
     if (waveActive) {
       waveTime += dt;
-      { const ic = inCircle(player.x, player.y); circleMsgCd -= dt;
+      { const ic = inCircle(player.x, player.y); circleMsgCd -= dt; rimPulse = Math.max(0, rimPulse - dt);
         if (ic && !wasInCircle && waveActive && circleMsgCd <= 0) { floatText(player.x, player.y - 66, "✦ CONSECRATED — +45% DAMAGE · THE GROUND HOLDS YOU", "#ffd94a"); circleMsgCd = 7; }
         wasInCircle = ic; }
       const st = Math.floor(waveTime / 20);
       if (st > deepenStacks) {
         deepenStacks = st;
-        if (st > deepenShown) { deepenShown = st; banner("☾ THE NIGHT DEEPENS ☾"); log("The night deepens: the dead quicken (+4% speed, +3% bite). End it soon."); }
+        circleRNow = Math.max(74, WORLD.circle.r - deepenStacks * 7); rimPulse = 0.7; // the holy ground itself gives way, 7px at a time
+        if (st > deepenShown) { deepenShown = st; banner("☾ THE NIGHT DEEPENS ☾"); log("The night deepens: the dead quicken (+4% speed, +3% bite). End it soon."); if (st === 1) log("And the consecrated ground wanes — the circle shrinks as the dark presses in."); }
       }
     }
     if (hitFlash > 0) hitFlash -= dt * 2.4;
     // embers, floating texts, zaps, blood never forgets
     for (const p of parts) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.92; p.vy *= 0.92; }
     for (const em of embers) { em.x += (em.vx + Math.sin(runTime * 0.7 + em.ph) * 6) * dt; em.y += em.vy * dt; if (em.y < -8) { em.y = H + 8; em.x = Math.random() * W; } if (em.x < -8) em.x = W + 8; if (em.x > W + 8) em.x = -8; }
+    for (const w of wrecks) w.ttl -= dt;
+    wrecks = wrecks.filter(w => w.ttl > 0);
     // v18: tick the falls — slide decays, then the body settles as a corpse
     for (const d of dyingFx) {
       d.t += dt;
@@ -1664,6 +1674,8 @@
           if (decals.length > 260) decals.shift();
         }
       }
+      // v19: wreckage — the splintered remains of a barricade trip the dead
+      for (const w of wrecks) if (Math.hypot(e.x - w.x, e.y - w.y) < w.r + e.r * 0.5) { sp *= 0.55; break; }
       const dpE = Math.hypot(player.x - e.x, player.y - e.y);
       let mx, my;
       if (e.type === "wraith") {
@@ -1832,19 +1844,26 @@
     }
     // blood remembers
     for (const d of decals) { ctx.fillStyle = `rgba(${d.rgb || "120,10,16"},${d.a})`; ctx.beginPath(); ctx.ellipse(d.x, d.y, d.r, d.r * 0.62, 0, 0, 6.283); ctx.fill(); }
-    // ritual circle glow (stronger when the knight stands in it)
-    const cActive = inCircle(player.x, player.y);
-    ctx.strokeStyle = `rgba(255,60,60,${cActive ? 0.5 : 0.22})`; ctx.lineWidth = 2.5;
-    ctx.beginPath(); ctx.arc(WORLD.circle.x, WORLD.circle.y, WORLD.circle.r, 0, 6.283); ctx.stroke();
-    if (inCircle(player.x, player.y)) {
+    // ritual circle — v19: etched, not glowing. A dark groove cut in the
+    // stone and a hairline of bone. The rune ticks wake only while the
+    // knight stands within; the rim flares red once each time the night
+    // eats another ring of it. The ground whispers now. It used to shout.
+    const cR = circleRNow > 0 ? circleRNow : WORLD.circle.r, cActive = inCircle(player.x, player.y);
+    ctx.strokeStyle = "rgba(0,0,0,0.42)"; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.arc(WORLD.circle.x, WORLD.circle.y, cR, 0, 6.283); ctx.stroke();
+    ctx.strokeStyle = `rgba(232,226,212,${cActive ? 0.30 : 0.15})`; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc(WORLD.circle.x, WORLD.circle.y, cR, 0, 6.283); ctx.stroke();
+    for (let i = 0; i < 12; i++) {
+      const a = i / 12 * 6.283 + 0.26, lit = cActive ? 0.5 + Math.sin(performance.now() / 480 + i * 1.7) * 0.2 : 0.12;
+      ctx.strokeStyle = `rgba(255,190,90,${lit})`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(WORLD.circle.x + Math.cos(a) * (cR - 6), WORLD.circle.y + Math.sin(a) * (cR - 6)); ctx.lineTo(WORLD.circle.x + Math.cos(a) * (cR + 2), WORLD.circle.y + Math.sin(a) * (cR + 2)); ctx.stroke();
+    }
+    if (rimPulse > 0) { ctx.strokeStyle = `rgba(255,90,70,${rimPulse * 0.55})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(WORLD.circle.x, WORLD.circle.y, cR + 4, 0, 6.283); ctx.stroke(); }
+    if (cActive) { // the knight keeps his own small halo — it is his, not the floor's
       const pu = 0.5 + Math.sin(performance.now() / 300) * 0.22;
-      ctx.strokeStyle = `rgba(255,217,74,${pu})`; ctx.lineWidth = 3.5;
-      ctx.beginPath(); ctx.arc(WORLD.circle.x, WORLD.circle.y, WORLD.circle.r, 0, 6.283); ctx.stroke();
       ctx.strokeStyle = `rgba(255,240,190,${pu * 0.8})`; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(player.x, player.y, player.r + 10 + Math.sin(performance.now() / 260) * 2, 0, 6.283); ctx.stroke();
     }
-    ctx.strokeStyle = `rgba(255,217,74,${cActive ? 0.35 : 0.10})`; ctx.lineWidth = 9;
-    ctx.beginPath(); ctx.arc(WORLD.circle.x, WORLD.circle.y, WORLD.circle.r - 8, performance.now() / 2400, performance.now() / 2400 + 4.4); ctx.stroke();
     // braziers flicker
     for (const bz of WORLD.braziers) {
       const f = 0.75 + Math.sin(performance.now() / 90 + bz.x) * 0.25;
@@ -1871,9 +1890,14 @@
       ctx.beginPath(); ctx.arc(s.x, s.y, p, 0, 6.283); ctx.fill(); ctx.shadowBlur = 0;
     }
     // towers
+    for (const w of wrecks) { // wreckage: flat, splintered, and still in the way
+      ctx.fillStyle = "rgba(30,22,14,0.5)"; ctx.beginPath(); ctx.ellipse(w.x, w.y + 8, w.r, w.r * 0.45, 0, 0, 6.283); ctx.fill();
+      drawSpr(IMG.barricade, w.x, w.y + 4, TILE * 1.3, { rot: 1.35, sy: 0.5, alpha: Math.min(0.85, w.ttl / w.max * 1.4) });
+    }
     for (const b of barriers) {
       shadow(b.c * TILE + 20, b.r * TILE + 36, 20);
-      drawSpr(IMG.barricade, b.c * TILE + 20, b.r * TILE + 20, TILE * 1.35, {});
+      const bhf = b.hp / b.max; // v19: a chewed barricade LEANS and slumps as it goes — damage you can read at a glance
+      drawSpr(IMG.barricade, b.c * TILE + 20, b.r * TILE + 20, TILE * 1.35, { rot: (1 - bhf) * 0.14 * (((b.c + b.r) % 2) ? 1 : -1), sy: 0.82 + 0.18 * bhf, alpha: 0.72 + 0.28 * bhf });
       const f = b.hp / b.max;
       if (f < 1) {
         ctx.fillStyle = "rgba(6,5,8,0.7)"; ctx.fillRect(b.c * TILE + 4, b.r * TILE + TILE - 7, TILE - 8, 4);
@@ -1906,7 +1930,7 @@
       if (losBlocked(mouse.x, mouse.y, W / 2, H / 2)) { ctx.fillStyle = "rgba(255,120,120,0.85)"; ctx.font = "bold 10px system-ui"; ctx.textAlign = "center"; ctx.fillText("WALLS BLIND THIS SPOT", mouse.x, mouse.y - 48); }
       drawSprite(IMG["spr_" + type], mouse.x, mouse.y, 62, blockedSpot ? 0.35 : 0.65);
     }
-    if (state === "build" && placingBarrier && mouse.inside) {
+    if ((state === "build" || state === "wave") && placingBarrier && mouse.inside) {
       const [c, r] = tileOf(mouse.x, mouse.y);
       ctx.fillStyle = charAt(c, r) === '#' || charAt(c, r) === 'r' || barrierAt(c, r) ? "rgba(215,38,61,0.35)" : "rgba(169,138,84,0.35)";
       ctx.fillRect(c * TILE + 1, r * TILE + 1, TILE - 2, TILE - 2);
@@ -2226,14 +2250,15 @@
     return ch !== '#' && ch !== 'r' && ch !== 'f' && !barrierAt(c, r);
   }
   cv.addEventListener("click", ev => {
-    if (state !== "build") return;
+    if (state !== "build" && !(state === "wave" && placingBarrier)) return;
     const p = canvasPos(ev);
     if (placingBarrier) {
       const [c, r] = tileOf(p.x, p.y), ch = charAt(c, r);
       if (ch === '#' || ch === 'r' || barrierAt(c, r)) { log("No barricade stands there."); return; }
+      if (state === "wave" && enemies.some(e => !e.dead && Math.hypot(e.x - (c * TILE + 20), e.y - (r * TILE + 20)) < 30)) { log("The dead stand there. Not there."); return; }
       if (towers.some(t => { const [tc, tr] = tileOf(t.x, t.y); return tc === c && tr === r; })) { log("A tower holds that ground."); return; }
       if (barriers.length >= G.TERRAIN.barrierMax) { log("The floor holds no more barricades."); placingBarrier = false; updateBarrierButton(); return; }
-      if (ashes < G.TERRAIN.barrierCost) { log("Barricades cost 15 ash."); placingBarrier = false; updateBarrierButton(); return; }
+      if (ashes < G.TERRAIN.barrierCost) { log(`Barricades cost ${G.TERRAIN.barrierCost} ash.`); placingBarrier = false; updateBarrierButton(); return; }
       ashes -= G.TERRAIN.barrierCost;
       barriers.push({ c, r, hp: G.TERRAIN.barrierHp, max: G.TERRAIN.barrierHp }); addStaticBody(c, r, "barrier");
       SFX.place(); burst(c * TILE + 20, r * TILE + 20, "#a98a54", 10); buildFlow();

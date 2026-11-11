@@ -475,7 +475,7 @@
     if (!silent) floatText(e.x + (Math.random() * 16 - 8), e.y - e.r - 4, String(Math.round(dmg)), crit ? "#ffd94a" : "#e8e2d4");
     if (e.hp <= 0 && !e.dead) {
       e.dead = true; kills++; streak++; SFX.die();
-      corpses.push({ img: e.img, x: e.x, y: e.y, s: e.r * 3.4, t: 0, dir: Math.random() < 0.5 ? -1 : 1, boss: e.boss }); window.__corpsePushes = (window.__corpsePushes || 0) + 1; if (corpses.length > 40) corpses.shift();
+      corpses.push({ img: e.img, x: e.x, y: e.y, s: e.r * 3.4, t: 0, dir: Math.random() < 0.5 ? -1 : 1, boss: e.boss }); if (corpses.length > 40) corpses.shift();
       burst(e.x, e.y, e.type === "wraith" ? "#9fd8ff" : e.type === "plague" ? "#b6d94a" : "#c93b2e", e.boss ? 46 : 10);
       decals.push({ x: e.x, y: e.y, r: e.r * (0.8 + Math.random() * 0.7), a: 0.34 }); if (decals.length > 260) decals.shift();
       const ashN = Math.round(e.ash * (omen && omen.ashMult ? omen.ashMult : 1) * (tonightTithe === "hoard" ? 0.7 : 1));
@@ -575,7 +575,7 @@
     // embers, floating texts, zaps, blood never forgets
     for (const p of parts) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.92; p.vy *= 0.92; }
     for (const em of embers) { em.x += (em.vx + Math.sin(runTime * 0.7 + em.ph) * 6) * dt; em.y += em.vy * dt; if (em.y < -8) { em.y = H + 8; em.x = Math.random() * W; } if (em.x < -8) em.x = W + 8; if (em.x > W + 8) em.x = -8; }
-    for (const c of corpses) c.t += dt; corpses = corpses.filter(c => c.t < 4.0);
+    for (const c of corpses) c.t += dt; corpses = corpses.filter(c => c.t < 2.6);
     parts = parts.filter(p => p.t < p.life);
     for (const t of texts) { t.t += dt; t.y -= 34 * dt; } texts = texts.filter(t => t.t < 0.9);
     for (const z of zaps) z.t += dt; zaps = zaps.filter(z => z.t < z.ttl);
@@ -897,14 +897,12 @@
       drawSprite(IMG["spr_" + type], mouse.x, mouse.y, 62, blockedSpot ? 0.35 : 0.65);
     }
     // the fallen: bodies topple, sink, and become the blood decals below them
-    ctx.fillStyle = "#00ff9a"; ctx.font = "bold 15px monospace"; ctx.textAlign = "left";
-    ctx.fillText("DBG corpses=" + corpses.length + " pushed=" + (window.__corpsePushes || 0) + " e0anim=" + (enemies[0] ? enemies[0].animT.toFixed(1) : "-"), 12, 22);
     for (const c of corpses) {
       const rot = c.dir * Math.min(1, c.t / 0.45) * 1.45;
-      const sink = 0;
-      const al = c.t < 3.0 ? 1 : Math.max(0, 1 - (c.t - 3.0));
-      shadow(c.x, c.y + c.s * 0.30, c.s * 0.34);
-      drawSpr(c.img, c.x, c.y + sink, c.s * 2.6, { rot, alpha: al });
+      const sink = c.t > 1.6 ? (c.t - 1.6) * 8 : 0;
+      const al = c.t < 1.7 ? 0.97 : Math.max(0, 0.97 - (c.t - 1.7) * 1.1);
+      shadow(c.x, c.y + c.s * 0.42, c.s * 0.5);
+      drawSpr(c.img, c.x, c.y + sink, c.s * 1.5, { rot, alpha: al });
     }
     // enemies
     for (const e of enemies) {
@@ -938,14 +936,14 @@
       const lean = Math.max(-0.12, Math.min(0.12, player.vx * 0.0004));
       let psx = 1, psy = 1;
       if (player.dashT > 0) { const along = Math.abs(player.dashDx) >= Math.abs(player.dashDy); psx = along ? 1.22 : 0.86; psy = along ? 0.86 : 1.22; }
+      shadow(player.x, player.y + 19, 22);
+      drawSpr(IMG.hero, player.x, player.y + bobY, 62, { rot: lean, sx: psx, sy: psy, alpha: player.invuln > 0 && state === "wave" ? 0.65 : 1 });
       if (player.rooted) {
-        ctx.strokeStyle = "rgba(196,186,170,0.95)"; ctx.lineWidth = 4;
-        for (let k = 0; k < 6; k++) { const a = k / 6 * 6.283 + 0.4 + Math.sin(performance.now() / 500) * 0.05; ctx.beginPath(); ctx.moveTo(player.x + Math.cos(a) * 34, player.y + 18 + Math.sin(a) * 7); ctx.quadraticCurveTo(player.x + Math.cos(a) * 18, player.y + 6, player.x + Math.cos(a) * 7, player.y - 6); ctx.stroke(); }
+        ctx.strokeStyle = "rgba(205,196,182,0.95)"; ctx.lineWidth = 4.5;
+        for (let k = 0; k < 6; k++) { const a = k / 6 * 6.283 + 0.4 + Math.sin(performance.now() / 500) * 0.05; ctx.beginPath(); ctx.moveTo(player.x + Math.cos(a) * 40, player.y + 20 + Math.sin(a) * 8); ctx.quadraticCurveTo(player.x + Math.cos(a) * 20, player.y + 8, player.x + Math.cos(a) * 8, player.y - 8); ctx.stroke(); }
         ctx.fillStyle = `rgba(255,93,46,${0.75 + Math.sin(performance.now() / 200) * 0.25})`; ctx.font = "bold 13px system-ui"; ctx.textAlign = "center";
         ctx.fillText("☠ ROOTED — MOVE! ☠", player.x, player.y - 46);
       }
-      shadow(player.x, player.y + 19, 22);
-      drawSpr(IMG.hero, player.x, player.y + bobY, 62, { rot: lean, sx: psx, sy: psy, alpha: player.invuln > 0 && state === "wave" ? 0.65 : 1 });
       ctx.fillStyle = "rgba(6,5,8,0.7)"; ctx.fillRect(player.x - 20, player.y + 30, 40, 5);
       ctx.fillStyle = "#7dff9a"; ctx.fillRect(player.x - 20, player.y + 30, 40 * Math.max(0, player.hp / player.maxHp), 5);
     }

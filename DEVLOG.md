@@ -476,3 +476,29 @@ interesting")
 - Still open: one test run stalled on Night 3 after game.js was opened
   in a second tab (time frozen, banner repeating) — unconfirmed as a
   game bug; watch for it in clean single-tab runs.
+
+## v16.3 (2026-11-11) — the failsafe was dead: a shared field
+- The v16.2 debug run SOLVED the corpse mystery by instrumenting it:
+  spawned == kills at every reading (30/30), up to 8 live at once, and
+  the tester saw the fallen sprites inside their debug rings, in blood
+  pools. Corpses render now (drawn above the crowd, 5s life). Whatever
+  the old occlusion/lifetime combination was doing, it is gone.
+- The same run caught a worse bug: Night 1 stalled 85s on ONE elite
+  wedged at the east edge — steering pushing, physics holding, night
+  unable to end. Root cause found in the code, and it is embarrassing:
+  the stuck failsafe shared e.markT with the Gallows Tree's mark. The
+  mark counts markT DOWN at the top of the enemy loop; the failsafe
+  counted it UP in the same iteration. Net change ~zero, forever: the
+  failsafe could never reach its 2.2s trigger, and gallows marks never
+  expired either. This is the same wave-tail stall reported in v5 and
+  v6 and "fixed" twice — the fixes edited a timer that could not run.
+  Lesson, again: verify a mechanism fires, not just that it exists.
+- Fix: the failsafe now owns stuckT/stuckX/stuckY. Window is 4s of
+  <12px displacement (long enough that a door queue shuffling forward
+  does not trip it), accelerating to 1.5s when <=3 enemies remain and
+  the spawn queue is empty — the wave tail, where stalls actually hurt.
+  Cultists are covered too when beyond their firing range (in range,
+  standing still is their job). Gallows marks expire again (4s).
+- Also: the wraith flanker read `dp` outside the block that declares
+  it — hoisted to one dpE per enemy per frame. And dashT no longer
+  drifts negative in the debug HUD.

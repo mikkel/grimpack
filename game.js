@@ -1399,7 +1399,7 @@
     const dl = Math.hypot(dx, dy);
     let pvx = 0, pvy = 0;
     if (player.dashT > 0) {
-      player.dashT -= dt; pvx = player.dashDx * 950; pvy = player.dashDy * 950;
+      player.dashT = Math.max(0, player.dashT - dt); pvx = player.dashDx * 950; pvy = player.dashDy * 950;
       for (const e of enemies) { if (e.dead || e.dashMark === player.dashId) continue; if (Math.hypot(e.x - player.x, e.y - player.y) < e.r + 34) { e.dashMark = player.dashId; applyImpulse(e, player.dashDx * 520, player.dashDy * 520); e.staggerT = Math.max(e.staggerT || 0, 0.22); burst(e.x, e.y, "#e8e2d4", 3); } }
       player.invuln = Math.max(player.invuln, 0.05);
       if (Math.random() < 0.8) parts.push({ x: player.x, y: player.y, vx: 0, vy: 0, life: 0.3, t: 0, color: "#d7263d", size: 3 });
@@ -1590,6 +1590,7 @@
       else if (e.inFog) { e.inFog = false; e.ambushT = 1.0; }
       e.hiddenNow = fogNow;
       if (e.ambushT > 0) { e.ambushT -= dt; sp *= 1.35; }
+      const dpE = Math.hypot(player.x - e.x, player.y - e.y);
       let mx, my;
       if (e.type === "wraith") {
         const a = Math.atan2(player.y + player.vy * 0.22 - e.y, player.x + player.vx * 0.22 - e.x);
@@ -1607,7 +1608,7 @@
           const d = flow[tIdx(nc, nr)] + ((dc && dr) ? 0.4 : 0);
           if (d < bd) { bd = d; const [cx2, cy2] = tileCenter(nc, nr); bx = cx2; by = cy2; }
         }
-        const dp = Math.hypot(player.x - e.x, player.y - e.y);
+        const dp = dpE;
         let tx, ty;
         if (dp < 210 && !losBlocked(e.x, e.y, player.x, player.y)) { tx = player.x + player.vx * 0.22; ty = player.y + player.vy * 0.22; }
         else if (bx !== null) { tx = bx; ty = by; }
@@ -1638,18 +1639,25 @@
       // FLANKERS: wraiths peel around the knight's sides instead of
       // joining the pour — their desired heading rotates toward a flank
       // anchor until they are close enough to dive.
-      if (e.type === "wraith" && dp > 130) {
+      if (e.type === "wraith" && dpE > 130) {
         if (!e.flankSide) e.flankSide = Math.random() < 0.5 ? -1 : 1;
-        const pa = Math.atan2(player.y - e.y, player.x - e.x) + e.flankSide * 0.85 * Math.min(1, (dp - 130) / 260);
+        const pa = Math.atan2(player.y - e.y, player.x - e.x) + e.flankSide * 0.85 * Math.min(1, (dpE - 130) / 260);
         mx = Math.cos(pa) * sp; my = Math.sin(pa) * sp;
       }
       e.steerX = mx; e.steerY = my;
-      // stuck failsafe: the cathedral rejects the wedged dead (displacement, not intent)
-      if (waveActive && e.type !== "cultist") {
-        if (e.markX == null) { e.markX = e.x; e.markY = e.y; e.markT = 0; }
-        e.markT += dt;
-        if (e.markT > 2.2) {
-          const moved = Math.hypot(e.x - e.markX, e.y - e.markY);
+      // stuck failsafe: the cathedral rejects the wedged dead (displacement, not intent).
+      // v16.3: this gets its OWN fields (stuckT/stuckX/stuckY). It used to share
+      // e.markT with the Gallows mark — the mark counts markT down at the top of
+      // this loop while the failsafe counted it up, netting ~zero forever, so the
+      // failsafe could NEVER fire and gallows marks never expired. That dead
+      // timer is the recurring wave-tail stall (v5, v6, v16.1, v16.2 sightings).
+      if (waveActive && (e.type !== "cultist" || dpE > 235)) {
+        if (e.stuckX == null) { e.stuckX = e.x; e.stuckY = e.y; e.stuckT = 0; }
+        e.stuckT += dt;
+        const tailMode = spawnQueue.length === 0 && enemies.length <= 3;
+        const stuckWindow = tailMode ? 1.5 : 4.0;
+        if (e.stuckT > stuckWindow) {
+          const moved = Math.hypot(e.x - e.stuckX, e.y - e.stuckY);
           if (moved < 12 && !(e.staggerT > 0)) {
             // pinned: chew an adjacent blocker if there is one, else the floor rejects it
             let chewed = false;
@@ -1659,7 +1667,7 @@
             }
             if (!chewed) { const [mxp, myp] = nearestPassable((e.x + player.x) / 2, (e.y + player.y) / 2); e.x = mxp; e.y = myp; e.vx = 0; e.vy = 0; if (e.body) { MV.setPosition(e.body, { x: mxp, y: myp }); MV.setVelocity(e.body, { x: 0, y: 0 }); } burst(e.x, e.y, "#8a7f6a", 6); }
           }
-          e.markX = e.x; e.markY = e.y; e.markT = 0;
+          e.stuckX = e.x; e.stuckY = e.y; e.stuckT = 0;
         }
       }
       e.animT += dt * (2.2 + Math.hypot(e.vx, e.vy) / 26);
@@ -1989,11 +1997,11 @@
       ctx.fillStyle = `rgba(255,240,200,${a * 0.8})`; ctx.beginPath(); ctx.ellipse(b.x, b.y + 6, 30, 9, 0, 0, 6.283); ctx.fill();
     }
     if (DEBUG) {
-      ctx.fillStyle = "rgba(0,0,0,0.72)"; ctx.fillRect(8, 8, 300, 62);
+      ctx.fillStyle = "rgba(0,0,0,0.72)"; ctx.fillRect(8, 8, 580, 62);
       ctx.fillStyle = "#8dff6a"; ctx.font = "bold 13px monospace"; ctx.textAlign = "left";
       ctx.fillText(`DEBUG state=${state} wave=${wave} kills=${kills}`, 16, 28);
       ctx.fillText(`corpses live=${corpses.length} spawned=${corpseStats.spawned} maxLive=${corpseStats.maxLive}`, 16, 48);
-      ctx.fillText(`dashCd=${(player.dashCd || 0).toFixed(1)} dashT=${(player.dashT || 0).toFixed(2)} enemies=${enemies.length}`, 16, 66);
+      ctx.fillText(`dashCd=${(player.dashCd || 0).toFixed(1)} dashT=${(player.dashT || 0).toFixed(2)} enemies=${enemies.length} maxStuck=${enemies.reduce((m, e) => Math.max(m, e.stuckT || 0), 0).toFixed(1)}`, 16, 66);
     }
     drawKeyHints();
   }

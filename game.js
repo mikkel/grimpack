@@ -1346,12 +1346,12 @@
     if (hintT < 0) return;
     const t = hintT;
     if (t > 4.7) { hintT = -1; return; }
-    if (!hintSlammed) { hintSlammed = true; burst(W - 96, H - 118, "#cbbd93", 18); }
+    if (!hintSlammed) { hintSlammed = true; burst(W - 118, H - 118, "#cbbd93", 18); }
     let alpha = 1, scale = 1;
     if (t < 0.45) { const k = t / 0.45; scale = 1.9 - 0.9 * (1 - Math.pow(1 - k, 3)); alpha = Math.min(1, k * 1.6); }
     else if (t > 3.4) alpha = Math.max(0, 1 - (t - 3.4) / 1.25);
     const dissolving = t > 3.4;
-    const cx = W - 96, cy = H - 118;
+    const cx = W - 118, cy = H - 118;
     const caps = [ { dx: 0, dy: -47, ch: "↑" }, { dx: -47, dy: 0, ch: "←" }, { dx: 0, dy: 0, ch: "↓", drip: true }, { dx: 47, dy: 0, ch: "→" } ];
     ctx.save();
     ctx.translate(cx, cy); ctx.scale(scale, scale); ctx.translate(-cx, -cy);

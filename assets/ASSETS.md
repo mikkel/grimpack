@@ -52,3 +52,6 @@ Batch D images: 10 × $0.011 = $0.110. Music: $0.024 (MiniMax Music 3 attempt
 failed free — it demands lyrics despite the instrumental flag; Stable Audio
 took the job). Running Nanoodle total for GRIMPACK: **$0.420** ($0.286 + $0.110
 + $0.024) of the $5 budget.
+
+## v4 hero replacement (batch hero2, $0.011)
+- spr/spr-hero.webp — solid plate-armored knight (the v1 hero was a wispy ink ghost; it read as transparent in-game). Keyed on max-channel flood fill.

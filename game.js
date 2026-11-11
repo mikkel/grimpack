@@ -85,7 +85,7 @@
     player = { x: W / 2, y: H / 2 + 60, hp: B.hp, maxHp: B.hp, dmg: B.dmg, rate: B.rate, proj: B.proj,
       pierce: B.pierce, critC: B.critC, critM: B.critM, speed: B.speed, collectR: B.collectR,
       regen: 0, shieldCd: 0, shieldMax: 0, shieldReady: false, revives: 0, wrathNext: false, wrathWave: false,
-      fireCd: 0, invuln: 0, r: B.radius, chillSlow: 0, chillSecs: 0, stormEvery: 0, hitCount: 0, vx: 0, vy: 0, stillT: 0, rooted: false, rootMove: 0, walkPh: 0,
+      fireCd: 0, invuln: 0, r: B.radius, chillSlow: 0, chillSecs: 0, stormEvery: 0, hitCount: 0, vx: 0, vy: 0, walkPh: 0,
       thorns: 0, brandPct: 0, dashCd: 0, dashT: 0, dashDx: 0, dashDy: 0, lastDx: 1, lastDy: 0 };
     enemies = []; bolts = []; ebolts = []; towers = []; shards = []; zones = []; parts = []; texts = []; decals = []; zaps = []; corpses = []; embers = [];
     for (let i = 0; i < 26; i++) embers.push({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - 0.5) * 9, vy: -6 - Math.random() * 12, ph: Math.random() * 6.28 });
@@ -513,6 +513,7 @@
 
   const keys = {};
   addEventListener("keydown", e => {
+    if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(e.key.toLowerCase())) e.preventDefault();
     keys[e.key.toLowerCase()] = true;
     if (e.key === " " && state === "build") { e.preventDefault(); beginWave(); }
     if (e.key === " " && state === "wave") { e.preventDefault(); tryDash(); }
@@ -599,16 +600,6 @@
     player.x = Math.max(18, Math.min(W - 18, player.x)); player.y = Math.max(18, Math.min(H - 18, player.y));
     if (dt > 0) { player.vx = (player.x - px0) / dt; player.vy = (player.y - py0) / dt; }
     const spd = Math.hypot(player.vx, player.vy);
-    if (waveActive && state === "wave") {
-      if (player.rooted) {
-        player.rootMove += spd * dt;
-        if (player.rootMove > 130) { player.rooted = false; player.stillT = 0; floatText(player.x, player.y - 44, "YOU TEAR FREE", "#7dff9a"); }
-      } else if (spd < 14 && player.dashT <= 0) {
-        player.stillT += dt;
-        if (player.stillT > 2.2 && player.stillT < 2.3) floatText(player.x, player.y - 44, "the grief gathers… MOVE", "#c9b8a3");
-        if (player.stillT >= 3.0) { player.rooted = true; player.rootMove = 0; SFX.hurt(); floatText(player.x, player.y - 52, "ROOTED IN GRIEF — MOVE!", "#ff5d2e"); log("You stood still too long. The grief takes root: slowed fire, softer flesh, until you tear free."); }
-      } else player.stillT = Math.max(0, player.stillT - dt * 2.5);
-    } else { player.stillT = 0; player.rooted = false; }
     player.walkPh += dt * (2 + spd / 22);
     // --- spawns ---
     if (waveActive && spawnQueue.length) {
@@ -617,7 +608,7 @@
       if (spawnTimer <= 0) {
         spawnTimer = (spec.duration / spec.count) * (2 + Math.floor(Math.random() * 4)) * (0.75 + Math.random() * 0.5);
         const knot = 2 + Math.floor(Math.random() * 4);
-        const ring = wave >= 4 && Math.random() < 0.25; // THE DEAD RISE AROUND YOU
+        const ring = wave >= 2 && Math.random() < 0.30; // THE DEAD RISE AROUND YOU — from Night 2, wherever you stand
         const baseA = Math.random() * 6.283;
         if (ring) floatText(player.x, player.y - 52, "THE DEAD RISE AROUND YOU", "#ff5d2e");
         for (let i = 0; i < knot && spawnQueue.length; i++) spawnEnemy(spawnQueue.pop(), ring ? baseA + (i / Math.max(1, knot)) * 6.283 : null);
@@ -643,10 +634,10 @@
     }
     // --- towers ---
     for (const tw of towers) {
-      const def = G.TOWERS[tw.type], lvM = Math.pow(G.PACK.towerLevelMult, tw.level - 1) * (tonightTithe === "blood" ? 1.15 : 1), cons = inCircle(tw.x, tw.y) ? (tonightTithe === "blood" ? 1.6 : 1.3) : 1;
+      const def = G.TOWERS[tw.type], lvM = Math.pow(G.PACK.towerLevelMult, tw.level - 1) * (tonightTithe === "blood" ? 1.15 : 1), cons = inCircle(tw.x, tw.y) ? (tonightTithe === "blood" ? 1.9 : WORLD.consecration) : 1;
       tw.cd -= dt;
       if (tw.type === "font") {
-        if (tonightTithe !== "pray" && Math.hypot(player.x - tw.x, player.y - tw.y) < def.auraRange + player.r) heal(def.healPerSec * tw.mult * lvM * dt * (inCircle(tw.x, tw.y) ? 1.3 : 1));
+        if (tonightTithe !== "pray" && Math.hypot(player.x - tw.x, player.y - tw.y) < def.auraRange + player.r) heal(def.healPerSec * tw.mult * lvM * dt * (inCircle(tw.x, tw.y) ? WORLD.consecration : 1));
         continue;
       }
       if (tw.type === "bell") {
@@ -688,10 +679,10 @@
       let tgt = null, bd = 1e9;
       for (const e of enemies) { if (e.dead || (e.type === "wraith" && e.flickerT % 2.6 > 1.9)) continue; const d = Math.hypot(e.x - player.x, e.y - player.y); if (d < bd) { bd = d; tgt = e; } }
       if (tgt) {
-        const rateMult = (inCircle(player.x, player.y) ? 1.15 : 1) * (player.rooted ? 0.55 : 1);
+        const rateMult = (inCircle(player.x, player.y) ? 1.15 : 1);
         player.fireCd = 1 / (player.rate * rateMult);
         const missing = 1 - player.hp / player.maxHp;
-        const dmgBase = player.dmg * (player.wrathWave ? 1.25 : 1) * (1 + player.brandPct * missing * 100);
+        const dmgBase = player.dmg * (player.wrathWave ? 1.25 : 1) * (1 + player.brandPct * missing * 100) * (inCircle(player.x, player.y) ? 1.2 : 1); // the circle feeds the knight too
         for (let i = 0; i < player.proj; i++) {
           const crit = Math.random() < player.critC;
           const dmg = dmgBase * (crit ? player.critM : 1) * (player.proj > 1 ? 1 : 1);
@@ -758,7 +749,7 @@
       e.flickerT += dt;
       if (e.type === "brute" && !e.enraged && e.hp < e.maxHp * 0.3) { e.enraged = true; floatText(e.x, e.y - e.r - 10, "ENRAGED", "#ff5d2e"); }
       if (e.burnT > 0) { e.burnT -= dt; e.burnAcc = (e.burnAcc || 0) + e.burnDps * dt; if (e.burnAcc >= 1) { const d = Math.floor(e.burnAcc); e.burnAcc -= d; damageEnemySilent(e, d); } if (e.dead) continue; }
-      let sp = e.speed * (e.enraged ? 1.45 : 1) * (1 + 0.04 * deepenStacks) * (player.rooted ? 1.25 : 1); // they smell stillness
+      let sp = e.speed * (e.enraged ? 1.45 : 1) * (1 + 0.04 * deepenStacks);
       if (e.type === "wraith") {
         e.lungeCd -= dt;
         if (e.lungeT > 0) { e.lungeT -= dt; sp *= 1.9; }
@@ -783,7 +774,7 @@
       e.animT += dt * (2.2 + Math.hypot(mx, my) / 26);
       if (e.atkPop > 0) e.atkPop -= dt;
       e.hitCd -= dt;
-      if (Math.hypot(player.x - e.x, player.y - e.y) < e.r + player.r && e.hitCd <= 0) { e.hitCd = 0.85; e.atkPop = 0.22; hurtPlayer(e.dmg * (1 + 0.03 * deepenStacks) * (player.rooted ? 1.25 : 1), e); }
+      if (Math.hypot(player.x - e.x, player.y - e.y) < e.r + player.r && e.hitCd <= 0) { e.hitCd = 0.85; e.atkPop = 0.22; hurtPlayer(e.dmg * (1 + 0.03 * deepenStacks), e); }
     }
     enemies = enemies.filter(e => !e.dead);
     // --- shards (Sanguine Font drinks them) ---
@@ -836,6 +827,14 @@
     if (shake > 0) { ctx.translate((Math.random() * 2 - 1) * shake, (Math.random() * 2 - 1) * shake); shake *= 0.88; if (shake < 0.4) shake = 0; }
     ctx.drawImage(IMG.arena, 0, 0, W, H);
     for (const em of embers) { const tw2 = 0.35 + Math.sin(performance.now() / 300 + em.ph) * 0.2; ctx.fillStyle = `rgba(255,150,60,${tw2})`; ctx.fillRect(em.x - 1.2, em.y - 1.2, 2.4, 2.4); }
+    if (state === "wave") for (const bz of WORLD.braziers) {
+      const hot = enemies.some(e => Math.hypot(e.x - bz.x, e.y - bz.y) < WORLD.brazierR + 6);
+      const gr = ctx.createRadialGradient(bz.x, bz.y, 4, bz.x, bz.y, WORLD.brazierR);
+      gr.addColorStop(0, hot ? "rgba(255,120,30,0.34)" : "rgba(255,120,30,0.10)");
+      gr.addColorStop(1, "rgba(255,120,30,0)");
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(bz.x, bz.y, WORLD.brazierR, 0, 6.283); ctx.fill();
+      if (hot) { ctx.strokeStyle = `rgba(255,150,60,${0.35 + Math.sin(performance.now() / 130) * 0.15})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(bz.x, bz.y, WORLD.brazierR - 3, 0, 6.283); ctx.stroke(); }
+    }
     // blood remembers
     for (const d of decals) { ctx.fillStyle = `rgba(120,10,16,${d.a})`; ctx.beginPath(); ctx.ellipse(d.x, d.y, d.r, d.r * 0.62, 0, 0, 6.283); ctx.fill(); }
     // ritual circle glow (stronger when the knight stands in it)
@@ -938,12 +937,6 @@
       if (player.dashT > 0) { const along = Math.abs(player.dashDx) >= Math.abs(player.dashDy); psx = along ? 1.22 : 0.86; psy = along ? 0.86 : 1.22; }
       shadow(player.x, player.y + 19, 22);
       drawSpr(IMG.hero, player.x, player.y + bobY, 62, { rot: lean, sx: psx, sy: psy, alpha: player.invuln > 0 && state === "wave" ? 0.65 : 1 });
-      if (player.rooted) {
-        ctx.strokeStyle = "rgba(205,196,182,0.95)"; ctx.lineWidth = 4.5;
-        for (let k = 0; k < 6; k++) { const a = k / 6 * 6.283 + 0.4 + Math.sin(performance.now() / 500) * 0.05; ctx.beginPath(); ctx.moveTo(player.x + Math.cos(a) * 40, player.y + 20 + Math.sin(a) * 8); ctx.quadraticCurveTo(player.x + Math.cos(a) * 20, player.y + 8, player.x + Math.cos(a) * 8, player.y - 8); ctx.stroke(); }
-        ctx.fillStyle = `rgba(255,93,46,${0.75 + Math.sin(performance.now() / 200) * 0.25})`; ctx.font = "bold 13px system-ui"; ctx.textAlign = "center";
-        ctx.fillText("☠ ROOTED — MOVE! ☠", player.x, player.y - 46);
-      }
       ctx.fillStyle = "rgba(6,5,8,0.7)"; ctx.fillRect(player.x - 20, player.y + 30, 40, 5);
       ctx.fillStyle = "#7dff9a"; ctx.fillRect(player.x - 20, player.y + 30, 40 * Math.max(0, player.hp / player.maxHp), 5);
     }
@@ -975,7 +968,6 @@
     ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
     if (hitFlash > 0) { ctx.fillStyle = `rgba(215,38,61,${hitFlash * 0.30})`; ctx.fillRect(0, 0, W, H); }
     if (player.hp < player.maxHp * 0.30 && state === "wave") { const pulse = 0.10 + Math.sin(performance.now() / 240) * 0.05; ctx.fillStyle = `rgba(215,38,61,${pulse})`; ctx.fillRect(0, 0, W, H); }
-    if (player.rooted && state === "wave") { const gv = ctx.createRadialGradient(W / 2, H / 2, H * 0.30, W / 2, H / 2, H * 0.78); gv.addColorStop(0, "rgba(90,84,76,0)"); gv.addColorStop(1, "rgba(90,84,76,0.42)"); ctx.fillStyle = gv; ctx.fillRect(0, 0, W, H); }
   }
   // ---------- input ----------
   function canvasPos(ev) { const r = cv.getBoundingClientRect(); return { x: (ev.clientX - r.left) * W / r.width, y: (ev.clientY - r.top) * H / r.height, inside: true }; }

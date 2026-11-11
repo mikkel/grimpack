@@ -1,0 +1,60 @@
+{
+ "v": 1,
+ "nodes": [
+  {
+   "id": "c1",
+   "type": "comment",
+   "name": "GRIMPACK hero replacement",
+   "x": 40,
+   "y": -260,
+   "w": 700,
+   "fields": {
+    "text": "A SOLID hero."
+   }
+  },
+  {
+   "id": "t1",
+   "type": "text",
+   "name": "hero2",
+   "x": 40,
+   "y": 300,
+   "w": 320,
+   "fields": {
+    "text": "Full-body solid heavily-armored knight, completely opaque and substantial: bulky dark steel plate armor with brass trim and engraved crosses, a deep crimson tattered cloak, a hooded helm with a narrow glowing amber visor slit, holding a heavy crossbow with a glowing amber bolt. Standing planted, weighty, heroic. Dark gothic hand-painted 2D game art, deep black background, dramatic warm rim lighting, strong solid readable silhouette, rich color, no transparency, no ghostliness, no splatter, no text, no watermark."
+   }
+  },
+  {
+   "id": "i1",
+   "type": "image",
+   "name": "hero2",
+   "x": 420,
+   "y": 300,
+   "w": 260,
+   "fields": {
+    "model": "meta/muse-image/text-to-image",
+    "size": "1:1",
+    "variations": "1"
+   }
+  }
+ ],
+ "links": [
+  {
+   "id": "l1",
+   "from": {
+    "node": "t1",
+    "port": "text"
+   },
+   "to": {
+    "node": "i1",
+    "port": "prompt"
+   }
+  }
+ ],
+ "nid": 3,
+ "lid": 1,
+ "view": {
+  "panX": 30,
+  "panY": 280,
+  "scale": 0.6
+ }
+}

@@ -56,8 +56,8 @@
   const PLAYER_BASE = { hp: 100, speed: 218, dmg: 13, rate: 2.0, proj: 1, pierce: 0, critC: 0.05, critM: 2.0, radius: 20, collectR: 52 };
 
   const ENEMIES = {
-    husk:    { hp: 22,  speed: 54,  dmg: 8,  r: 16, ash: 1 },
-    cultist: { hp: 16,  speed: 80,  dmg: 7,  r: 15, ash: 1 },
+    husk:    { hp: 22,  speed: 64,  dmg: 8,  r: 16, ash: 1 },
+    cultist: { hp: 16,  speed: 90,  dmg: 7,  r: 15, ash: 1 },
     wraith:  { hp: 12,  speed: 140, dmg: 6,  r: 14, ash: 1 },
     brute:   { hp: 100, speed: 35,  dmg: 16, r: 24, ash: 3 },
     plague:  { hp: 30,  speed: 47,  dmg: 10, r: 18, ash: 2, explodeDmg: 26, explodeR: 66 },
@@ -66,13 +66,13 @@
   };
 
   function waveSpec(w) {
-    const count = Math.round(22 * Math.pow(1.27, w - 1));
-    const hpScale = Math.pow(1.24, w - 1);
+    const count = Math.round(30 * Math.pow(1.27, w - 1));
+    const hpScale = Math.pow(1.24, w - 1) * (w <= 2 ? 1.08 : 1);
     const bossScale = 1 + 0.10 * (w - 1); // bosses scale gently; they are a DPS check, not a sponge wall
     const dmgScale = 1 + 0.045 * (w - 1);
-    const duration = Math.round((34 + 4 * w) * (w >= 7 ? 0.45 : 0.55)); // seconds over which the wave spawns — compressed: the horde arrives like weather, not a queue
+    const duration = Math.round((34 + 4 * w) * (w >= 7 ? 0.45 : w <= 3 ? 0.36 : 0.55)); // seconds over which the wave spawns — compressed: the horde arrives like weather, not a queue
     let mix;
-    if (w === 1) mix = { husk: 1 };
+    if (w === 1) mix = { husk: 0.8, cultist: 0.2 };
     else if (w === 2) mix = { husk: 0.75, cultist: 0.25 };
     else if (w === 3) mix = { husk: 0.55, cultist: 0.23, wraith: 0.14, plague: 0.08 };
     else if (w < 7)  mix = { husk: 0.44, cultist: 0.20, wraith: 0.15, brute: 0.12, plague: 0.09 };
@@ -95,7 +95,7 @@
     braziers: [
       { x: 140, y: 92 }, { x: 828, y: 86 }, { x: 136, y: 552 }, { x: 830, y: 556 },
     ],
-    brazierR: 74, brazierDps: 11,
+    brazierR: 84, brazierDps: 16, consecration: 1.45,
   };
 
   const OMENS = [
@@ -126,7 +126,7 @@
   const TITHES = [
     { id: "braziers", name: "Burn the Tithe",   text: "Pay 30 ash. The braziers burn double tonight — but their light draws +15% more dead.", cost: "ash", amt: 30 },
     { id: "doors",    name: "Bar the Doors",    text: "The dead come 10% slower tonight — but the timber costs you tomorrow's free pack.", cost: "none", amt: 0 },
-    { id: "blood",    name: "Blood the Circle", text: "Pay 15 HP, for good. Towers deal +15% tonight; consecration doubles to +60%.", cost: "hp", amt: 15 },
+    { id: "blood",    name: "Blood the Circle", text: "Pay 15 HP, for good. Towers deal +15% tonight; consecration rises to +90%.", cost: "hp", amt: 15 },
     { id: "crypts",   name: "Open the Crypts",  text: "A free pack, right now. But something old wakes — Anointed elites triple tonight.", cost: "none", amt: 0 },
     { id: "hoard",    name: "Hoard the Ash",    text: "Gain 25 ash now. The dead provide 30% less ash tonight. Misers are remembered.", cost: "none", amt: 0 },
     { id: "silence",  name: "Refuse the Omen",  text: "Cast tonight's omen out — boon and curse alike. A plain night, chosen by you.", cost: "none", amt: 0 },

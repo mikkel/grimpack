@@ -160,7 +160,7 @@ function playRun(diff) {
       P.shieldCd -= dt; if (P.shieldMax && !P.shieldReady && P.shieldCd <= 0) P.shieldReady = true;
       // --- towers (instant-hit approximation with travel factor 0.92) ---
       for (const tw of towers) {
-        const def = G.TOWERS[tw.type], lvM = Math.pow(G.PACK.towerLevelMult, tw.level - 1), cons = inCircle(tw.x, tw.y) ? 1.3 : 1;
+        const def = G.TOWERS[tw.type], lvM = Math.pow(G.PACK.towerLevelMult, tw.level - 1), cons = inCircle(tw.x, tw.y) ? WORLD.consecration : 1;
         tw.cd -= dt;
         if (tw.type === "font") { if (dist(P, tw) < def.auraRange + P.r) P.hp = Math.min(P.maxHp, P.hp + def.healPerSec * tw.mult * lvM * dt); continue; }
         if (tw.type === "bell") {

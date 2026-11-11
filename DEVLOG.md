@@ -152,3 +152,23 @@ consequences; sit-in-center-and-win. Answers:
 - Lesson: screenshot agents have limited acuity for small dark motion;
   verify mechanics with counters, verify look with scale, let the human
   judge motion in motion.
+
+## v4 — Mikkel's second playtest (2026-11-10 late)
+Five more notes, five answers:
+- "Rooted is weird" — REMOVED entirely. Anti-camping is now diegetic: ring
+  spawns rise around the player from Night 2 (was Night 4), and the deepening
+  clock never stops. The map and the dead punish stillness, not a debuff.
+- "The main character is transparent" — the v1 hero art was literally a
+  watercolor ghost. New hero generated (+$0.011): a solid plate-armored
+  knight, crimson cloak, glowing crossbow. Keying lesson: luminance flood-
+  fill eats dark COLORED cloth (crimson shadow reads as black); the fix was
+  keying on max-channel (true background is neutral AND near-zero).
+- "Up/down scroll the page" — arrow keys + space now preventDefault.
+- "Enemies aren't hard at first" — Night 1: 30 enemies (was 22) arriving in
+  ~14s (was ~21s), cultists shooting from the first night, husks faster.
+  Playsim: Vigil bot 98% → 90%, median damage taken 54 → 91 HP.
+- "The map does nothing" — braziers: dps 11 → 16, radius 74 → 84, and they
+  now visibly flare when the dead enter their light. The circle feeds the
+  knight too (+20% damage inside it) and consecration rose 1.30 → 1.45 —
+  placement and positioning are real decisions with visible numbers.
+Total Nanoodle spend: $0.431 of $5.

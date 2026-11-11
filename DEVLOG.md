@@ -315,3 +315,9 @@ v9.2: the title-screen pack still showed a black slab — box-shadow paints
 the element's rectangle, not the art's silhouette. On keyed art the
 shadow must be filter: drop-shadow, which follows the alpha shape.
 Applied to the title pack and the ritual modal's sealed pack.
+v9.3: still a slab — the real culprit was in the IMAGE: the photo's glow
+halo (dark pixels just above the keying threshold) survived as an opaque
+dark ring hugging the pack; invisible on the dark button, obvious on the
+title's mottled backdrop. Re-keyed with a soft alpha ramp: anything
+edge-connected and dark fades out by darkness (0 at near-black, full at
+the trim line), so the glow now melts into whatever is behind it.

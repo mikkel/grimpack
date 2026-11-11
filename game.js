@@ -1514,7 +1514,7 @@
     for (const b of bolts) {
       if (b.homing && !b.homing.dead) { const a = Math.atan2(b.homing.y - b.y, b.homing.x - b.x), sp = Math.hypot(b.vx, b.vy); b.vx = Math.cos(a) * sp; b.vy = Math.sin(a) * sp; }
       // v17: every bolt drags a fading trail; pyre embers ARC and smoke
-      b.trail = b.trail || []; b.trail.unshift({ x: b.x, y: b.y }); if (b.trail.length > 4) b.trail.pop();
+      b.trail = b.trail || []; b.trail.unshift({ x: b.x, y: b.y }); if (b.trail.length > 3) b.trail.pop();
       if (b.kind === "ember") { b.vy += 300 * dt; if (Math.random() < 0.55) parts.push({ x: b.x, y: b.y - 2, vx: (Math.random() - 0.5) * 12, vy: -22 - Math.random() * 14, life: 0.55, t: 0, color: "#4a4238", size: 2.6 }); }
       b.x += b.vx * dt; b.y += b.vy * dt;
       if (pillarHit(b.x, b.y)) { b.dead = true; burst(b.x, b.y, "#8a7f6a", 3); continue; }
@@ -1616,11 +1616,13 @@
       if (e.twitchT <= 0) { e.twitchT = 1.0 + Math.random() * 1.6; e.twitchFx = 0.26; }
       if (e.twitchFx > 0) { e.twitchFx -= dt; sp *= 0.25; }
       // the wounded leak: one drop per ~15px actually travelled, so the
-      // trail is a spaced dotted line and can never pool into a splat
-      if (e.hp < e.maxHp * 0.5) {
+      // trail is a spaced dotted line and can never pool into a splat.
+      // Threshold is 72% of max HP (v17.3): at 50% the window was a sliver —
+      // a husk takes two bolts in its whole life and the second one kills it.
+      if (e.hp < e.maxHp * 0.72) {
         if (e.dripX == null || Math.hypot(e.x - e.dripX, e.y - e.dripY) >= 15) {
           e.dripX = e.x; e.dripY = e.y;
-          decals.push({ x: e.x + (Math.random() * 8 - 4), y: e.y + e.r * 0.7, r: 5 + Math.random() * 3.5, a: 0.30 });
+          decals.push({ x: e.x + (Math.random() * 8 - 4), y: e.y + e.r * 0.7, r: 5.5 + Math.random() * 3.5, a: 0.42, rgb: "172,28,34" });
           if (decals.length > 260) decals.shift();
         }
       }
@@ -1791,7 +1793,7 @@
       if (hot) { ctx.strokeStyle = `rgba(255,150,60,${0.35 + Math.sin(performance.now() / 130) * 0.15})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(bz.x, bz.y, WORLD.brazierR - 3, 0, 6.283); ctx.stroke(); }
     }
     // blood remembers
-    for (const d of decals) { ctx.fillStyle = `rgba(120,10,16,${d.a})`; ctx.beginPath(); ctx.ellipse(d.x, d.y, d.r, d.r * 0.62, 0, 0, 6.283); ctx.fill(); }
+    for (const d of decals) { ctx.fillStyle = `rgba(${d.rgb || "120,10,16"},${d.a})`; ctx.beginPath(); ctx.ellipse(d.x, d.y, d.r, d.r * 0.62, 0, 0, 6.283); ctx.fill(); }
     // ritual circle glow (stronger when the knight stands in it)
     const cActive = inCircle(player.x, player.y);
     ctx.strokeStyle = `rgba(255,60,60,${cActive ? 0.5 : 0.22})`; ctx.lineWidth = 2.5;
@@ -1908,14 +1910,14 @@
       // black hoods — so theirs float in the void where a face should be.
       // The plague mask gets a single sick glow in its one dark eye-hole.
       if (!flick) {
-        const EYE = e.type === "husk" ? { oy: -1.16, cx: -0.10, sep: 0.17, col: "#ff4a2e" }
-          : e.type === "cultist" ? { oy: -1.02, cx: -0.09, sep: 0.12, col: "#c99aff" }
-          : e.type === "wraith" ? { oy: -1.22, cx: 0, sep: 0.11, col: "#dff4ff" }
-          : e.type === "plague" ? { oy: -1.17, cx: -0.28, sep: 0, col: "#b6d94a" }
-          : e.type === "brute" ? { oy: -1.05, cx: -0.03, sep: 0.10, col: "#ffb03a" }
-          : e.type === "abbot" ? { oy: -0.68, cx: 0, sep: 0.05, col: "#ffb03a" }
-          : { oy: -0.97, cx: 0.01, sep: 0.06, col: "#ff2e4a" };
-        const ex = e.x + twX + EYE.cx * e.r, ey = e.y + bob + EYE.oy * e.r, sep = EYE.sep * e.r, er = (e.boss || e.type === "brute") ? 3.2 : 2.6;
+        const EYE = e.type === "husk" ? { oy: -1.16, cx: -0.10, sep: 0.17, col: "#ff4a2e", er: 2.6 }
+          : e.type === "cultist" ? { oy: -1.02, cx: -0.09, sep: 0.12, col: "#e6ccff", er: 3.0 }
+          : e.type === "wraith" ? { oy: -1.22, cx: 0, sep: 0.11, col: "#dff4ff", er: 2.6 }
+          : e.type === "plague" ? { oy: -1.17, cx: -0.28, sep: 0, col: "#b6d94a", er: 2.6 }
+          : e.type === "brute" ? { oy: -1.05, cx: -0.03, sep: 0.13, col: "#ffb03a", er: 2.4 }
+          : e.type === "abbot" ? { oy: -0.68, cx: 0, sep: 0.05, col: "#ffb03a", er: 3.2 }
+          : { oy: -0.97, cx: 0.01, sep: 0.06, col: "#ff2e4a", er: 3.2 };
+        const ex = e.x + twX + EYE.cx * e.r, ey = e.y + bob + EYE.oy * e.r, sep = EYE.sep * e.r, er = EYE.er;
         ctx.fillStyle = EYE.col; ctx.shadowColor = EYE.col; ctx.shadowBlur = 8;
         ctx.globalAlpha = e.twitchFx > 0 ? 1 : 0.80 + Math.sin(performance.now() / 340 + e.wob) * 0.13;
         ctx.beginPath(); ctx.arc(ex + sep, ey, er, 0, 6.283); if (sep > 0) ctx.arc(ex - sep, ey, er, 0, 6.283); ctx.fill();
@@ -2098,6 +2100,10 @@
       ctx.fillText(`DEBUG state=${state} wave=${wave} kills=${kills}`, 16, 28);
       ctx.fillText(`corpses live=${corpses.length} spawned=${corpseStats.spawned} maxLive=${corpseStats.maxLive}`, 16, 48);
       ctx.fillText(`dashCd=${(player.dashCd || 0).toFixed(1)} dashT=${(player.dashT || 0).toFixed(2)} enemies=${enemies.length} maxStuck=${enemies.reduce((m, e) => Math.max(m, e.stuckT || 0), 0).toFixed(1)}`, 16, 66);
+      { let ne = null, nd = 1e9; for (const e of enemies) { if (e.dead) continue; const d = Math.hypot(e.x - player.x, e.y - player.y); if (d < nd) { nd = d; ne = e; } }
+        ctx.fillStyle = "rgba(10,10,10,0.72)"; ctx.fillRect(10, 74, 580, 22);
+        ctx.fillStyle = "#baffc0"; ctx.font = "13px monospace"; ctx.textAlign = "left";
+        ctx.fillText(ne ? `near=${ne.type} spd=${Math.hypot(ne.vx || 0, ne.vy || 0).toFixed(0)}px/s gait=${(ne.gaitPulse != null ? ne.gaitPulse : -1).toFixed(2)} hp=${Math.ceil(ne.hp)}/${Math.ceil(ne.maxHp)}` : "near=none", 16, 89); }
     }
     drawKeyHints();
   }

@@ -590,3 +590,22 @@ again. unnerving."
   bright tapering core), 4-point trail, head radius 6.4 with a 3px
   white core. Cultist ring got a faint full circle under the sweep
   so the sweep has something to be compared against.
+
+## v17.3 (2026-11-11) — measure, don't guess
+- v17.2 verification: husk eyes CONFIRMED on the skull, comet head
+  (10-12px, white core) and halo CONFIRMED, cultist faint ring
+  CONFIRMED, no bugs. Still unproven by stills: the crouch-lunge
+  (tracked enemies averaged ~15px/s against a 64px/s spec — either
+  the gait is being damped somewhere or the test tab's clock is),
+  twitches, leak. Three screenshot rounds cannot settle a velocity
+  question, so the DEBUG HUD now prints the nearest enemy's real
+  speed and gait phase (line 4: near/spd/gait/hp) — numbers, then
+  conclusions.
+- Leak: the 50% HP threshold was a sliver (a husk's second bolt
+  kills it — it is never alive-and-wounded for long). Raised to
+  72%, and the drops are now fresh-blood bright (172,28,34 at 0.42)
+  against the dark dried splats.
+- Cultist eyes brightened to near-white violet (#e6ccff, r 3.0);
+  brute pupils separated (they merged into one dot). Comet trail
+  shortened to 3 points so a stream of bolts segments into comets
+  instead of fusing into one beam.

@@ -21,20 +21,20 @@
     { id: "pyre",   kind: "tower", name: "Soul Pyre",     art: "assets/tower-pyre.jpg",  blurb: "Lobs embers that leave burning ground." },
     { id: "frost",  kind: "tower", name: "Frost Obelisk", art: "assets/tower-frost.jpg", blurb: "Heavy shots that chill the damned." },
     // weapons
-    { id: "hellfire", kind: "weapon", name: "Hellfire Rounds",   art: "assets/icon-hellfire.jpg", blurb: "+bolt damage." },
-    { id: "twin",     kind: "weapon", name: "Twin Seal",         art: "assets/icon-twin.jpg",     blurb: "+1 projectile (each bolt a little weaker)." },
-    { id: "cadence",  kind: "weapon", name: "Reaper's Cadence",  art: "assets/icon-cadence.jpg",  blurb: "+fire rate." },
-    { id: "pierce",   kind: "weapon", name: "Piercing Sigil",    art: "assets/icon-pierce.jpg",   blurb: "Bolts pierce +1 enemy." },
-    { id: "axe",      kind: "weapon", name: "Executioner's Mass",art: "assets/icon-axe.jpg",      blurb: "+crit chance and crit damage." },
+    { id: "hellfire", kind: "weapon", name: "Hellfire Rounds",   art: "assets/icon-hellfire.jpg", blurb: "Bolts wreathed in hellfire." },
+    { id: "twin",     kind: "weapon", name: "Twin Seal",         art: "assets/icon-twin.jpg",     blurb: "One seal, two deaths. Each bolt a little weaker." },
+    { id: "cadence",  kind: "weapon", name: "Reaper's Cadence",  art: "assets/icon-cadence.jpg",  blurb: "The drum that sets the reaping tempo." },
+    { id: "pierce",   kind: "weapon", name: "Piercing Sigil",    art: "assets/icon-pierce.jpg",   blurb: "What it kills, it kills through." },
+    { id: "axe",      kind: "weapon", name: "Executioner's Mass",art: "assets/icon-axe.jpg",      blurb: "It falls heaviest on the finishing blow." },
     // relics
-    { id: "boots",   kind: "relic", name: "Gravewind Boots",  art: "assets/icon-boots.jpg",  blurb: "+move speed." },
-    { id: "chalice", kind: "relic", name: "Sanguine Chalice", art: "assets/icon-chalice.jpg",blurb: "+max HP, +regen, heal a little now." },
-    { id: "magnet",  kind: "relic", name: "Ashen Lodestone",  art: "assets/icon-magnet.jpg", blurb: "Ashes fly to you from farther away." },
-    { id: "ward",    kind: "relic", name: "Widow's Ward",     art: "assets/icon-ward.jpg",   blurb: "A shield that eats one hit, then re-forms." },
+    { id: "boots",   kind: "relic", name: "Gravewind Boots",  art: "assets/icon-boots.jpg",  blurb: "The gravewind carries you." },
+    { id: "chalice", kind: "relic", name: "Sanguine Chalice", art: "assets/icon-chalice.jpg",blurb: "Drink deep; the blood provides." },
+    { id: "magnet",  kind: "relic", name: "Ashen Lodestone",  art: "assets/icon-magnet.jpg", blurb: "Ash remembers its owner." },
+    { id: "ward",    kind: "relic", name: "Widow's Ward",     art: "assets/icon-ward.jpg",   blurb: "She watches still. The shield re-forms after each save." },
     // consumables
-    { id: "vial",    kind: "consumable", name: "Blood Vial",    art: "assets/icon-vial.jpg",    blurb: "Heal 35% of max HP, right now." },
-    { id: "draught", kind: "consumable", name: "Wrath Draught", art: "assets/icon-draught.jpg", blurb: "+25% damage for the next wave." },
-    { id: "candle",  kind: "consumable", name: "Saint's Candle",art: "assets/icon-candle.jpg",  blurb: "Cheat death once: revive at 50% HP." },
+    { id: "vial",    kind: "consumable", name: "Blood Vial",    art: "assets/icon-vial.jpg",    blurb: "Warm. Fresh. Yours, mostly." },
+    { id: "draught", kind: "consumable", name: "Wrath Draught", art: "assets/icon-draught.jpg", blurb: "Tastes of copper and fury." },
+    { id: "candle",  kind: "consumable", name: "Saint's Candle",art: "assets/icon-candle.jpg",  blurb: "A saint is listening." },
   ];
 
   const TOWERS = {

@@ -220,3 +220,14 @@ to behaviour." GRIMPACK now runs on momentum:
   drifting wisps, an upper veil); spawns can no longer land inside walls;
   embedded bodies eject cleanly; a stuck-failsafe unwedges stragglers;
   cultist bolts are unmistakably violet and their first shot comes sooner.
+
+## v6.2 — the phantom-wall bug (found by verification, fixed same night)
+Three verification runs reported "invisible stragglers": waves stalling for
+minutes with enemies alive but nowhere on screen. Root cause: tile collision
+treated out-of-grid tiles as walls (charAt returns '#' off-grid), so enemies
+spawning 30px outside the arena were embedded in phantom wall tiles and the
+new embedded-ejection kept pushing them OUT — hovering off-screen, immortal
+and unreachable. Fix: collision skips off-grid tiles entirely, plus a hard
+position clamp. Verified after the fix: Night 1 completes standing still in
+19 seconds, spawns streaming from all four edges; Night 2 in 25 seconds.
+Lesson: every "it stalls" report was real. The testers were right all along.

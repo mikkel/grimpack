@@ -144,6 +144,7 @@
   }
   function fmtTime(s) { return Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0"); }
   function updateHUD() {
+    updateBeginEyes();
     $("hp-fill").style.width = Math.max(0, player.hp / player.maxHp * 100) + "%";
     $("hp-text").textContent = Math.ceil(player.hp) + "/" + player.maxHp;
     $("hud-wave").textContent = wave === 0 ? "—" : wave + " / 10" + (waveActive ? ` · ${enemies.length + spawnQueue.length} left` : "");
@@ -180,6 +181,59 @@
     if (freePacks > 0) { b.disabled = false; $("pack-btn-label").textContent = `Open Pack — FREE (${freePacks})`; }
     else if (ashes >= price) { b.disabled = false; $("pack-btn-label").textContent = `Buy Pack — ${price} ashes`; }
     else { b.disabled = true; $("pack-btn-label").textContent = `Pack — ${price} ashes (need ${price - ashes} more)`; }
+  }
+
+  // ---- THE WATCHERS: eyes for the Begin button ----
+  // The pack gets the hand; the night gets the watched feeling. When the
+  // build is otherwise done (no free pack waiting), eyes open in the dark
+  // around Begin — blinking out of sync, glancing at the button, and now
+  // and then one creeps closer. They snap shut when the night begins.
+  const EYE_SPOTS = [
+    { l: "-6px", t: "-14px", s: 15, r: -8, dx: 0.3, dy: 1 },
+    { l: "33%", t: "-20px", s: 11, r: 5, dx: 0, dy: 1 },
+    { r: "-4px", t: "-16px", s: 13, r: 9, dx: -0.3, dy: 1 },
+    { l: "14px", b: "-14px", s: 10, r: -14, dx: 0.4, dy: -1 },
+    { r: "24px", b: "-16px", s: 14, r: 6, dx: -0.2, dy: -1 },
+    { l: "57%", t: "-18px", s: 9, r: -4, dx: 0, dy: 1 }
+  ];
+  const eyeEls = [];
+  for (const spot of EYE_SPOTS) {
+    const e = document.createElement("span"); e.className = "eye";
+    e.style.width = spot.s + "px"; e.style.height = Math.round(spot.s * 0.55) + "px";
+    if (spot.l) e.style.left = spot.l; if (spot.r) e.style.right = spot.r;
+    if (spot.t) e.style.top = spot.t; if (spot.b) e.style.bottom = spot.b;
+    e.style.transform = `rotate(${spot.r}deg)`;
+    e.innerHTML = '<span class="lid"><i class="iris"></i></span>';
+    const lid = e.querySelector(".lid");
+    lid.style.animationDuration = (3.9 + Math.random() * 2.6).toFixed(2) + "s";
+    lid.style.animationDelay = (-Math.random() * 5).toFixed(2) + "s";
+    e._base = { dx: spot.dx, dy: spot.dy }; e.dataset.creep = "0";
+    $("begin-wrap").appendChild(e); eyeEls.push(e);
+  }
+  let eyesOn = false, eyesTimer = null;
+  function updateBeginEyes() {
+    const on = state === "build" && freePacks === 0;
+    if (on === eyesOn) return; eyesOn = on;
+    $("begin-wrap").classList.toggle("watched", on);
+    if (on) {
+      for (const e of eyeEls) { e.dataset.creep = "0"; e.style.marginLeft = "0px"; e.style.marginTop = "0px"; }
+      eyesTimer = setInterval(eyeCreep, 2600);
+    } else { clearInterval(eyesTimer); eyesTimer = null; }
+  }
+  function eyeCreep() {
+    if (!eyesOn) return;
+    for (const e of eyeEls) {
+      const ir = e.querySelector(".iris");
+      ir.style.transform = `translate(${(Math.random() * 2.4 - 1.2).toFixed(1)}px, ${(Math.random() * 1.6 - 0.8).toFixed(1)}px)`;
+    }
+    const e = eyeEls[Math.floor(Math.random() * eyeEls.length)];
+    const cur = parseFloat(e.dataset.creep || 0);
+    if (cur < 26) {
+      const nxt = cur + 6 + Math.random() * 5; e.dataset.creep = String(nxt);
+      e.style.marginLeft = (e._base.dx * nxt).toFixed(1) + "px";
+      e.style.marginTop = (e._base.dy * nxt).toFixed(1) + "px";
+      if (Math.random() < 0.35) playSnd("toll", 0.09, 0.15);
+    }
   }
   function offerRewards() {
     const pool = [...G.REWARDS].sort(() => Math.random() - 0.5).slice(0, 3);
@@ -1732,7 +1786,7 @@
   cv.addEventListener("touchstart", ev => { const t = ev.touches[0]; touchTarget = canvasPos(t); }, { passive: true });
   cv.addEventListener("touchmove", ev => { const t = ev.touches[0]; touchTarget = canvasPos(t); }, { passive: true });
   cv.addEventListener("touchend", () => touchTarget = null);
-  $("btn-begin").addEventListener("click", () => { if (state === "build") { beginWave(); kickMusic(); } });
+  $("btn-begin").addEventListener("click", () => { if (state === "build") { $("begin-wrap").classList.add("shut"); setTimeout(() => { $("begin-wrap").classList.remove("shut"); beginWave(); kickMusic(); }, 140); } });
   document.addEventListener("click", e => { const b = e.target.closest("button"); if (b) b.blur(); });
   // ---------- title / difficulty / restart ----------
   function selectDiff(key2) {

@@ -575,7 +575,7 @@
     // embers, floating texts, zaps, blood never forgets
     for (const p of parts) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.92; p.vy *= 0.92; }
     for (const em of embers) { em.x += (em.vx + Math.sin(runTime * 0.7 + em.ph) * 6) * dt; em.y += em.vy * dt; if (em.y < -8) { em.y = H + 8; em.x = Math.random() * W; } if (em.x < -8) em.x = W + 8; if (em.x > W + 8) em.x = -8; }
-    for (const c of corpses) c.t += dt; corpses = corpses.filter(c => c.t < 2.3);
+    for (const c of corpses) c.t += dt; corpses = corpses.filter(c => c.t < 4.0);
     parts = parts.filter(p => p.t < p.life);
     for (const t of texts) { t.t += dt; t.y -= 34 * dt; } texts = texts.filter(t => t.t < 0.9);
     for (const z of zaps) z.t += dt; zaps = zaps.filter(z => z.t < z.ttl);
@@ -901,19 +901,17 @@
     ctx.fillText("DBG corpses=" + corpses.length + " pushed=" + (window.__corpsePushes || 0) + " e0anim=" + (enemies[0] ? enemies[0].animT.toFixed(1) : "-"), 12, 22);
     for (const c of corpses) {
       const rot = c.dir * Math.min(1, c.t / 0.45) * 1.45;
-      const sink = c.t > 1.2 ? (c.t - 1.2) * 9 : 0;
-      const al = c.t < 1.5 ? 0.95 : Math.max(0, 0.95 - (c.t - 1.5) * 1.2);
+      const sink = 0;
+      const al = c.t < 3.0 ? 1 : Math.max(0, 1 - (c.t - 3.0));
       shadow(c.x, c.y + c.s * 0.30, c.s * 0.34);
-      drawSpr(c.img, c.x, c.y + sink, c.s, { rot, alpha: al });
-      ctx.strokeStyle = "#ff00ff"; ctx.lineWidth = 3; ctx.strokeRect(c.x - c.s / 2, c.y + sink - c.s / 2, c.s, c.s);
-      ctx.fillStyle = "#ff00ff"; ctx.font = "bold 11px monospace"; ctx.textAlign = "center"; ctx.fillText("CORPSE", c.x, c.y + sink - c.s / 2 - 4);
+      drawSpr(c.img, c.x, c.y + sink, c.s * 2.6, { rot, alpha: al });
     }
     // enemies
     for (const e of enemies) {
       const ph = e.animT * 2.1;
-      const bob = e.type === "wraith" ? Math.sin(ph * 0.9) * 6.5 : Math.abs(Math.sin(ph)) * -4.6;
-      const squash = 1 + Math.sin(ph) * (e.type === "brute" ? 0.075 : 0.06);
-      const tilt = Math.max(-0.2, Math.min(0.2, (e.vx || 0) * 0.00045 + Math.sin(ph) * 0.05));
+      const bob = e.type === "wraith" ? Math.sin(ph * 0.9) * 8 : Math.abs(Math.sin(ph)) * -7;
+      const squash = 1 + Math.sin(ph) * (e.type === "brute" ? 0.10 : 0.085);
+      const tilt = Math.max(-0.26, Math.min(0.26, (e.vx || 0) * 0.0006 + Math.sin(ph) * 0.11));
       let sc = e.r * 3.4, sy = squash, sx = 2 - squash > 0 ? 1 / squash : 1;
       if (e.windT > 0) { sy *= 0.88; sx *= 1.1; }
       if (e.atkPop > 0) { const p = 1 + e.atkPop * 0.9; sx *= p; sy *= p; }

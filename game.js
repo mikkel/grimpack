@@ -17,7 +17,7 @@
   loadImg("wraith", "assets/spr/spr-wraith.webp"); loadImg("brute", "assets/spr/spr-brute.webp");
   loadImg("plague", "assets/spr/spr-plague.webp"); loadImg("abbot", "assets/spr/spr-abbot.webp");
   loadImg("vesper", "assets/spr/spr-vesper.webp");
-  loadImg("wall", "assets/wall.jpg"); loadImg("rubble", "assets/spr/spr-rubble.webp"); loadImg("barricade", "assets/spr/spr-barricade.webp");
+  loadImg("wall", "assets/spr/spr-wall.webp"); loadImg("rubble", "assets/spr/spr-rubble.webp"); loadImg("barricade", "assets/spr/spr-barricade.webp");
   const SPR_TOWER = { spire: "spr-spire", bell: "spr-bell", pyre: "spr-pyre", frost: "spr-frost", gallows: "spr-gallows", font: "spr-font" };
   for (const [id, f] of Object.entries(SPR_TOWER)) loadImg("spr_" + id, "assets/spr/" + f + ".webp");
   const CARDMAP = {}; for (const c of G.CARDS) { CARDMAP[c.id] = c; loadImg("card_" + c.id, c.art); }
@@ -1153,7 +1153,7 @@
     // THE FLOOR ITSELF: walls, rubble, grave-fog
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
       const ch = grid[r] ? grid[r][c] : '.';
-      if (ch === '#') { shadow(c * TILE + 20, r * TILE + 36, 20); ctx.drawImage(IMG.wall, c * TILE - 2, r * TILE - 2, TILE + 4, TILE + 4); }
+      if (ch === '#') { shadow(c * TILE + 20, r * TILE + 35, 21); drawSpr(IMG.wall, c * TILE + 20, r * TILE + 20, TILE * 1.32, {}); }
       else if (ch === 'r') { shadow(c * TILE + 20, r * TILE + 34, 19); drawSpr(IMG.rubble, c * TILE + 20, r * TILE + 20, TILE * 1.3, {}); const hpF = (rubbleHp[c + "," + r] || G.TERRAIN.rubbleHp) / G.TERRAIN.rubbleHp; if (hpF < 1) { ctx.fillStyle = `rgba(0,0,0,${(1 - hpF) * 0.45})`; ctx.fillRect(c * TILE + 3, r * TILE + 3, TILE - 6, TILE - 6); } }
     }
     for (const em of embers) { const tw2 = 0.35 + Math.sin(performance.now() / 300 + em.ph) * 0.2; ctx.fillStyle = `rgba(255,150,60,${tw2})`; ctx.fillRect(em.x - 1.2, em.y - 1.2, 2.4, 2.4); }

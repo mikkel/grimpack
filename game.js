@@ -478,6 +478,7 @@
   function togglePause() { paused = !paused; $("pause-overlay").classList.toggle("hidden", !paused); }
   function toggleMute() { muted = !muted; $("btn-mute").textContent = muted ? "🔇" : "🔊"; if (dirge) { muted ? dirge.pause() : (state === "wave" || state === "build") && dirge.play().catch(() => {}); } }
   $("btn-mute").addEventListener("click", toggleMute);
+  $("btn-pause").addEventListener("click", () => { if (state === "wave" || state === "build") togglePause(); });
   function tryDash() {
     if (player.dashCd > 0) return;
     let dx = (keys["d"] || keys["arrowright"] ? 1 : 0) - (keys["a"] || keys["arrowleft"] ? 1 : 0);
@@ -920,7 +921,7 @@
   }
   $("btn-start").addEventListener("click", () => {
     ac(); reset(); state = "build";
-    $("title-screen").classList.add("hidden"); $("game-ui").classList.remove("hidden");
+    $("title-screen").classList.add("hidden");
     setMusic(true);
     $("phase-title").textContent = "The Vigil Begins";
     log("Night approaches. Open your free pack, then begin.");

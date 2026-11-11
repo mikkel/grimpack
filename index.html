@@ -16,6 +16,7 @@
       <div class="hud-item"><label>Night</label><b id="hud-wave">—</b></div>
       <div class="hud-item"><label>Ashes</label><b id="hud-ashes">0</b></div>
       <div class="hud-item"><label>Slain</label><b id="hud-kills">0</b></div>
+      <div class="hud-item"><label>Dash</label><b id="hud-dash">↯ ready</b></div>
       <div class="hud-item"><label>Time</label><b id="hud-time">0:00</b></div>
       <div class="hud-item"><button id="btn-mute" title="Mute (M)">🔊</button><button id="btn-pause" title="Pause (P)">⏸</button></div>
     </div>
@@ -32,20 +33,34 @@
           <h1>GRIM<span>PACK</span></h1>
           <p class="tagline">Crack the seal. Raise your towers. Survive the night.</p>
           <p class="howto">
-            <b>WASD / arrows</b> — move &nbsp;·&nbsp; your crossbow <b>fires on its own</b><br>
+            <b>WASD / arrows</b> — move &nbsp;·&nbsp; <b>Space / Shift</b> — dash &nbsp;·&nbsp; your crossbow <b>fires on its own</b><br>
             Clear a wave → <b>tear open a booster pack</b> → place towers, stack weapons &amp; relics.<br>
-            Ten nights. The fifth tolls for <b>The Abbot</b>. The tenth, for <b>Vesper, Mother of Bells</b>.
+            The arena fights: <b>pillars block bolts</b>, the <b>ritual circle consecrates</b> towers inside it.<br>
+            Ten nights. The fifth tolls for <b>The Abbot</b>. The tenth, for <b>Vesper</b>. And the night deepens…
           </p>
+          <div class="diff-row">
+            <button id="diff-vigil" class="diff-btn diff-on">☾ Vigil <small>the intended night</small></button>
+            <button id="diff-torment" class="diff-btn">☠ Torment <small>harder dead, luckier packs</small></button>
+          </div>
           <button id="btn-start" class="big-btn">Begin the Vigil</button>
-          <p class="fineprint">All art generated with Nanoodle → NanoGPT for $0.286. No install, no mercy.</p>
+          <p id="best-line" class="best-line"></p>
+          <p class="fineprint">Every image and the dirge itself generated with Nanoodle → NanoGPT for $0.42. No install, no mercy.</p>
         </div>
       </div>
 
       <div id="end-screen" class="overlay hidden">
         <div class="title-content">
+          <img id="end-art" class="end-art" src="assets/title-art.jpg" alt="">
           <h1 id="end-title">THE NIGHT TAKES YOU</h1>
           <p id="end-stats" class="howto"></p>
-          <button id="btn-restart" class="big-btn">Another Vigil</button>
+          <button id="btn-again" class="big-btn">Another Vigil</button>
+        </div>
+      </div>
+
+      <div id="pause-overlay" class="overlay hidden">
+        <div class="title-content">
+          <h1>HELD BREATH</h1>
+          <p class="howto">The dead wait, politely. Press P to resume.</p>
         </div>
       </div>
 
@@ -62,7 +77,7 @@
           <span id="pack-btn-label">Open Pack — FREE</span>
         </button>
         <div id="hand-wrap">
-          <h3> Towers in hand <span id="hand-hint">(click a tower, then click the arena)</span></h3>
+          <h3> Towers in hand <span id="hand-hint">(click a tower, then click the arena — double-click a standing tower to overcharge it)</span></h3>
           <div id="hand"></div>
         </div>
         <button id="btn-begin" class="big-btn">Begin Night 1 ☾</button>
@@ -87,11 +102,13 @@
       <img id="pack-img" src="assets/pack.jpg" alt="Sealed grimpack">
       <p>Click the pack to tear the seal…</p>
     </div>
+    <p id="foil-note"></p>
     <div id="pack-cards" class="hidden"></div>
     <button id="btn-collect" class="big-btn hidden">Collect All</button>
   </div>
 </div>
 
+<audio id="dirge" src="assets/dirge.mp3" loop preload="auto"></audio>
 <script src="balance.js"></script>
 <script src="game.js"></script>
 </body>

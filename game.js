@@ -1,10 +1,13 @@
-/* GRIMPACK — game logic. Balance numbers all live in balance.js (window.GRIM). */
+/* GRIMPACK v2 — game logic. Balance numbers live in balance.js (window.GRIM).
+   The arena art is gameplay: pillars block bolts, the ritual circle
+   consecrates, braziers burn, blood stays where it fell. */
 (function () {
   "use strict";
   const G = window.GRIM;
   const W = 960, H = 640;
   const cv = document.getElementById("game"), ctx = cv.getContext("2d");
   const $ = id => document.getElementById(id);
+  const WORLD = G.WORLD;
 
   // ---------- images ----------
   const IMG = {};
@@ -12,12 +15,13 @@
   loadImg("arena", "assets/arena.jpg"); loadImg("hero", "assets/hero.jpg");
   loadImg("husk", "assets/husk.jpg"); loadImg("cultist", "assets/cultist.jpg");
   loadImg("wraith", "assets/wraith.jpg"); loadImg("brute", "assets/brute.jpg");
-  loadImg("boss", "assets/boss.jpg"); loadImg("abbot", "assets/cultist.jpg");
+  loadImg("plague", "assets/plague.jpg"); loadImg("abbot", "assets/abbot.jpg");
   loadImg("vesper", "assets/boss.jpg");
   const CARDMAP = {}; for (const c of G.CARDS) { CARDMAP[c.id] = c; loadImg("card_" + c.id, c.art); }
 
-  // ---------- audio (WebAudio synth, zero files) ----------
+  // ---------- audio ----------
   let AC = null, muted = false;
+  const dirge = $("dirge");
   function ac() { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === "suspended") AC.resume(); return AC; }
   function tone(freq, dur, type, vol, slideTo) {
     if (muted) return;
@@ -28,7 +32,7 @@
       g.gain.setValueAtTime(vol || 0.05, a.currentTime);
       g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
       o.connect(g).connect(a.destination); o.start(); o.stop(a.currentTime + dur);
-    } catch (e) { /* audio is garnish */ }
+    } catch (e) {}
   }
   function noiseBurst(dur, vol) {
     if (muted) return;
@@ -51,33 +55,42 @@
     flip:  r => tone(420 + r * 130, 0.22, "triangle", 0.06, 900 + r * 260),
     ash:   () => tone(1250 + Math.random() * 300, 0.07, "sine", 0.02, 1800),
     place: () => tone(150, 0.14, "triangle", 0.07, 70),
+    dash:  () => noiseBurst(0.14, 0.05),
+    boom:  () => { tone(70, 0.4, "sawtooth", 0.12, 34); noiseBurst(0.3, 0.14); },
+    shock: () => tone(1400, 0.12, "square", 0.03, 300),
     win:   () => { [392, 523, 659, 784].forEach((f, i) => setTimeout(() => tone(f, 0.35, "triangle", 0.06), i * 140)); },
     lose:  () => { [330, 262, 196, 131].forEach((f, i) => setTimeout(() => tone(f, 0.4, "triangle", 0.06), i * 170)); },
   };
+  function setMusic(on) { if (!dirge) return; dirge.volume = 0.32; if (on && !muted) dirge.play().catch(() => {}); else dirge.pause(); }
 
   // ---------- state ----------
-  let state = "title"; // title | build | wave | pack | over | win
-  let paused = false, lastT = 0, runTime = 0;
-  let player, enemies, bolts, ebolts, towers, shards, zones, parts, texts;
+  let state = "title";
+  let paused = false, lastT = 0, runTime = 0, hitStop = 0;
+  let player, enemies, bolts, ebolts, towers, shards, zones, parts, texts, decals, zaps;
   let wave = 0, spawnQueue = [], spawnTimer = 0, waveActive = false;
-  let ashes = 0, kills = 0, packsOpened = 0, packCost = G.PACK.baseCost, freePacks = 0, dryPacks = 0;
-  let hand = {};           // towerId -> {count, bestMult}
-  let placedCount = {};    // towerId -> placed towers[]
-  let collection = [];     // every card pulled {id, rarityIdx}
-  let selectedHand = null, moveTower = null, mouse = { x: 0, y: 0 };
-  let bossRef = null, shake = 0, hitFlash = 0;
+  let ashes = 0, kills = 0, streak = 0, packsOpened = 0, packCost = G.PACK.baseCost, freePacks = 0, dryPacks = 0;
+  let hand = {}, placedCount = {}, collection = [], owned = {};
+  let selectedHand = null, moveTower = null, mouse = { x: 0, y: 0 }, touchTarget = null;
+  let bossRef = null, shake = 0, hitFlash = 0, waveTime = 0, deepenStacks = 0, deepenShown = 0;
+  let diff = G.DIFFS.vigil, omen = null, nextOmen = null;
+  let packsThisBuild = 0, bonusCards = 0, emberTimer = 5, strikeWarn = null;
+  let best = JSON.parse(localStorage.getItem("grimpack-best") || '{"nights":0,"kills":0,"wins":0,"bestTime":0}');
 
+  function hasSyn(id) { const s = G.SYNERGIES.find(x => x.id === id); return s && s.needs.every(n => owned[n]); }
   function reset() {
     const B = G.PLAYER_BASE;
     player = { x: W / 2, y: H / 2 + 60, hp: B.hp, maxHp: B.hp, dmg: B.dmg, rate: B.rate, proj: B.proj,
       pierce: B.pierce, critC: B.critC, critM: B.critM, speed: B.speed, collectR: B.collectR,
-      regen: 0, shieldCd: 0, shieldReady: false, revives: 0, wrathNext: false, fireCd: 0, invuln: 0, r: B.radius };
-    enemies = []; bolts = []; ebolts = []; towers = []; shards = []; zones = []; parts = []; texts = [];
-    wave = 0; spawnQueue = []; waveActive = false; runTime = 0;
-    ashes = 0; kills = 0; packsOpened = 0; packCost = G.PACK.baseCost; freePacks = 1; dryPacks = 0;
-    hand = {}; placedCount = {}; collection = []; selectedHand = null; moveTower = null; bossRef = null;
-    $("log").innerHTML = ""; $("collection").innerHTML = '<p class="empty">Nothing pulled yet. The pack provides.</p>';
-    updateHUD(); renderHand(); updatePackButton();
+      regen: 0, shieldCd: 0, shieldMax: 0, shieldReady: false, revives: 0, wrathNext: false, wrathWave: false,
+      fireCd: 0, invuln: 0, r: B.radius, chillSlow: 0, chillSecs: 0, stormEvery: 0, hitCount: 0, vx: 0, vy: 0,
+      thorns: 0, brandPct: 0, dashCd: 0, dashT: 0, dashDx: 0, dashDy: 0, lastDx: 1, lastDy: 0 };
+    enemies = []; bolts = []; ebolts = []; towers = []; shards = []; zones = []; parts = []; texts = []; decals = []; zaps = [];
+    wave = 0; spawnQueue = []; waveActive = false; runTime = 0; hitStop = 0;
+    ashes = 0; kills = 0; streak = 0; packsOpened = 0; packCost = G.PACK.baseCost; freePacks = 1; dryPacks = 0;
+    hand = {}; placedCount = {}; collection = []; owned = {};
+    selectedHand = null; moveTower = null; bossRef = null; packsThisBuild = 0; bonusCards = 0;
+    nextOmen = G.OMENS[Math.floor(Math.random() * G.OMENS.length)]; omen = null;
+    $("log").innerHTML = ""; renderCollection(); updateHUD(); renderHand(); updatePackButton(); showOmenPreview();
   }
 
   // ---------- logging / HUD ----------
@@ -93,6 +106,8 @@
     $("hud-ashes").textContent = ashes;
     $("hud-kills").textContent = kills;
     $("hud-time").textContent = fmtTime(runTime);
+    $("hud-dash").textContent = player.dashCd > 0 ? "↯ " + player.dashCd.toFixed(1) : "↯ ready";
+    $("hud-dash").style.color = player.dashCd > 0 ? "#8a7f6a" : "#ffd94a";
     if (bossRef && bossRef.hp > 0) { $("boss-bar").classList.remove("hidden"); $("boss-fill").style.width = Math.max(0, bossRef.hp / bossRef.maxHp * 100) + "%"; }
     else $("boss-bar").classList.add("hidden");
   }
@@ -102,6 +117,11 @@
     if (freePacks > 0) { b.disabled = false; $("pack-btn-label").textContent = `Open Pack — FREE (${freePacks})`; }
     else if (ashes >= packCost) { b.disabled = false; $("pack-btn-label").textContent = `Buy Pack — ${packCost} ashes`; }
     else { b.disabled = true; $("pack-btn-label").textContent = `Pack — ${packCost} ashes (need ${packCost - ashes} more)`; }
+  }
+  function showOmenPreview() {
+    if (wave >= 10) return;
+    $("phase-text").innerHTML = `Tonight's omen: <b style="color:#ffd94a">${nextOmen.name}</b> — ${nextOmen.desc}` +
+      `<br><span style="opacity:.75">Open packs, place towers (the ritual circle consecrates them: +30% damage), then begin.</span>`;
   }
   function renderHand() {
     const el = $("hand"); el.innerHTML = "";
@@ -125,13 +145,20 @@
       row.innerHTML = `<img src="${c.art}" alt=""><span>${c.name} <span class="rar" style="color:${r.color}">best: ${r.name}</span></span><span class="cnt">×${a.n}</span>`;
       el.appendChild(row);
     }
+    for (const s of G.SYNERGIES) if (s.needs.every(n => owned[n])) {
+      const row = document.createElement("div"); row.className = "col-row";
+      row.innerHTML = `<span style="color:#7dff9a">✦ SYNERGY — ${s.name}</span>`;
+      row.title = s.desc; el.appendChild(row);
+    }
     if (!Object.keys(agg).length) el.innerHTML = '<p class="empty">Nothing pulled yet. The pack provides.</p>';
   }
 
   // ---------- cards & packs ----------
-  function rollRarityIdx() {
-    let x = Math.random() * 100, acc = 0;
-    for (let i = 0; i < G.RARITIES.length; i++) { acc += G.RARITIES[i].weight; if (x < acc) return i; }
+  function rollRarityIdx(luckShift) {
+    // luckShift moves weight from Common toward the better tiers (Torment, Gilded Seal)
+    const wts = G.RARITIES.map((r, i) => i === 0 ? Math.max(10, r.weight - (luckShift || 0)) : r.weight + (luckShift || 0) / 4);
+    let x = Math.random() * wts.reduce((a, b) => a + b, 0), acc = 0;
+    for (let i = 0; i < G.RARITIES.length; i++) { acc += wts[i]; if (x < acc) return i; }
     return 0;
   }
   function rollCard() {
@@ -142,13 +169,17 @@
     return pool[Math.floor(Math.random() * pool.length)];
   }
   function rollPack() {
+    const nCards = G.PACK.cardsPerPack + bonusCards; bonusCards = 0;
+    const foil = packsThisBuild >= 2; // third pack in one build phase is a FOIL pack
+    const luck = diff.luck;
     const cards = [];
     let gotRarePlus = false;
-    for (let s = 0; s < G.PACK.cardsPerPack; s++) {
-      let ri = rollRarityIdx();
-      if (s === 0 && dryPacks >= 2 && ri < 2) ri = 2; // pity: third dry pack guarantees Rare+
+    for (let s = 0; s < nCards; s++) {
+      let ri = rollRarityIdx(luck);
+      if (s === 0 && dryPacks >= 2 && ri < 2) ri = 2; // pity
+      if (foil) ri = Math.min(4, ri + 1);
       if (ri >= 2) gotRarePlus = true;
-      cards.push({ def: rollCard(), rarityIdx: ri });
+      cards.push({ def: rollCard(), rarityIdx: ri, foil });
     }
     dryPacks = gotRarePlus ? 0 : dryPacks + 1;
     return cards;
@@ -160,24 +191,31 @@
       case "bell":  return `Aura ${Math.round(T.auraDps * m)}/s, slows ${Math.round(T.slow * 100)}%`;
       case "pyre":  return `Embers ${Math.round(T.dmg * m)} dmg, ground burns ${Math.round(T.burnDps * m)}/s`;
       case "frost": return `Shots ${Math.round(T.dmg * m)} dmg, chill ${Math.round(T.chillSlow * 100)}%`;
+      case "gallows": return `Shots ${Math.round(T.dmg * m)} dmg, range ${T.range}, marks prey`;
+      case "font":  return `Heals ${(T.healPerSec * m).toFixed(1)}/s nearby, anoints towers`;
       case "hellfire": return `+${Math.round(8 * m)} bolt damage`;
       case "twin":  return `+1 projectile`;
       case "cadence": return `+${(0.38 * m).toFixed(2)} shots/s`;
       case "pierce": return `Bolts pierce +${m >= 2.3 ? 2 : 1}`;
       case "axe":   return `+${Math.round(7 * m)}% crit, +${Math.round(12 * m)}% crit dmg`;
+      case "chill": return `Bolts chill ${Math.round(20 * m)}% for ${(1.1 * m).toFixed(1)}s`;
+      case "storm": return `Every ${Math.max(3, Math.round(6 - m))}th hit: lightning chains`;
       case "boots": return `+${Math.round(16 * m)} move speed`;
-      case "chalice": return `+${Math.round(18 * m)} max HP, +${(0.35 * m).toFixed(2)}/s regen`;
+      case "chalice": return `+${Math.round(18 * m)} max HP, +${(0.25 * m).toFixed(2)}/s regen`;
       case "magnet": return `+${Math.round(34 * m)} ash-collect radius`;
       case "ward":  return `Shield blocks a hit, re-forms in ${Math.max(8, Math.round(26 - 4 * m))}s`;
+      case "thorns": return `Attackers take ${Math.round(7 * m)} thorn damage`;
+      case "brand": return `+${Math.round(0.5 * m * 10) / 10}% damage per 1% HP missing`;
       case "vial":  return `Heal ${Math.round(player.maxHp * 0.35)} HP now`;
       case "draught": return `+25% damage next wave`;
       case "candle": return `+1 death-cheat (revive at 50%)`;
+      case "seal":  return `Next pack: +1 card, better luck`;
       default: return def.blurb;
     }
   }
   function applyCard(pull) {
     const { def, rarityIdx } = pull, m = G.RARITIES[rarityIdx].mult, R = G.RARITIES[rarityIdx];
-    collection.push({ id: def.id, rarityIdx });
+    collection.push({ id: def.id, rarityIdx }); owned[def.id] = (owned[def.id] || 0) + 1;
     log(`${R.name} ${def.name} — ${describeCard(pull)}`, rarityIdx >= 4 ? "legendary" : rarityIdx === 3 ? "epic" : rarityIdx === 2 ? "rare" : "");
     if (def.kind === "tower") {
       const placed = (placedCount[def.id] || []).filter(t => t.level < G.PACK.towerLevelCap);
@@ -196,15 +234,20 @@
       if (def.id === "twin") { player.proj += 1; player.dmg *= 0.92; }
       if (def.id === "pierce") player.pierce += m >= 2.3 ? 2 : 1;
       if (def.id === "axe") { player.critC += 0.07 * m; player.critM += 0.12 * m; }
+      if (def.id === "chill") { player.chillSlow = Math.max(player.chillSlow, 0.20 * Math.min(m, 2)); player.chillSecs = Math.max(player.chillSecs, 1.1 * Math.min(m, 2)); }
+      if (def.id === "storm") player.stormEvery = player.stormEvery ? Math.max(3, player.stormEvery - 1) : Math.max(3, Math.round(6 - m));
     } else if (def.kind === "relic") {
       if (def.id === "boots") player.speed += 16 * m;
-      if (def.id === "chalice") { const add = 18 * m; player.maxHp += Math.round(add); player.regen += 0.35 * m; heal(add); }
+      if (def.id === "chalice") { const add = 18 * m; player.maxHp += Math.round(add); player.regen += 0.25 * m; heal(add); }
       if (def.id === "magnet") player.collectR += 34 * m;
       if (def.id === "ward") { player.shieldMax = Math.max(8, 26 - 4 * m); if (!player.shieldReady) { player.shieldReady = true; player.shieldCd = player.shieldMax; } }
+      if (def.id === "thorns") player.thorns += 7 * m;
+      if (def.id === "brand") player.brandPct += 0.005 * m;
     } else if (def.kind === "consumable") {
       if (def.id === "vial") heal(player.maxHp * 0.35);
       if (def.id === "draught") player.wrathNext = true;
       if (def.id === "candle") player.revives += 1;
+      if (def.id === "seal") { bonusCards += 1; dryPacks = Math.max(0, dryPacks - 1); log("The Gilded Seal promises a fatter, luckier pack."); }
     }
     renderCollection(); updateHUD();
   }
@@ -217,22 +260,25 @@
     if (freePacks > 0) freePacks--;
     else if (ashes >= packCost) { ashes -= packCost; packCost = Math.round(packCost * G.PACK.costGrowth); }
     else return;
-    packsOpened++; state = "pack"; currentPack = null; flipped = 0;
+    packsOpened++; packsThisBuild++; state = "pack"; currentPack = null; flipped = 0;
     $("pack-modal").classList.remove("hidden");
     $("pack-closed").style.display = ""; $("pack-cards").classList.add("hidden");
     $("pack-cards").innerHTML = ""; $("btn-collect").classList.add("hidden");
+    $("foil-note").textContent = packsThisBuild >= 3 ? "" : (packsThisBuild === 2 ? "One more pack this vigil and it turns FOIL — every card +1 rarity." : "");
     updatePackButton(); updateHUD();
   }
   $("pack-img").addEventListener("click", () => {
     if (currentPack) return;
     SFX.rip(); currentPack = rollPack();
+    if (currentPack[0] && currentPack[0].foil) { $("foil-note").textContent = "✦ FOIL PACK — every card raised a rarity ✦"; hitStop = Math.max(hitStop, 0.08); }
     $("pack-closed").style.display = "none";
     const wrap = $("pack-cards"); wrap.classList.remove("hidden");
     currentPack.forEach((pull, i) => {
       const R = G.RARITIES[pull.rarityIdx], d = document.createElement("div");
       d.className = "gcard";
       d.innerHTML = `<div class="inner">
-        <div class="face back"><img src="assets/card-back.jpg" alt=""></div>
+        <div class="face back"><img src="assets/card-back.jpg" alt="">
+          <button class="trade-btn" title="Burn 25 ashes to trade this card for a new pull">↻ trade · 25 ash</button></div>
         <div class="face front" style="border-color:${R.color}">
           <img src="${pull.def.art}" alt="">
           <div class="cbody">
@@ -241,13 +287,33 @@
             <span class="cstat">${describeCard(pull)}</span>
             <span class="cblurb">${pull.def.blurb}</span>
           </div></div></div>`;
+      const trade = d.querySelector(".trade-btn");
+      if (ashes < 25) trade.disabled = true;
+      trade.onclick = ev => {
+        ev.stopPropagation();
+        if (ashes < 25 || d.classList.contains("flipped")) return;
+        ashes -= 25;
+        let nri = rollRarityIdx(diff.luck); if (pull.foil) nri = Math.min(4, nri + 1);
+        const np = { def: rollCard(), rarityIdx: nri, foil: pull.foil };
+        currentPack[i] = np;
+        d.querySelector(".front").style.borderColor = G.RARITIES[np.rarityIdx].color;
+        d.querySelector(".front img").src = np.def.art;
+        d.querySelector(".cname").textContent = np.def.name;
+        const cr = d.querySelector(".crar"); cr.textContent = `${G.RARITIES[np.rarityIdx].name} · ${np.def.kind}`; cr.style.color = G.RARITIES[np.rarityIdx].color;
+        d.querySelector(".cstat").textContent = describeCard(np);
+        d.querySelector(".cblurb").textContent = np.def.blurb;
+        trade.remove(); noiseBurst(0.15, 0.08);
+        log("The dead accept your trade."); updateHUD(); updatePackButton();
+      };
       d.onclick = () => {
         if (d.classList.contains("flipped")) return;
-        d.classList.add("flipped"); SFX.flip(pull.rarityIdx); flipped++;
+        d.classList.add("flipped"); SFX.flip(pull.rarityIdx);
+        if (pull.rarityIdx >= 4) { hitStop = Math.max(hitStop, 0.1); SFX.toll(); }
+        flipped++;
         if (flipped >= currentPack.length) $("btn-collect").classList.remove("hidden");
       };
       wrap.appendChild(d);
-      setTimeout(() => { if (!d.classList.contains("flipped")) d.click(); }, 2500 + i * 900); // no dead air
+      setTimeout(() => { if (!d.classList.contains("flipped")) d.click(); }, 2500 + i * 900);
     });
   });
   $("btn-collect").addEventListener("click", () => {
@@ -259,82 +325,138 @@
   });
   $("btn-pack").addEventListener("click", openPack);
 
+  // ---------- world geometry ----------
+  function losBlocked(x1, y1, x2, y2) {
+    for (const p of WORLD.pillars) {
+      const dx = x2 - x1, dy = y2 - y1, len2 = dx * dx + dy * dy || 1;
+      let t = ((p.x - x1) * dx + (p.y - y1) * dy) / len2; t = Math.max(0, Math.min(1, t));
+      const cx = x1 + t * dx, cy = y1 + t * dy;
+      if (Math.hypot(p.x - cx, p.y - cy) < p.r - 2) return true;
+    }
+    return false;
+  }
+  function inCircle(x, y) { return Math.hypot(x - WORLD.circle.x, y - WORLD.circle.y) < WORLD.circle.r; }
+  function pillarHit(x, y) { for (const p of WORLD.pillars) if (Math.hypot(p.x - x, p.y - y) < p.r) return true; return false; }
+
   // ---------- waves & combat ----------
   function buildSpawnQueue(w) {
     const spec = G.waveSpec(w), q = [];
     for (let i = 0; i < spec.count; i++) {
       let x = Math.random(), acc = 0, type = "husk";
       for (const [k, f] of Object.entries(spec.mix)) { acc += f; if (x < acc) { type = k; break; } }
+      if (omen && omen.noWraith && type === "wraith") type = "husk";
       q.push(type);
     }
-    // shuffle, but keep brutes spread out
     for (let i = q.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [q[i], q[j]] = [q[j], q[i]]; }
     if (spec.boss) q.push(spec.boss);
     return q;
   }
-  function spawnEnemy(type) {
+  function spawnEnemy(type, ringAngle) {
     const spec = G.waveSpec(wave), base = G.ENEMIES[type];
     const edge = Math.floor(Math.random() * 4); let x, y;
-    if (edge === 0) { x = Math.random() * W; y = -30; } else if (edge === 1) { x = Math.random() * W; y = H + 30; }
+    if (ringAngle != null) { x = player.x + Math.cos(ringAngle) * 330; y = player.y + Math.sin(ringAngle) * 330; }
+    else if (edge === 0) { x = Math.random() * W; y = -30; } else if (edge === 1) { x = Math.random() * W; y = H + 30; }
     else if (edge === 2) { x = -30; y = Math.random() * H; } else { x = W + 30; y = Math.random() * H; }
     const isBoss = type === "abbot" || type === "vesper";
-    const hp = base.hp * (isBoss ? spec.bossScale : spec.hpScale);
-    const e = { type, x, y, hp, maxHp: hp, speed: base.speed * (0.9 + Math.random() * 0.2), dmg: base.dmg * spec.dmgScale,
-      r: base.r, ash: base.ash, slowT: 0, slowF: 0, burnT: 0, burnDps: 0, hitCd: 0, boss: isBoss,
-      summonCd: 4, tollCd: 6, img: IMG[type], wob: Math.random() * 6.28 };
+    let hp = base.hp * (isBoss ? spec.bossScale : spec.hpScale) * diff.hp;
+    if (omen && omen.bruteHp && type === "brute") hp *= omen.bruteHp;
+    const elite = !isBoss && Math.random() < 0.04 * (omen && omen.eliteMult ? omen.eliteMult : 1);
+    if (elite) hp *= 3.2;
+    const e = { type, x, y, hp, maxHp: hp, speed: base.speed * (0.9 + Math.random() * 0.2) * (omen && omen.enemySpeed ? omen.enemySpeed : 1),
+      dmg: base.dmg * spec.dmgScale * diff.dmg * (elite ? 1.3 : 1), r: base.r * (elite ? 1.35 : 1), ash: base.ash * (elite ? 6 : 1),
+      slowT: 0, slowF: 0, chillT: 0, burnT: 0, burnDps: 0, markT: 0, shockCd: 0, hitCd: 0, boss: isBoss, elite,
+      summonCd: 4, tollCd: 6, img: IMG[type], wob: Math.random() * 6.28, flickerT: Math.random() * 2, enraged: false, exploded: false, lungeCd: 2 + Math.random() * 2, lungeT: 0, chargeCd: 3 + Math.random() * 3, chargeT: 0, windT: 0 };
     enemies.push(e);
-    if (isBoss) { bossRef = e; $("boss-name").textContent = type === "vesper" ? "VESPER, MOTHER OF BELLS" : "THE ABBOT"; SFX.toll(); banner(type === "vesper" ? "☠ VESPER ☠" : "THE ABBOT TOLLS"); }
+    if (isBoss) { bossRef = e; $("boss-name").textContent = type === "vesper" ? "VESPER, MOTHER OF BELLS" : "THE ABBOT"; SFX.toll(); setTimeout(() => SFX.toll(), 350); banner(type === "vesper" ? "☠ VESPER ☠" : "THE ABBOT TOLLS"); shake = 10; }
     return e;
   }
   function banner(txt) { const b = $("wave-banner"); b.textContent = txt; b.classList.remove("hidden"); setTimeout(() => b.classList.add("hidden"), 2600); }
   function beginWave() {
     if (state !== "build") return;
-    if (freePacks > 0) { log("You begin the night with an unopened pack. It will keep."); }
+    if (freePacks > 0) log("You begin the night with an unopened pack. It will keep.");
     selectedHand = null; moveTower = null; renderHand();
-    wave++; waveActive = true; state = "wave";
-    spawnQueue = buildSpawnQueue(wave); spawnTimer = 0;
+    wave++; waveActive = true; state = "wave"; packsThisBuild = 0; waveTime = 0; deepenStacks = 0; deepenShown = 0;
+    omen = nextOmen; nextOmen = G.OMENS[Math.floor(Math.random() * G.OMENS.length)];
+    if (omen && omen.packBonus) bonusCards += omen.packBonus;
+    spawnQueue = buildSpawnQueue(wave); spawnTimer = 0; emberTimer = 4;
     if (player.wrathNext) { player.wrathWave = true; player.wrathNext = false; log("Wrath Draught: +25% damage this wave."); }
-    banner(wave === 10 ? "☠ THE FINAL NIGHT ☠" : "NIGHT " + wave);
-    $("phase-title").textContent = "Night " + wave;
+    banner((wave === 10 ? "☠ THE FINAL NIGHT ☠ " : "NIGHT " + wave) + (omen && !omen.plain ? " — " + omen.name.toUpperCase() : ""));
+    $("phase-title").textContent = "Night " + wave + (omen ? " · " + omen.name : "");
     $("phase-text").textContent = wave === 5 ? "Something tolls in the dark. The Abbot comes." : wave === 10 ? "Vesper rises. End this." : "Survive. The pack provides for the living.";
     $("btn-begin").disabled = true; $("btn-pack").disabled = true;
     updateHUD();
   }
   function endWave() {
-    waveActive = false; state = "build"; bossRef = null;
+    waveActive = false; state = "build"; bossRef = null; omen = null; strikeWarn = null;
     player.wrathWave = false;
     if (wave >= 10) return endRun(true);
     freePacks++; SFX.toll();
     log(`Night ${wave} survived. A fresh pack drops from the dark.`);
     $("phase-title").textContent = "Night " + wave + " Survived";
-    $("phase-text").textContent = "Tear the pack. Place your towers. Then descend again.";
+    showOmenPreview();
     $("btn-begin").disabled = false; $("btn-begin").textContent = "Begin Night " + (wave + 1) + " ☾";
     updatePackButton(); updateHUD();
   }
   function endRun(wonGame) {
     state = wonGame ? "win" : "over";
+    setMusic(false);
+    best.nights = Math.max(best.nights, wave); best.kills = Math.max(best.kills, kills);
+    if (wonGame) { best.wins++; best.bestTime = best.bestTime ? Math.min(best.bestTime, runTime) : runTime; }
+    localStorage.setItem("grimpack-best", JSON.stringify(best));
+    $("end-art").src = wonGame ? "assets/dawn-art.jpg" : "assets/title-art.jpg";
     $("end-title").textContent = wonGame ? "DAWN, OF A SORT" : "THE NIGHT TAKES YOU";
     $("end-title").style.color = wonGame ? "#ffd94a" : "#d7263d";
     $("end-stats").innerHTML = `${wonGame ? "Vesper is silent. The cathedral is yours." : "You fell on night " + wave + "."}<br>` +
-      `Survived <b>${fmtTime(runTime)}</b> · Slain <b>${kills}</b> · Packs torn <b>${packsOpened}</b> · Cards pulled <b>${collection.length}</b>`;
+      `Survived <b>${fmtTime(runTime)}</b> · Slain <b>${kills}</b> · Packs torn <b>${packsOpened}</b> · Cards pulled <b>${collection.length}</b><br>` +
+      `<span style="opacity:.75">Best: ${best.nights} nights · ${best.kills} slain · ${best.wins} dawn(s)${best.bestTime ? " · fastest dawn " + fmtTime(best.bestTime) : ""}</span>`;
     $("end-screen").classList.remove("hidden");
     wonGame ? SFX.win() : SFX.lose(); updateHUD();
   }
-  function burst(x, y, color, n) { for (let i = 0; i < n && parts.length < 420; i++) { const a = Math.random() * 6.28, s = 40 + Math.random() * 130; parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.4 + Math.random() * 0.4, t: 0, color, size: 1.5 + Math.random() * 2.5 }); } }
-  function floatText(x, y, txt, color) { if (texts.length < 40) texts.push({ x, y, txt, color, t: 0 }); }
+  function burst(x, y, color, n) { for (let i = 0; i < n && parts.length < 460; i++) { const a = Math.random() * 6.28, s = 40 + Math.random() * 140; parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.4 + Math.random() * 0.4, t: 0, color, size: 1.5 + Math.random() * 2.5 }); } }
+  function floatText(x, y, txt, color) { if (texts.length < 44) texts.push({ x, y, txt, color, t: 0 }); }
+  function maybeShock(e, baseDmg) {
+    if (!hasSyn("thermal") || e.shockCd > 0 || e.dead) return;
+    if (e.chillT > 0 && e.burnT > 0) {
+      e.shockCd = 0.6; const d = baseDmg * 0.6 + 6;
+      SFX.shock(); burst(e.x, e.y, "#ffe9a8", 10); floatText(e.x, e.y - e.r - 16, "SHOCK " + Math.round(d), "#ffe9a8");
+      damageEnemy(e, d, false, true);
+    }
+  }
   function damageEnemy(e, dmg, crit, silent) {
+    if (e.dead) return;
+    if (e.markT > 0) dmg *= 1.15;
     e.hp -= dmg; e.flash = 0.08;
     if (!silent) floatText(e.x + (Math.random() * 16 - 8), e.y - e.r - 4, String(Math.round(dmg)), crit ? "#ffd94a" : "#e8e2d4");
     if (e.hp <= 0 && !e.dead) {
-      e.dead = true; kills++; SFX.die(); burst(e.x, e.y, e.type === "wraith" ? "#9fd8ff" : "#c93b2e", e.boss ? 46 : 10);
-      for (let i = 0; i < e.ash; i++) shards.push({ x: e.x + (Math.random() * 24 - 12), y: e.y + (Math.random() * 24 - 12), vx: 0, vy: 0, t: Math.random() * 6 });
-      if (e.boss) { bossRef = null; shake = 14; log(e.type === "vesper" ? "VESPER FALLS." : "The Abbot is silenced. His ashes scatter — collect them."); }
+      e.dead = true; kills++; streak++; SFX.die();
+      burst(e.x, e.y, e.type === "wraith" ? "#9fd8ff" : e.type === "plague" ? "#b6d94a" : "#c93b2e", e.boss ? 46 : 10);
+      decals.push({ x: e.x, y: e.y, r: e.r * (0.8 + Math.random() * 0.7), a: 0.34 }); if (decals.length > 260) decals.shift();
+      const ashN = Math.round(e.ash * (omen && omen.ashMult ? omen.ashMult : 1));
+      for (let i = 0; i < ashN; i++) shards.push({ x: e.x + (Math.random() * 24 - 12), y: e.y + (Math.random() * 24 - 12), vx: 0, vy: 0, t: Math.random() * 6 });
+      if (streak > 0 && streak % 25 === 0) { ashes += 5; floatText(player.x, player.y - 40, "RAMPAGE +5 ash", "#ff7a26"); log(`Rampage — ${streak} slain without a scratch. The dead provide (+5 ashes).`); updatePackButton(); }
+      if (e.elite) { hitStop = Math.max(hitStop, 0.05); log("An Anointed one falls. It died rich."); }
+      if (e.type === "plague" && !e.exploded) explodePlague(e);
+      if (e.boss) { bossRef = null; shake = 14; hitStop = Math.max(hitStop, 0.12); log(e.type === "vesper" ? "VESPER FALLS." : "The Abbot is silenced. His ashes scatter — collect them."); }
     }
   }
-  function hurtPlayer(dmg) {
+  function explodePlague(e) {
+    e.exploded = true; SFX.boom(); shake = Math.max(shake, 7);
+    burst(e.x, e.y, "#b6d94a", 22);
+    const R = G.ENEMIES.plague.explodeR, D = G.ENEMIES.plague.explodeDmg;
+    for (const o of [...enemies]) if (o !== e && !o.dead && Math.hypot(o.x - e.x, o.y - e.y) < R + o.r) damageEnemy(o, D, false);
+    if (Math.hypot(player.x - e.x, player.y - e.y) < R + player.r) hurtPlayer(D * 0.8);
+  }
+  function damageEnemySilent(e, dmg) { damageEnemy(e, dmg, false, true); }
+  function hurtPlayer(dmg, attacker) {
     if (player.invuln > 0 || state !== "wave") return;
-    if (player.shieldReady) { player.shieldReady = false; player.shieldCd = player.shieldMax || 22; player.invuln = 0.6; burst(player.x, player.y, "#e8efff", 16); floatText(player.x, player.y - 34, "WARD!", "#bcd3ff"); return; }
-    player.hp -= dmg; player.invuln = 0.3; hitFlash = 0.25; shake = Math.max(shake, 5); SFX.hurt();
+    if (player.shieldReady) {
+      player.shieldReady = false; player.shieldCd = player.shieldMax || 22; player.invuln = 0.6;
+      burst(player.x, player.y, "#e8efff", 16); floatText(player.x, player.y - 34, "WARD!", "#bcd3ff");
+      if (hasSyn("thorns-ward") && player.thorns > 0) { for (const o of [...enemies]) if (!o.dead && Math.hypot(o.x - player.x, o.y - player.y) < 96 + o.r) damageEnemy(o, player.thorns * 2.2, false); burst(player.x, player.y, "#ff5d73", 18); }
+      return;
+    }
+    player.hp -= dmg; player.invuln = 0.3; hitFlash = 0.25; shake = Math.max(shake, 5); streak = 0; SFX.hurt();
+    if (player.thorns > 0) for (const o of [...enemies]) if (!o.dead && Math.hypot(o.x - player.x, o.y - player.y) < 74 + o.r) damageEnemy(o, player.thorns * (0.5 + Math.random() * 0.5), false, true);
     if (player.hp <= 0) {
       if (player.revives > 0) { player.revives--; player.hp = player.maxHp * 0.5; player.invuln = 2; shake = 16; burst(player.x, player.y, "#ffd94a", 40); log("The Saint's Candle gutters — and holds. You rise at half strength."); SFX.toll(); }
       else { player.hp = 0; endRun(false); }
@@ -342,262 +464,474 @@
     updateHUD();
   }
 
-  // ---------- update ----------
   const keys = {};
   addEventListener("keydown", e => {
     keys[e.key.toLowerCase()] = true;
-    if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(e.key.toLowerCase())) e.preventDefault();
-    if (e.key.toLowerCase() === "p") togglePause();
+    if (e.key === " " && state === "build") { e.preventDefault(); beginWave(); }
+    if (e.key === " " && state === "wave") { e.preventDefault(); tryDash(); }
+    if (e.key.toLowerCase() === "shift" && state === "wave") tryDash();
+    if (e.key.toLowerCase() === "p" && (state === "wave" || state === "build")) togglePause();
     if (e.key.toLowerCase() === "m") toggleMute();
-    if (e.key === " " && state === "build") beginWave();
     if (e.key === "Escape") { selectedHand = null; moveTower = null; renderHand(); }
   });
   addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
-  function togglePause() { if (state === "wave" || state === "build") { paused = !paused; $("btn-pause").textContent = paused ? "▶" : "⏸"; } }
-  function toggleMute() { muted = !muted; $("btn-mute").textContent = muted ? "🔇" : "🔊"; }
-  $("btn-pause").onclick = togglePause; $("btn-mute").onclick = toggleMute;
-
-  function nearestEnemy(x, y, maxD) {
-    let best = null, bd = maxD;
-    for (const e of enemies) { if (e.dead) continue; const d = Math.hypot(e.x - x, e.y - y); if (d < bd) { bd = d; best = e; } }
-    return best;
+  function togglePause() { paused = !paused; $("pause-overlay").classList.toggle("hidden", !paused); }
+  function toggleMute() { muted = !muted; $("btn-mute").textContent = muted ? "🔇" : "🔊"; if (dirge) { muted ? dirge.pause() : (state === "wave" || state === "build") && dirge.play().catch(() => {}); } }
+  $("btn-mute").addEventListener("click", toggleMute);
+  function tryDash() {
+    if (player.dashCd > 0) return;
+    let dx = (keys["d"] || keys["arrowright"] ? 1 : 0) - (keys["a"] || keys["arrowleft"] ? 1 : 0);
+    let dy = (keys["s"] || keys["arrowdown"] ? 1 : 0) - (keys["w"] || keys["arrowup"] ? 1 : 0);
+    if (!dx && !dy) { dx = player.lastDx; dy = player.lastDy; }
+    const l = Math.hypot(dx, dy) || 1;
+    player.dashDx = dx / l; player.dashDy = dy / l; player.dashT = 0.16; player.dashCd = 2.6; SFX.dash();
   }
-  function rollCrit() { return Math.random() < player.critC; }
-
+  function chainZap(from, firstHit, baseDmg) {
+    const jumps = 2 + Math.max(0, player.proj - 1) * (hasSyn("stormtwin") ? 1 : 0);
+    let cur = firstHit, ox = from.x, oy = from.y; const seen = new Set([firstHit]);
+    for (let j = 0; j <= jumps && cur; j++) {
+      zaps.push({ x1: ox, y1: oy, x2: cur.x, y2: cur.y, t: 0, ttl: 0.16 });
+      if (j > 0 || cur !== firstHit) damageEnemy(cur, baseDmg * 0.6, false);
+      ox = cur.x; oy = cur.y;
+      let best = null, bd = 150;
+      for (const o of enemies) if (!o.dead && !seen.has(o) && Math.hypot(o.x - ox, o.y - oy) < bd) { bd = Math.hypot(o.x - ox, o.y - oy); best = o; }
+      if (best) seen.add(best);
+      cur = best;
+    }
+    SFX.shock();
+  }
+  function towerFireRate(tw, def) {
+    let r = def.rate * (Math.pow(G.PACK.towerLevelMult, tw.level - 1));
+    for (const f of towers) if (f.type === "font" && Math.hypot(f.x - tw.x, f.y - tw.y) < 150) { r *= G.TOWERS.font.anointRate; break; }
+    if (tw.type === "bell" && hasSyn("resonance")) r *= 1.33;
+    return r;
+  }
+  function fireBolt(from, target, dmg, opts) {
+    const a = Math.atan2(target.y - from.y, target.x - from.x);
+    bolts.push({ x: from.x, y: from.y, vx: Math.cos(a) * (opts.speed || 620), vy: Math.sin(a) * (opts.speed || 620),
+      dmg, pierce: opts.pierce || 0, hits: new Set(), kind: opts.kind || "bolt", chillSlow: opts.chillSlow || 0, chillSecs: opts.chillSecs || 0,
+      mark: !!opts.mark, homing: opts.homing ? target : null, zoneDps: opts.zoneDps || 0, playerBolt: from === player });
+    if (from === player) SFX.shoot();
+  }
   function update(dt) {
-    if (state === "wave") runTime += dt;
-    // player movement (build + wave)
-    if (state === "build" || state === "wave") {
-      let dx = (keys["d"] || keys["arrowright"] ? 1 : 0) - (keys["a"] || keys["arrowleft"] ? 1 : 0);
-      let dy = (keys["s"] || keys["arrowdown"] ? 1 : 0) - (keys["w"] || keys["arrowup"] ? 1 : 0);
-      if (dx && dy) { dx *= 0.707; dy *= 0.707; }
-      player.x = Math.min(W - player.r, Math.max(player.r, player.x + dx * player.speed * dt));
-      player.y = Math.min(H - player.r, Math.max(player.r, player.y + dy * player.speed * dt));
-      if (player.regen) heal(player.regen * dt);
-      if (player.invuln > 0) player.invuln -= dt;
-      if (player.shieldMax && !player.shieldReady) { player.shieldCd -= dt; if (player.shieldCd <= 0) { player.shieldReady = true; burst(player.x, player.y, "#bcd3ff", 8); } }
+    runTime += dt;
+    if (waveActive) {
+      waveTime += dt;
+      const st = Math.floor(waveTime / 20);
+      if (st > deepenStacks) {
+        deepenStacks = st;
+        if (st > deepenShown) { deepenShown = st; banner("☾ THE NIGHT DEEPENS ☾"); log("The night deepens: the dead quicken (+4% speed, +3% bite). End it soon."); }
+      }
     }
-    if (state !== "wave") { updateFx(dt); return; }
-
-    // spawning — burst knots at one edge point feel like a swarm, not a queue
-    const spec = G.waveSpec(wave);
-    if (spawnQueue.length) {
+    if (hitFlash > 0) hitFlash -= dt * 2.4;
+    // embers, floating texts, zaps, blood never forgets
+    for (const p of parts) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.92; p.vy *= 0.92; }
+    parts = parts.filter(p => p.t < p.life);
+    for (const t of texts) { t.t += dt; t.y -= 34 * dt; } texts = texts.filter(t => t.t < 0.9);
+    for (const z of zaps) z.t += dt; zaps = zaps.filter(z => z.t < z.ttl);
+    player.invuln = Math.max(0, player.invuln - dt); player.shieldCd -= dt; player.dashCd = Math.max(0, player.dashCd - dt);
+    if (player.shieldMax && !player.shieldReady && player.shieldCd <= 0) { player.shieldReady = true; floatText(player.x, player.y - 34, "ward re-formed", "#bcd3ff"); }
+    heal(player.regen * dt);
+    // --- movement (+ dash, touch) ---
+    let dx = (keys["d"] || keys["arrowright"] ? 1 : 0) - (keys["a"] || keys["arrowleft"] ? 1 : 0);
+    let dy = (keys["s"] || keys["arrowdown"] ? 1 : 0) - (keys["w"] || keys["arrowup"] ? 1 : 0);
+    if (touchTarget) { const tdx = touchTarget.x - player.x, tdy = touchTarget.y - player.y; if (Math.hypot(tdx, tdy) > 14) { dx = tdx; dy = tdy; } else { dx = 0; dy = 0; } }
+    const dl = Math.hypot(dx, dy);
+    const px0 = player.x, py0 = player.y;
+    if (player.dashT > 0) {
+      player.dashT -= dt; player.x += player.dashDx * 950 * dt; player.y += player.dashDy * 950 * dt;
+      player.invuln = Math.max(player.invuln, 0.05);
+      if (Math.random() < 0.8) parts.push({ x: player.x, y: player.y, vx: 0, vy: 0, life: 0.3, t: 0, color: "#d7263d", size: 3 });
+    } else if (dl > 0) {
+      player.lastDx = dx / dl; player.lastDy = dy / dl;
+      player.x += dx / dl * player.speed * dt; player.y += dy / dl * player.speed * dt;
+    }
+    player.x = Math.max(18, Math.min(W - 18, player.x)); player.y = Math.max(18, Math.min(H - 18, player.y));
+    if (dt > 0) { player.vx = (player.x - px0) / dt; player.vy = (player.y - py0) / dt; }
+    // --- spawns ---
+    if (waveActive && spawnQueue.length) {
       spawnTimer -= dt;
+      const spec = G.waveSpec(wave);
       if (spawnTimer <= 0) {
-        const knot = spawnQueue[0] === "abbot" || spawnQueue[0] === "vesper" ? 1 : 2 + Math.floor(Math.random() * 4);
-        for (let i = 0; i < knot && spawnQueue.length; i++) spawnEnemy(spawnQueue.shift());
-        spawnTimer = spec.duration / spec.count * knot * (0.75 + Math.random() * 0.5);
+        spawnTimer = (spec.duration / spec.count) * (2 + Math.floor(Math.random() * 4)) * (0.75 + Math.random() * 0.5);
+        const knot = 2 + Math.floor(Math.random() * 4);
+        const ring = wave >= 4 && Math.random() < 0.25; // THE DEAD RISE AROUND YOU
+        const baseA = Math.random() * 6.283;
+        if (ring) floatText(player.x, player.y - 52, "THE DEAD RISE AROUND YOU", "#ff5d2e");
+        for (let i = 0; i < knot && spawnQueue.length; i++) spawnEnemy(spawnQueue.pop(), ring ? baseA + (i / Math.max(1, knot)) * 6.283 : null);
       }
     }
-    // player auto-fire
-    player.fireCd -= dt;
-    if (player.fireCd <= 0) {
-      const tgt = nearestEnemy(player.x, player.y, 620);
-      if (tgt) {
-        player.fireCd = 1 / player.rate;
-        const baseA = Math.atan2(tgt.y - player.y, tgt.x - player.x), n = player.proj;
-        for (let i = 0; i < n; i++) {
-          const a = baseA + (n > 1 ? (i - (n - 1) / 2) * 0.11 : 0);
-          bolts.push({ x: player.x, y: player.y, vx: Math.cos(a) * 540, vy: Math.sin(a) * 540, dmg: player.dmg * (player.wrathWave ? 1.25 : 1), pierce: player.pierce, life: 1.2, kind: "bolt" });
-        }
-        SFX.shoot();
-      } else player.fireCd = 0.08;
-    }
-    // towers
-    for (const t of towers) {
-      const T = G.TOWERS[t.type], lvM = Math.pow(G.PACK.towerLevelMult, t.level - 1);
-      if (t.type === "bell") {
-        t.tollT = (t.tollT || 0) - dt;
-        for (const e of enemies) { if (!e.dead && Math.hypot(e.x - t.x, e.y - t.y) < T.auraRange) { e.slowF = Math.max(e.slowF, T.slow); e.slowT = Math.max(e.slowT, 0.15); damageEnemySilent(e, T.auraDps * t.mult * lvM * dt); } }
-        if (t.tollT <= 0) { t.tollT = T.tollEvery; t.ring = 0.5; if (nearestEnemy(t.x, t.y, T.auraRange)) SFX.toll(); }
-      } else {
-        t.cd -= dt;
-        if (t.cd <= 0) {
-          const tgt = nearestEnemy(t.x, t.y, T.range);
-          if (tgt) {
-            t.cd = 1 / T.rate;
-            if (t.type === "spire") bolts.push({ x: t.x, y: t.y - 8, vx: 0, vy: 0, homing: tgt, speed: T.boltSpeed, dmg: T.dmg * t.mult * lvM, pierce: 0, life: 1.1, kind: "spire" });
-            if (t.type === "frost") bolts.push({ x: t.x, y: t.y - 8, vx: 0, vy: 0, homing: tgt, speed: 480, dmg: T.dmg * t.mult * lvM, pierce: 0, life: 1.1, kind: "frost", chill: T.chillSlow, chillSecs: T.chillSecs });
-            if (t.type === "pyre") bolts.push({ x: t.x, y: t.y - 8, tx: tgt.x, ty: tgt.y, sx: t.x, sy: t.y - 8, prog: 0, dur: Math.max(0.35, Math.hypot(tgt.x - t.x, tgt.y - t.y) / 430), dmg: T.dmg * t.mult * lvM, kind: "ember", burnDps: T.burnDps * t.mult * lvM, burnSecs: T.burnSecs, burnRadius: T.burnRadius });
-          } else t.cd = 0.1;
-        }
+    // --- ember storm ---
+    if (waveActive && omen && omen.emberStorm) {
+      emberTimer -= dt;
+      if (emberTimer <= 0 && !strikeWarn) {
+        emberTimer = 3.4 + Math.random() * 2.2;
+        const nearPlayer = Math.random() < 0.4;
+        strikeWarn = { x: nearPlayer ? player.x + (Math.random() * 120 - 60) : (enemies.length ? enemies[Math.floor(Math.random() * enemies.length)].x : Math.random() * W),
+                       y: nearPlayer ? player.y + (Math.random() * 120 - 60) : (enemies.length ? enemies[0].y : Math.random() * H), t: 0.85 };
       }
-      if (t.ring > 0) t.ring -= dt;
     }
-    // bolts
-    for (const b of bolts) {
-      if (b.kind === "ember") {
-        b.prog += dt / b.dur;
-        b.x = b.sx + (b.tx - b.sx) * b.prog; b.y = b.sy + (b.ty - b.sy) * b.prog - Math.sin(b.prog * Math.PI) * 46;
-        if (b.prog >= 1) { b.dead = true; zones.push({ x: b.tx, y: b.ty, r: b.burnRadius, dps: b.burnDps, t: b.burnSecs }); burst(b.tx, b.ty, "#ff7a26", 8); const e = nearestEnemy(b.tx, b.ty, 40); if (e) damageEnemy(e, b.dmg, false); }
+    if (strikeWarn) {
+      strikeWarn.t -= dt;
+      if (strikeWarn.t <= 0) {
+        const s = strikeWarn; strikeWarn = null; SFX.boom(); burst(s.x, s.y, "#ff7a26", 20); shake = Math.max(shake, 4);
+        for (const e of [...enemies]) if (!e.dead && Math.hypot(e.x - s.x, e.y - s.y) < 58 + e.r) damageEnemy(e, 55, false);
+        if (Math.hypot(player.x - s.x, player.y - s.y) < 58 + player.r) hurtPlayer(14);
+      }
+    }
+    // --- towers ---
+    for (const tw of towers) {
+      const def = G.TOWERS[tw.type], lvM = Math.pow(G.PACK.towerLevelMult, tw.level - 1), cons = inCircle(tw.x, tw.y) ? 1.3 : 1;
+      tw.cd -= dt;
+      if (tw.type === "font") {
+        if (Math.hypot(player.x - tw.x, player.y - tw.y) < def.auraRange + player.r) heal(def.healPerSec * tw.mult * lvM * dt * (inCircle(tw.x, tw.y) ? 1.3 : 1));
         continue;
       }
-      if (b.homing) { if (b.homing.dead) { b.dead = true; continue; } const a = Math.atan2(b.homing.y - b.y, b.homing.x - b.x); b.vx = Math.cos(a) * b.speed; b.vy = Math.sin(a) * b.speed; }
-      b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt; if (b.life <= 0) b.dead = true;
-      for (const e of enemies) {
-        if (e.dead || b.dead) continue;
-        if (b.hitSet && b.hitSet.has(e)) continue;
-        if (Math.hypot(e.x - b.x, e.y - b.y) < e.r + 6) {
-          const crit = b.kind === "bolt" ? rollCrit() : false;
-          damageEnemy(e, b.dmg * (crit ? player.critM : 1), crit); SFX.hit();
-          if (b.chill) { e.slowF = Math.max(e.slowF, b.chill); e.slowT = Math.max(e.slowT, b.chillSecs); }
-          if (b.pierce > 0) { b.pierce--; b.hitSet = b.hitSet || new Set(); b.hitSet.add(e); }
-          else b.dead = true;
+      if (tw.type === "bell") {
+        if (tw.cd <= 0) {
+          let any = false;
+          for (const e of enemies) {
+            if (e.dead || Math.hypot(e.x - tw.x, e.y - tw.y) > def.auraRange) continue;
+            any = true;
+            const before = e.hp;
+            damageEnemySilent(e, def.auraDps * tw.mult * lvM * def.tollEvery * cons);
+            e.slowT = Math.max(e.slowT, 0.4); e.slowF = Math.max(e.slowF, def.slow);
+            if (hasSyn("resonance")) damageEnemySilent(e, 4);
+            if (e.dead && before > 0) { /* died by toll */ }
+          }
+          if (any && waveActive) { SFX.toll(); tw.tollAnim = 1; }
+          tw.cd = def.tollEvery / (Math.pow(G.PACK.towerLevelMult, tw.level - 1)) * (hasSyn("resonance") ? 0.75 : 1);
         }
+        continue;
+      }
+      const range = def.range;
+      let tgt = null, bd = 1e9;
+      for (const e of enemies) {
+        if (e.dead || (e.type === "wraith" && e.flickerT % 2.6 > 1.9)) continue;
+        const d = Math.hypot(e.x - tw.x, e.y - tw.y);
+        if (d < range && d < bd && !losBlocked(tw.x, tw.y, e.x, e.y)) { bd = d; tgt = e; }
+      }
+      if (tgt && tw.cd <= 0) {
+        tw.cd = 1 / towerFireRate(tw, def);
+        const dmg = def.dmg * tw.mult * lvM * cons;
+        if (tw.type === "pyre") fireBolt(tw, tgt, dmg, { kind: "ember", speed: 460, zoneDps: def.burnDps * tw.mult * lvM * cons });
+        else if (tw.type === "gallows") fireBolt(tw, tgt, dmg, { kind: "spike", speed: 760, mark: true, homing: true });
+        else if (tw.type === "frost") fireBolt(tw, tgt, dmg, { kind: "frost", speed: 560, chillSlow: def.chillSlow, chillSecs: def.chillSecs });
+        else fireBolt(tw, tgt, dmg, { kind: "spike", speed: 700 });
       }
     }
+    // --- player fire (the circle feeds the knight too) ---
+    player.fireCd -= dt;
+    if (waveActive && player.fireCd <= 0) {
+      let tgt = null, bd = 1e9;
+      for (const e of enemies) { if (e.dead || (e.type === "wraith" && e.flickerT % 2.6 > 1.9)) continue; const d = Math.hypot(e.x - player.x, e.y - player.y); if (d < bd) { bd = d; tgt = e; } }
+      if (tgt) {
+        const rateMult = (inCircle(player.x, player.y) ? 1.15 : 1);
+        player.fireCd = 1 / (player.rate * rateMult);
+        const missing = 1 - player.hp / player.maxHp;
+        const dmgBase = player.dmg * (player.wrathWave ? 1.25 : 1) * (1 + player.brandPct * missing * 100);
+        for (let i = 0; i < player.proj; i++) {
+          const crit = Math.random() < player.critC;
+          const dmg = dmgBase * (crit ? player.critM : 1) * (player.proj > 1 ? 1 : 1);
+          const spread = (i - (player.proj - 1) / 2) * 0.09;
+          const a = Math.atan2(tgt.y - player.y, tgt.x - player.x) + spread;
+          bolts.push({ x: player.x, y: player.y, vx: Math.cos(a) * 640, vy: Math.sin(a) * 640, dmg, crit, pierce: player.pierce, hits: new Set(), kind: "bolt", playerBolt: true, chillSlow: player.chillSlow, chillSecs: player.chillSecs });
+        }
+        SFX.shoot();
+      }
+    }
+    // --- bolts ---
+    for (const b of bolts) {
+      if (b.homing && !b.homing.dead) { const a = Math.atan2(b.homing.y - b.y, b.homing.x - b.x), sp = Math.hypot(b.vx, b.vy); b.vx = Math.cos(a) * sp; b.vy = Math.sin(a) * sp; }
+      b.x += b.vx * dt; b.y += b.vy * dt;
+      if (pillarHit(b.x, b.y)) { b.dead = true; burst(b.x, b.y, "#8a7f6a", 3); continue; }
+      for (const e of enemies) {
+        if (e.dead || b.hits.has(e) || (e.type === "wraith" && e.flickerT % 2.6 > 1.9)) continue;
+        if (Math.hypot(e.x - b.x, e.y - b.y) < e.r + 5) {
+          b.hits.add(e);
+          damageEnemy(e, b.dmg, b.crit);
+          if (!b.crit) SFX.hit();
+          if (b.chillSecs) { const wasBurning = e.burnT > 0; e.slowT = Math.max(e.slowT, b.chillSecs); e.slowF = Math.max(e.slowF, b.chillSlow); e.chillT = Math.max(e.chillT, b.chillSecs); if (wasBurning) maybeShock(e, b.dmg); }
+          if (b.mark) e.markT = G.TOWERS.gallows.markSecs;
+          if (b.kind === "ember" && !b.zoned) { b.zoned = true; zones.push({ x: e.x, y: e.y, r: G.TOWERS.pyre.burnRadius, dps: b.zoneDps, ttl: G.TOWERS.pyre.burnSecs }); }
+          if (b.playerBolt) {
+            player.hitCount++;
+            if (hasSyn("kindled")) { e.burnT = Math.max(e.burnT, 1.2); e.burnDps = Math.max(e.burnDps, 5); if (e.chillT > 0) maybeShock(e, b.dmg); }
+            if (player.stormEvery && player.hitCount % player.stormEvery === 0) chainZap(b, e, b.dmg);
+            if (b.kind === "bolt" && e.dead && Math.random() < 0.3) { /* ash handled at death */ }
+          }
+          if (b.pierce > 0) b.pierce--; else { b.dead = true; }
+          break;
+        }
+      }
+      if (b.x < -20 || b.x > W + 20 || b.y < -20 || b.y > H + 20) b.dead = true;
+    }
     bolts = bolts.filter(b => !b.dead);
-    // burn zones
-    for (const z of zones) { z.t -= dt; for (const e of enemies) if (!e.dead && Math.hypot(e.x - z.x, e.y - z.y) < z.r + e.r * 0.5) { e.burnT = Math.max(e.burnT, 0.2); e.burnDps = Math.max(e.burnDps, z.dps); } }
-    zones = zones.filter(z => z.t > 0);
-    // enemies
+    // boss specials
     for (const e of enemies) {
-      if (e.dead) continue;
+      if (!e.boss || e.dead) continue;
+      if (e.type === "abbot") {
+        e.tollCd -= dt;
+        if (e.tollCd <= 0) {
+          e.tollCd = 6; SFX.toll(); shake = Math.max(shake, 3);
+          for (let k = 0; k < 8; k++) { const a = k / 8 * 6.283; ebolts.push({ x: e.x, y: e.y, vx: Math.cos(a) * 130, vy: Math.sin(a) * 130, r: 6, dmg: 10 }); }
+        }
+      } else if (e.type === "vesper") {
+        e.tollCd -= dt; e.summonCd -= dt;
+        if (e.tollCd <= 0) {
+          e.tollCd = 5.2; SFX.toll(); shake = Math.max(shake, 4);
+          for (let k = 0; k < 12; k++) { const a = k / 12 * 6.283 + Math.random() * 0.2; ebolts.push({ x: e.x, y: e.y, vx: Math.cos(a) * 140, vy: Math.sin(a) * 140, r: 6, dmg: 12 }); }
+        }
+        if (e.summonCd <= 0 && enemies.length < 60) { e.summonCd = 7; for (let k = 0; k < 3; k++) { const w = spawnEnemy("wraith"); w.x = e.x + (Math.random() * 90 - 45); w.y = e.y + (Math.random() * 90 - 45); } }
+      }
+    }
+    for (const b of ebolts) { b.x += b.vx * dt; b.y += b.vy * dt; if (pillarHit(b.x, b.y)) { b.dead = true; continue; } if (Math.hypot(player.x - b.x, player.y - b.y) < player.r + b.r) { b.dead = true; hurtPlayer(b.dmg, null); } if (b.x < -20 || b.x > W + 20 || b.y < -20 || b.y > H + 20) b.dead = true; }
+    ebolts = ebolts.filter(b => !b.dead);
+    // --- enemies ---
+    for (const e of enemies) {
       if (e.flash > 0) e.flash -= dt;
-      if (e.burnT > 0) { e.burnT -= dt; damageEnemySilent(e, e.burnDps * dt); if (e.dead) continue; }
-      const slow = e.slowT > 0 ? 1 - e.slowF : 1; if (e.slowT > 0) e.slowT -= dt; else e.slowF = 0;
-      const a = Math.atan2(player.y - e.y, player.x - e.x);
-      e.x += Math.cos(a) * e.speed * slow * dt; e.y += Math.sin(a) * e.speed * slow * dt;
-      // light separation so knots don't stack into one sprite
-      for (const o of enemies) { if (o !== e && !o.dead) { const d = Math.hypot(o.x - e.x, o.y - e.y), min = (o.r + e.r) * 0.8; if (d > 0 && d < min) { e.x -= (o.x - e.x) / d * (min - d) * 0.3; e.y -= (o.y - e.y) / d * (min - d) * 0.3; } } }
+      if (e.markT > 0) e.markT -= dt;
+      if (e.chillT > 0) e.chillT -= dt;
+      if (e.shockCd > 0) e.shockCd -= dt;
+      e.flickerT += dt;
+      if (e.type === "brute" && !e.enraged && e.hp < e.maxHp * 0.3) { e.enraged = true; floatText(e.x, e.y - e.r - 10, "ENRAGED", "#ff5d2e"); }
+      if (e.burnT > 0) { e.burnT -= dt; e.burnAcc = (e.burnAcc || 0) + e.burnDps * dt; if (e.burnAcc >= 1) { const d = Math.floor(e.burnAcc); e.burnAcc -= d; damageEnemySilent(e, d); } if (e.dead) continue; }
+      let sp = e.speed * (e.enraged ? 1.45 : 1) * (1 + 0.04 * deepenStacks);
+      if (e.type === "wraith") {
+        e.lungeCd -= dt;
+        if (e.lungeT > 0) { e.lungeT -= dt; sp *= 1.9; }
+        else if (e.lungeCd <= 0 && Math.hypot(player.x - e.x, player.y - e.y) < 135) { e.lungeT = 0.6; e.lungeCd = 3.2; }
+      }
+      if (e.type === "brute") {
+        e.chargeCd -= dt;
+        if (e.windT > 0) { e.windT -= dt; sp *= 0.3; if (e.windT <= 0) { e.chargeT = 0.8; e.chargeCd = 5; } }
+        else if (e.chargeT > 0) { e.chargeT -= dt; sp *= 2.2; }
+        else if (e.chargeCd <= 0) { const dd = Math.hypot(player.x - e.x, player.y - e.y); if (dd > 170 && dd < 330) e.windT = 0.4; else e.chargeCd = 0.5; }
+      }
+      if (e.slowT > 0) { e.slowT -= dt; sp *= (1 - e.slowF); if (e.slowT <= 0) e.slowF = 0; }
+      for (const c of enemies) if (!c.dead && c.type === "cultist" && c !== e && Math.hypot(c.x - e.x, c.y - e.y) < 95) { sp *= 1.12; break; }
+      // braziers burn what wanders close
+      for (const bz of WORLD.braziers) if (Math.hypot(e.x - bz.x, e.y - bz.y) < WORLD.brazierR) { e.burnT = Math.max(e.burnT, 0.4); e.burnDps = Math.max(e.burnDps, WORLD.brazierDps); break; }
+      const lead = 0.22; // the dead learn: they run at where you WILL be
+      const a = Math.atan2(player.y + player.vy * lead - e.y, player.x + player.vx * lead - e.x);
+      let mx = Math.cos(a) * sp, my = Math.sin(a) * sp;
+      for (const o of enemies) { if (o === e || o.dead) continue; const d = Math.hypot(o.x - e.x, o.y - e.y), rr = e.r + o.r; if (d > 0.01 && d < rr) { mx -= (o.x - e.x) / d * (rr - d) * 3.2; my -= (o.y - e.y) / d * (rr - d) * 3.2; } }
+      e.x += mx * dt; e.y += my * dt;
       e.hitCd -= dt;
-      if (Math.hypot(player.x - e.x, player.y - e.y) < e.r + player.r && e.hitCd <= 0) { e.hitCd = 0.85; hurtPlayer(e.dmg); }
-      if (e.type === "abbot") { e.summonCd -= dt; if (e.summonCd <= 0 && enemies.filter(x => !x.dead).length < 90) { e.summonCd = 4; const h = spawnEnemy("husk"); h.x = e.x + 30; h.y = e.y + 10; burst(e.x, e.y, "#a41623", 8); } }
-      if (e.type === "vesper") { e.tollCd -= dt; if (e.tollCd <= 0) { e.tollCd = 6; SFX.toll(); shake = Math.max(shake, 6); for (let i = 0; i < 10; i++) { const aa = i / 10 * 6.283; ebolts.push({ x: e.x, y: e.y, vx: Math.cos(aa) * 165, vy: Math.sin(aa) * 165, dmg: 10 * spec.dmgScale, life: 3.4, r: 7 }); } for (let i = 0; i < 3; i++) { const w = spawnEnemy("wraith"); w.x = e.x + (Math.random() * 90 - 45); w.y = e.y + (Math.random() * 90 - 45); } } }
+      if (Math.hypot(player.x - e.x, player.y - e.y) < e.r + player.r && e.hitCd <= 0) { e.hitCd = 0.85; hurtPlayer(e.dmg * (1 + 0.03 * deepenStacks), e); }
     }
     enemies = enemies.filter(e => !e.dead);
-    // enemy bolts (Vesper's toll-bursts)
-    for (const b of ebolts) { b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt; if (b.life <= 0) b.dead = true; if (!b.dead && Math.hypot(player.x - b.x, player.y - b.y) < player.r + b.r) { b.dead = true; hurtPlayer(b.dmg); } }
-    ebolts = ebolts.filter(b => !b.dead);
-    // ash shards
+    // --- shards (Sanguine Font drinks them) ---
+    const fontSyn = hasSyn("font-chalice");
     for (const s of shards) {
       s.t += dt * 3;
-      const d = Math.hypot(player.x - s.x, player.y - s.y);
-      if (d < player.collectR * 2.1) { const pull = d < player.collectR ? 430 : 190; s.x += (player.x - s.x) / (d || 1) * pull * dt; s.y += (player.y - s.y) / (d || 1) * pull * dt; }
-      if (d < player.r + 9) { s.dead = true; ashes++; SFX.ash(); updatePackButton(); }
+      const dP = Math.hypot(player.x - s.x, player.y - s.y);
+      let target = null;
+      if (fontSyn) for (const f of towers) if (f.type === "font" && Math.hypot(f.x - s.x, f.y - s.y) < G.TOWERS.font.auraRange) { target = f; break; }
+      if (target) { const d = Math.hypot(target.x - s.x, target.y - s.y); if (d < 16) { s.got = true; heal(0.35); continue; } s.x += (target.x - s.x) / d * 260 * dt; s.y += (target.y - s.y) / d * 260 * dt; }
+      else if (dP < player.collectR) { const pull = 430; s.x += (player.x - s.x) / (dP || 1) * pull * dt; s.y += (player.y - s.y) / (dP || 1) * pull * dt; if (dP < player.r + 8) { s.got = true; ashes++; SFX.ash(); updatePackButton(); } }
     }
-    shards = shards.filter(s => !s.dead);
-    updateFx(dt);
+    shards = shards.filter(s => !s.got);
+    // --- burn zones ---
+    if (waveActive) for (const e of enemies) if (!e.dead) for (const z of zones) {
+      if (Math.hypot(e.x - z.x, e.y - z.y) < z.r + e.r) { const wasChilled = e.chillT > 0; e.burnT = Math.max(e.burnT, 0.35); e.burnDps = Math.max(e.burnDps, z.dps); if (wasChilled) maybeShock(e, z.dps); break; }
+    }
+    for (const z of zones) z.ttl -= dt; zones = zones.filter(z => z.ttl > 0);
+    // pyre embers leave zones on kill handled below via bolt hits:
+    for (const b of []) {}
     if (waveActive && !spawnQueue.length && !enemies.length && state === "wave") endWave();
     updateHUD();
   }
-  function damageEnemySilent(e, dmg) { damageEnemy(e, dmg, false, true); } // aura/burn ticks: no float-text spam
-  function updateFx(dt) {
-    for (const p of parts) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.92; p.vy *= 0.92; }
-    parts = parts.filter(p => p.t < p.life);
-    for (const t of texts) { t.t += dt; t.y -= 34 * dt; }
-    texts = texts.filter(t => t.t < 0.8);
-    if (shake > 0) shake = Math.max(0, shake - dt * 26);
-    if (hitFlash > 0) hitFlash -= dt;
-  }
 
-  // ---------- render ----------
-  function drawToken(x, y, r, img, ring) {
-    ctx.save();
-    ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.clip();
-    if (img && img.complete && img.naturalWidth) ctx.drawImage(img, x - r, y - r, r * 2, r * 2);
-    else { ctx.fillStyle = "#333"; ctx.fillRect(x - r, y - r, r * 2, r * 2); }
-    ctx.restore();
-    ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.strokeStyle = ring; ctx.lineWidth = 2; ctx.stroke();
+  // ---------- rendering ----------
+  function drawSprite(img, x, y, s, alpha) {
+    if (!img || !img.complete || !img.naturalWidth) { ctx.fillStyle = "#554"; ctx.fillRect(x - s / 2, y - s / 2, s, s); return; }
+    const iw = img.naturalWidth, ih = img.naturalHeight, sc = Math.max(s / iw, s / ih);
+    ctx.save(); ctx.globalAlpha = alpha == null ? 1 : alpha; ctx.beginPath(); ctx.rect(x - s / 2, y - s / 2, s, s); ctx.clip();
+    ctx.drawImage(img, x - iw * sc / 2, y - ih * sc / 2, iw * sc, ih * sc); ctx.restore();
+  }
+  function loop(ts) {
+    requestAnimationFrame(loop);
+    const rawDt = Math.min(0.05, (ts - lastT) / 1000 || 0.016); lastT = ts;
+    if (paused || state === "title" || state === "pack" || state === "win" || state === "over") { render(); return; }
+    let dt = rawDt;
+    if (hitStop > 0) { hitStop -= rawDt; dt = 0; }
+    update(dt); render();
   }
   function render() {
     ctx.save();
-    if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
-    if (IMG.arena.complete) ctx.drawImage(IMG.arena, 0, 0, W, H); else { ctx.fillStyle = "#0b0a09"; ctx.fillRect(0, 0, W, H); }
-    ctx.fillStyle = "rgba(0,0,0,0.22)"; ctx.fillRect(0, 0, W, H);
-    // burn zones
-    for (const z of zones) { const g = ctx.createRadialGradient(z.x, z.y, 4, z.x, z.y, z.r); g.addColorStop(0, "rgba(255,140,40,0.5)"); g.addColorStop(1, "rgba(255,80,20,0)"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, 6.283); ctx.fill(); }
-    // placement range preview
-    if (state === "build" && (selectedHand || moveTower)) {
-      const id = selectedHand || moveTower.type, T = G.TOWERS[id];
-      const range = T.range || T.auraRange || 150;
-      ctx.beginPath(); ctx.arc(mouse.x, mouse.y, range, 0, 6.283); ctx.fillStyle = "rgba(255,217,74,0.07)"; ctx.fill(); ctx.strokeStyle = "rgba(255,217,74,0.4)"; ctx.stroke();
+    if (shake > 0) { ctx.translate((Math.random() * 2 - 1) * shake, (Math.random() * 2 - 1) * shake); shake *= 0.88; if (shake < 0.4) shake = 0; }
+    ctx.drawImage(IMG.arena, 0, 0, W, H);
+    // blood remembers
+    for (const d of decals) { ctx.fillStyle = `rgba(120,10,16,${d.a})`; ctx.beginPath(); ctx.ellipse(d.x, d.y, d.r, d.r * 0.62, 0, 0, 6.283); ctx.fill(); }
+    // ritual circle glow (stronger when the knight stands in it)
+    const cActive = inCircle(player.x, player.y);
+    ctx.strokeStyle = `rgba(255,60,60,${cActive ? 0.5 : 0.22})`; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(WORLD.circle.x, WORLD.circle.y, WORLD.circle.r, 0, 6.283); ctx.stroke();
+    ctx.strokeStyle = `rgba(255,217,74,${cActive ? 0.35 : 0.10})`; ctx.lineWidth = 9;
+    ctx.beginPath(); ctx.arc(WORLD.circle.x, WORLD.circle.y, WORLD.circle.r - 8, performance.now() / 2400, performance.now() / 2400 + 4.4); ctx.stroke();
+    // braziers flicker
+    for (const bz of WORLD.braziers) {
+      const f = 0.75 + Math.sin(performance.now() / 90 + bz.x) * 0.25;
+      const gr = ctx.createRadialGradient(bz.x, bz.y, 2, bz.x, bz.y, WORLD.brazierR);
+      gr.addColorStop(0, `rgba(255,122,38,${0.20 * f})`); gr.addColorStop(1, "rgba(255,122,38,0)");
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(bz.x, bz.y, WORLD.brazierR, 0, 6.283); ctx.fill();
     }
-    // ash shards
-    for (const s of shards) { ctx.fillStyle = "#ffb066"; ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.t); ctx.fillRect(-2.6, -2.6, 5.2, 5.2); ctx.restore(); }
+    // burn zones
+    for (const z of zones) {
+      const fl = 0.8 + Math.sin(performance.now() / 70 + z.x) * 0.2;
+      ctx.fillStyle = `rgba(255,110,30,${0.22 * fl})`; ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, 6.283); ctx.fill();
+      ctx.fillStyle = `rgba(255,190,60,${0.16 * fl})`; ctx.beginPath(); ctx.arc(z.x, z.y, z.r * 0.55, 0, 6.283); ctx.fill();
+    }
+    // ember storm warning
+    if (strikeWarn) {
+      ctx.strokeStyle = `rgba(255,122,38,${0.5 + strikeWarn.t})`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(strikeWarn.x, strikeWarn.y, 58, 0, 6.283); ctx.stroke();
+      ctx.fillStyle = `rgba(255,122,38,${0.12 + (0.85 - strikeWarn.t) * 0.25})`; ctx.beginPath(); ctx.arc(strikeWarn.x, strikeWarn.y, 58, 0, 6.283); ctx.fill();
+    }
+    // shards
+    for (const s of shards) {
+      const p = 2.6 + Math.sin(s.t) * 0.8;
+      ctx.fillStyle = "#ff7a26"; ctx.shadowColor = "#ff7a26"; ctx.shadowBlur = 7;
+      ctx.beginPath(); ctx.arc(s.x, s.y, p, 0, 6.283); ctx.fill(); ctx.shadowBlur = 0;
+    }
     // towers
-    for (const t of towers) {
-      const T = G.TOWERS[t.type];
-      if (t.type === "bell" && state === "wave") { ctx.beginPath(); ctx.arc(t.x, t.y, T.auraRange, 0, 6.283); ctx.fillStyle = "rgba(180,160,255,0.075)"; ctx.fill(); ctx.strokeStyle = "rgba(180,160,255,0.28)"; ctx.stroke(); }
-      if (t.ring > 0) { ctx.beginPath(); ctx.arc(t.x, t.y, T.auraRange * (1 - t.ring / 0.5) + 10, 0, 6.283); ctx.strokeStyle = "rgba(210,195,255,0.75)"; ctx.lineWidth = 2; ctx.stroke(); ctx.lineWidth = 1; }
-      drawToken(t.x, t.y, 24, IMG["card_" + t.type], moveTower === t ? "#ffd94a" : "#6b5a3e");
-      ctx.fillStyle = "#ffd94a"; ctx.font = "11px Georgia"; ctx.textAlign = "center";
-      if (t.level > 1) ctx.fillText("★".repeat(t.level), t.x, t.y + 38);
+    for (const tw of towers) {
+      const c = CARDMAP[tw.type], def = G.TOWERS[tw.type];
+      if (tw.type === "bell") { ctx.fillStyle = "rgba(160,170,220,0.13)"; ctx.beginPath(); ctx.arc(tw.x, tw.y, def.auraRange, 0, 6.283); ctx.fill(); ctx.strokeStyle = "rgba(160,170,220,0.30)"; ctx.stroke(); }
+      if (tw.type === "font") { ctx.fillStyle = "rgba(215,38,61,0.12)"; ctx.beginPath(); ctx.arc(tw.x, tw.y, def.auraRange, 0, 6.283); ctx.fill(); ctx.strokeStyle = "rgba(215,38,61,0.30)"; ctx.stroke(); }
+      if (inCircle(tw.x, tw.y)) { ctx.strokeStyle = "rgba(255,217,74,0.55)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(tw.x, tw.y, 30, 0, 6.283); ctx.stroke(); }
+      drawSprite(IMG["card_" + tw.type], tw.x, tw.y, 56, 1);
+      ctx.fillStyle = "rgba(6,5,8,0.75)"; ctx.fillRect(tw.x - 22, tw.y + 30, 44, 13);
+      ctx.fillStyle = "#ffd94a"; ctx.font = "bold 9.5px system-ui"; ctx.textAlign = "center";
+      ctx.fillText(tw.level > 1 ? "LV " + tw.level : c.name.split(" ")[0].toUpperCase(), tw.x, tw.y + 40);
+      if (tw.tollAnim > 0) { tw.tollAnim -= 0.04; ctx.strokeStyle = `rgba(190,200,240,${tw.tollAnim * 0.5})`; ctx.beginPath(); ctx.arc(tw.x, tw.y, def.auraRange * (1 - tw.tollAnim * 0.4), 0, 6.283); ctx.stroke(); }
+    }
+    // placement preview
+    if (state === "build" && (selectedHand || moveTower) && mouse.inside) {
+      const type = selectedHand || moveTower.type, def = G.TOWERS[type], rng = def.range || def.auraRange;
+      const blockedSpot = pillarHit(mouse.x, mouse.y);
+      ctx.fillStyle = blockedSpot ? "rgba(215,38,61,0.14)" : "rgba(255,255,255,0.10)";
+      ctx.beginPath(); ctx.arc(mouse.x, mouse.y, rng, 0, 6.283); ctx.fill();
+      if (inCircle(mouse.x, mouse.y)) { ctx.fillStyle = "rgba(255,217,74,0.8)"; ctx.font = "bold 11px system-ui"; ctx.textAlign = "center"; ctx.fillText("CONSECRATED +30% DMG", mouse.x, mouse.y - rng - 8); }
+      if (losBlocked(mouse.x, mouse.y, W / 2, H / 2)) { ctx.fillStyle = "rgba(255,120,120,0.85)"; ctx.font = "bold 10px system-ui"; ctx.textAlign = "center"; ctx.fillText("PILLARS BLIND THIS SPOT", mouse.x, mouse.y + rng + 14); }
+      drawSprite(IMG["card_" + type], mouse.x, mouse.y, 56, blockedSpot ? 0.35 : 0.65);
     }
     // enemies
     for (const e of enemies) {
-      const bob = Math.sin(runTime * 6 + e.wob) * 2;
-      drawToken(e.x, e.y + bob * 0.3, e.r, e.img, e.boss ? "#d7263d" : e.type === "wraith" ? "#7fb8d8" : "#54452e");
-      if (e.flash > 0) { ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, 6.283); ctx.fillStyle = "rgba(255,240,220,0.45)"; ctx.fill(); }
-      if (e.slowT > 0) { ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 2, 0, 6.283); ctx.strokeStyle = "rgba(140,200,255,0.65)"; ctx.stroke(); }
-      if (e.hp < e.maxHp) { const w = e.r * 2; ctx.fillStyle = "#20090b"; ctx.fillRect(e.x - e.r, e.y - e.r - 10, w, 4); ctx.fillStyle = e.boss ? "#d7263d" : "#a41623"; ctx.fillRect(e.x - e.r, e.y - e.r - 10, w * Math.max(0, e.hp / e.maxHp), 4); }
+      const wob = Math.sin(performance.now() / 160 + e.wob) * 2;
+      const flick = e.type === "wraith" && e.flickerT % 2.6 > 1.9;
+      drawSprite(e.img, e.x, e.y + wob * 0.4, e.r * 2.9, flick ? 0.25 : 0.96);
+      if (e.flash > 0) { ctx.fillStyle = `rgba(255,240,220,${e.flash * 5})`; ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, 6.283); ctx.fill(); }
+      if (e.elite) { ctx.strokeStyle = "#ffd94a"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 5 + Math.sin(performance.now() / 200) * 1.5, 0, 6.283); ctx.stroke(); }
+      if (e.enraged) { ctx.strokeStyle = "rgba(255,60,30,0.8)"; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 3, 0, 6.283); ctx.stroke(); }
+      if (e.markT > 0) { ctx.fillStyle = "#ffd94a"; ctx.font = "bold 12px system-ui"; ctx.textAlign = "center"; ctx.fillText("✛", e.x, e.y - e.r - 14); }
+      if (e.chillT > 0) { ctx.fillStyle = "rgba(160,220,255,0.85)"; ctx.font = "10px system-ui"; ctx.textAlign = "center"; ctx.fillText("❄", e.x + e.r, e.y - e.r); }
+      if (e.burnT > 0) { ctx.fillStyle = "rgba(255,140,40,0.9)"; ctx.font = "10px system-ui"; ctx.textAlign = "center"; ctx.fillText("🔥", e.x - e.r, e.y - e.r); }
+      if (e.hp < e.maxHp) {
+        ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(e.x - e.r, e.y - e.r - 9, e.r * 2, 4);
+        ctx.fillStyle = e.boss ? "#d7263d" : "#c93b2e"; ctx.fillRect(e.x - e.r, e.y - e.r - 9, e.r * 2 * Math.max(0, e.hp / e.maxHp), 4);
+      }
+    }
+    // player
+    if (state !== "over") {
+      if (player.shieldReady) { ctx.strokeStyle = "rgba(170,200,255,0.7)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(player.x, player.y, 30 + Math.sin(performance.now() / 300) * 2, 0, 6.283); ctx.stroke(); }
+      if (player.dashT > 0) { ctx.strokeStyle = "rgba(215,38,61,0.7)"; ctx.beginPath(); ctx.arc(player.x, player.y, 26, 0, 6.283); ctx.stroke(); }
+      drawSprite(IMG.hero, player.x, player.y, 56, player.invuln > 0 && state === "wave" ? 0.65 : 1);
+      ctx.fillStyle = "rgba(6,5,8,0.7)"; ctx.fillRect(player.x - 20, player.y + 30, 40, 5);
+      ctx.fillStyle = "#7dff9a"; ctx.fillRect(player.x - 20, player.y + 30, 40 * Math.max(0, player.hp / player.maxHp), 5);
     }
     // bolts
     for (const b of bolts) {
-      ctx.fillStyle = b.kind === "frost" ? "#aee2ff" : b.kind === "ember" ? "#ff9a3c" : "#ffc46b";
-      ctx.beginPath(); ctx.arc(b.x, b.y, b.kind === "ember" ? 6 : 4, 0, 6.283); ctx.fill();
+      ctx.strokeStyle = b.kind === "frost" ? "#a8dcff" : b.kind === "ember" ? "#ff9a3c" : b.kind === "spike" ? "#e8e2d4" : "#ffd9c9";
+      ctx.lineWidth = b.kind === "spike" ? 3 : 2.4; ctx.beginPath();
+      ctx.moveTo(b.x - b.vx * 0.018, b.y - b.vy * 0.018); ctx.lineTo(b.x, b.y); ctx.stroke();
+      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(b.x, b.y, 2.2, 0, 6.283); ctx.fill();
     }
-    for (const b of ebolts) { ctx.fillStyle = "#ff5d73"; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 6.283); ctx.fill(); }
-    // player
-    if (state !== "title" && state !== "over") {
-      if (!(player.invuln > 0 && Math.floor(runTime * 14) % 2 && state === "wave")) drawToken(player.x, player.y, player.r, IMG.hero, player.shieldReady ? "#bcd3ff" : "#c9a227");
-      if (player.shieldReady) { ctx.beginPath(); ctx.arc(player.x, player.y, player.r + 6, 0, 6.283); ctx.strokeStyle = "rgba(160,190,255,0.5)"; ctx.stroke(); }
-      ctx.fillStyle = "rgba(0,0,0,0.55)"; ctx.fillRect(player.x - 26, player.y - player.r - 14, 52, 5);
-      ctx.fillStyle = "#c1272d"; ctx.fillRect(player.x - 26, player.y - player.r - 14, 52 * Math.max(0, player.hp / player.maxHp), 5);
+    for (const b of ebolts) { ctx.fillStyle = "#b9c6ff"; ctx.shadowColor = "#8fa2ff"; ctx.shadowBlur = 8; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 6.283); ctx.fill(); ctx.shadowBlur = 0; }
+    // lightning
+    for (const z of zaps) {
+      ctx.strokeStyle = `rgba(255,233,168,${1 - z.t / z.ttl})`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(z.x1, z.y1);
+      const mx = (z.x1 + z.x2) / 2 + (Math.random() * 18 - 9), my = (z.y1 + z.y2) / 2 + (Math.random() * 18 - 9);
+      ctx.lineTo(mx, my); ctx.lineTo(z.x2, z.y2); ctx.stroke();
     }
     // particles & texts
     for (const p of parts) { ctx.globalAlpha = 1 - p.t / p.life; ctx.fillStyle = p.color; ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size); }
     ctx.globalAlpha = 1;
-    ctx.font = "bold 13px Georgia"; ctx.textAlign = "center";
-    for (const t of texts) { ctx.globalAlpha = 1 - t.t / 0.8; ctx.fillStyle = t.color; ctx.fillText(t.txt, t.x, t.y); }
+    ctx.textAlign = "center";
+    for (const t of texts) { ctx.globalAlpha = 1 - t.t / 0.9; ctx.fillStyle = t.color; ctx.font = "bold 12.5px system-ui"; ctx.fillText(t.txt, t.x, t.y); }
     ctx.globalAlpha = 1;
-    if (hitFlash > 0) { ctx.fillStyle = `rgba(164,22,35,${hitFlash * 0.55})`; ctx.fillRect(0, 0, W, H); }
-    if (paused) { ctx.fillStyle = "rgba(0,0,0,0.55)"; ctx.fillRect(0, 0, W, H); ctx.fillStyle = "#d8d2c4"; ctx.font = "42px Georgia"; ctx.textAlign = "center"; ctx.fillText("PAUSED", W / 2, H / 2); }
     ctx.restore();
+    // full-arena dark vignette + damage flash
+    const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.42, W / 2, H / 2, H * 0.85);
+    vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,0.5)");
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+    if (hitFlash > 0) { ctx.fillStyle = `rgba(215,38,61,${hitFlash * 0.30})`; ctx.fillRect(0, 0, W, H); }
+    if (player.hp < player.maxHp * 0.30 && state === "wave") { const pulse = 0.10 + Math.sin(performance.now() / 240) * 0.05; ctx.fillStyle = `rgba(215,38,61,${pulse})`; ctx.fillRect(0, 0, W, H); }
   }
-  function loop(ts) {
-    const dt = Math.min(0.05, (ts - lastT) / 1000 || 0); lastT = ts;
-    if (!paused && state !== "title") update(dt);
-    render();
-    requestAnimationFrame(loop);
-  }
-
-  // ---------- placement input ----------
-  function canvasPos(ev) { const r = cv.getBoundingClientRect(); return { x: (ev.clientX - r.left) * (W / r.width), y: (ev.clientY - r.top) * (H / r.height) }; }
-  cv.addEventListener("mousemove", e => { mouse = canvasPos(e); });
-  cv.addEventListener("click", e => {
+  // ---------- input ----------
+  function canvasPos(ev) { const r = cv.getBoundingClientRect(); return { x: (ev.clientX - r.left) * W / r.width, y: (ev.clientY - r.top) * H / r.height, inside: true }; }
+  cv.addEventListener("mousemove", ev => { mouse = canvasPos(ev); });
+  cv.addEventListener("mouseleave", () => mouse.inside = false);
+  cv.addEventListener("click", ev => {
     if (state !== "build") return;
-    const p = canvasPos(e);
-    if (moveTower) {
-      moveTower.x = p.x; moveTower.y = p.y; moveTower = null; SFX.place(); renderHand(); return;
-    }
+    const p = canvasPos(ev);
     if (selectedHand) {
-      if ((placedCount._total || 0) >= G.PACK.maxFieldTowers && !placedCount[selectedHand]) { log("The field holds six towers. Pull a duplicate to upgrade instead."); return; }
-      const id = selectedHand, info = hand[id];
-      const t = { type: id, x: p.x, y: p.y, level: 1, mult: info.bestMult, cd: 0, tollT: 0, ring: 0 };
-      towers.push(t); (placedCount[id] = placedCount[id] || []).push(t); placedCount._total = (placedCount._total || 0) + 1;
-      info.count--; if (info.count <= 0) selectedHand = null;
-      SFX.place(); burst(p.x, p.y, "#ffd94a", 10); renderHand(); return;
+      if (pillarHit(p.x, p.y)) { log("The pillars swallow that spot. Choose open ground."); return; }
+      if (towers.length >= G.PACK.maxFieldTowers) { log(`The floor holds only ${G.PACK.maxFieldTowers} towers.`); return; }
+      const h = hand[selectedHand];
+      const tw = { type: selectedHand, x: p.x, y: p.y, level: 1, mult: h.bestMult, cd: 0, tollAnim: 0 };
+      towers.push(tw); placedCount[selectedHand] = placedCount[selectedHand] || []; placedCount[selectedHand].push(tw);
+      h.count--; if (h.count <= 0) selectedHand = null;
+      SFX.place(); burst(p.x, p.y, "#e8e2d4", 8); renderHand(); return;
     }
-    const t = towers.find(t => Math.hypot(t.x - p.x, t.y - p.y) < 28);
-    if (t) { moveTower = t; log(`${CARDMAP[t.type].name} Lv${t.level} — click where it should stand. Esc to cancel.`); }
+    const tw = towers.find(t => Math.hypot(t.x - p.x, t.y - p.y) < 32);
+    if (tw) { moveTower = moveTower === tw ? null : tw; log(moveTower ? `${CARDMAP[tw.type].name} lifted — click its new ground (or double-click it to overcharge: 20 ash).` : "Set down."); }
+    else if (moveTower) {
+      if (pillarHit(p.x, p.y)) { log("Not into a pillar."); return; }
+      moveTower.x = p.x; moveTower.y = p.y; SFX.place(); moveTower = null;
+    }
   });
-
-  // ---------- buttons ----------
-  $("btn-begin").addEventListener("click", beginWave);
+  cv.addEventListener("dblclick", ev => {
+    if (state !== "build") return;
+    const p = canvasPos(ev);
+    const tw = towers.find(t => Math.hypot(t.x - p.x, t.y - p.y) < 32);
+    if (!tw) return;
+    if (tw.level >= G.PACK.towerLevelCap) { log("That tower is at its peak."); return; }
+    if (ashes < 20) { log("Overcharge costs 20 ashes."); return; }
+    ashes -= 20; tw.level++; SFX.toll(); burst(tw.x, tw.y, "#ffd94a", 20);
+    log(`${CARDMAP[tw.type].name} overcharged to level ${tw.level}.`); updateHUD(); updatePackButton();
+  });
+  cv.addEventListener("touchstart", ev => { const t = ev.touches[0]; touchTarget = canvasPos(t); }, { passive: true });
+  cv.addEventListener("touchmove", ev => { const t = ev.touches[0]; touchTarget = canvasPos(t); }, { passive: true });
+  cv.addEventListener("touchend", () => touchTarget = null);
+  $("btn-begin").addEventListener("click", () => { if (state === "build") beginWave(); });
+  // ---------- title / difficulty / restart ----------
+  function selectDiff(key2) {
+    diff = G.DIFFS[key2];
+    $("diff-vigil").classList.toggle("diff-on", key2 === "vigil");
+    $("diff-torment").classList.toggle("diff-on", key2 === "torment");
+  }
+  $("diff-vigil").addEventListener("click", () => selectDiff("vigil"));
+  $("diff-torment").addEventListener("click", () => selectDiff("torment"));
+  function showBest() {
+    $("best-line").textContent = best.nights ? `Best vigil: ${best.nights} nights · ${best.kills} slain · ${best.wins} dawn(s)` : "No vigil survived yet. The pack provides.";
+  }
   $("btn-start").addEventListener("click", () => {
     ac(); reset(); state = "build";
-    $("title-screen").classList.add("hidden");
+    $("title-screen").classList.add("hidden"); $("game-ui").classList.remove("hidden");
+    setMusic(true);
     $("phase-title").textContent = "The Vigil Begins";
-    log("Your first pack waits. Tear it open.");
+    log("Night approaches. Open your free pack, then begin.");
+    updatePackButton();
   });
-  $("btn-restart").addEventListener("click", () => {
-    $("end-screen").classList.add("hidden"); reset(); state = "build";
+  $("btn-again").addEventListener("click", () => {
+    $("end-screen").classList.add("hidden"); reset(); state = "build"; setMusic(true);
+    $("phase-title").textContent = "The Vigil Begins";
     $("btn-begin").disabled = false; $("btn-begin").textContent = "Begin Night 1 ☾";
-    $("phase-title").textContent = "The Vigil Begins";
-    $("phase-text").textContent = "Open your first pack, place what the dead provide, then begin the night.";
+    log("Again. The pack provides."); updatePackButton();
   });
-
-  reset();
+  reset(); showBest(); selectDiff("vigil"); state = "title";
   requestAnimationFrame(loop);
 })();

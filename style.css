@@ -92,3 +92,15 @@ aside p{margin:4px 0 10px;font-size:14px;line-height:1.45}
 #btn-collect{width:auto;margin:6px auto;padding:12px 30px}
 #btn-collect.hidden{display:none}
 @media (max-width:1300px){ main{flex-direction:column} #stage{width:100%} canvas#game{width:100%;height:auto} }
+
+.trade-btn { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); background:#241d16; color:#ffd94a;
+  border:1px solid #6b5a2e; border-radius:6px; padding:4px 8px; font-size:11px; cursor:pointer; white-space:nowrap; }
+.trade-btn:hover { background:#3a2d1a; } .trade-btn:disabled { opacity:.4; cursor:default; }
+#foil-note { color:#ffd94a; min-height:16px; margin:2px 0 0; font-size:13px; text-align:center; }
+.diff-row { display:flex; gap:10px; justify-content:center; margin:10px 0 4px; }
+.diff-btn { background:#17131f; color:#cfc6ad; border:1px solid #3a3450; border-radius:8px; padding:8px 14px; cursor:pointer; font-size:14px; }
+.diff-btn small { display:block; font-size:10.5px; opacity:.7; margin-top:2px; }
+.diff-btn.diff-on { border-color:#ffd94a; color:#ffd94a; box-shadow:0 0 12px rgba(255,217,74,.25); }
+.best-line { color:#8a7f6a; font-size:12.5px; margin-top:10px; }
+.end-art { width:min(420px,80%); border-radius:10px; border:1px solid #3a3450; margin-bottom:10px; }
+#hud-dash { font-weight:700; font-size:13px; }

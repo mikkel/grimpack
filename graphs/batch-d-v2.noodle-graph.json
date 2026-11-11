@@ -1,0 +1,375 @@
+{
+  "v": 1,
+  "nodes": [
+    {
+      "id": "c1",
+      "type": "comment",
+      "name": "GRIMPACK batch D (v2)",
+      "x": 40,
+      "y": -260,
+      "w": 700,
+      "fields": {
+        "text": "Batch D: v2 expansion art for GRIMPACK."
+      }
+    },
+    {
+      "id": "t1",
+      "type": "text",
+      "name": "abbot",
+      "x": 40,
+      "y": 300,
+      "w": 320,
+      "fields": {
+        "text": "Full-body portrait of a gaunt abbot mini-boss: tall skeletal cleric in black and gold vestments, a tall mitre crowned with a brass bell, holding a heavy processional bell-staff, hollow glowing eyes. Dark gothic hand-painted 2D game art, deep black background, bone white, dried-blood red and hellfire orange accents, dramatic rim lighting, strong readable silhouette, no text, no letters, no watermark."
+      }
+    },
+    {
+      "id": "i1",
+      "type": "image",
+      "name": "abbot",
+      "x": 420,
+      "y": 300,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t2",
+      "type": "text",
+      "name": "plague",
+      "x": 40,
+      "y": 600,
+      "w": 320,
+      "fields": {
+        "text": "Full-body bloated plague bearer enemy: swollen corpse in a rotting plague-doctor robe, leaking sickly green-orange pustules, carrying a bursting sack of corruption, flies around its head. Dark gothic hand-painted 2D game art, deep black background, bone white, dried-blood red and hellfire orange accents, dramatic rim lighting, strong readable silhouette, no text, no letters, no watermark."
+      }
+    },
+    {
+      "id": "i2",
+      "type": "image",
+      "name": "plague",
+      "x": 420,
+      "y": 600,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t3",
+      "type": "text",
+      "name": "tower-gallows",
+      "x": 40,
+      "y": 900,
+      "w": 320,
+      "fields": {
+        "text": "A gothic defensive tower: a crooked gallows tree of black wood with hanging chains and a long iron sniper rifle of bone mounted in its branches, crow on top, round stone base, game asset. Dark gothic hand-painted 2D game art, deep black background, bone white, dried-blood red and hellfire orange accents, dramatic rim lighting, strong readable silhouette, no text, no letters, no watermark."
+      }
+    },
+    {
+      "id": "i3",
+      "type": "image",
+      "name": "tower-gallows",
+      "x": 420,
+      "y": 900,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t4",
+      "type": "text",
+      "name": "tower-font",
+      "x": 40,
+      "y": 1200,
+      "w": 320,
+      "fields": {
+        "text": "A gothic defensive tower: a black stone blood font basin filled with glowing crimson liquid, four small candles and a bone chalice on its rim, round stone base, game asset. Dark gothic hand-painted 2D game art, deep black background, bone white, dried-blood red and hellfire orange accents, dramatic rim lighting, strong readable silhouette, no text, no letters, no watermark."
+      }
+    },
+    {
+      "id": "i4",
+      "type": "image",
+      "name": "tower-font",
+      "x": 420,
+      "y": 1200,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t5",
+      "type": "text",
+      "name": "icon-chill",
+      "x": 40,
+      "y": 1500,
+      "w": 320,
+      "fields": {
+        "text": "Crossbow bolts tipped with pale blue frost crystals, cold mist curling off them. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    {
+      "id": "i5",
+      "type": "image",
+      "name": "icon-chill",
+      "x": 420,
+      "y": 1500,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t6",
+      "type": "text",
+      "name": "icon-storm",
+      "x": 40,
+      "y": 1800,
+      "w": 320,
+      "fields": {
+        "text": "A bone-white rune sigil crackling with orange lightning arcs in a circle. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    {
+      "id": "i6",
+      "type": "image",
+      "name": "icon-storm",
+      "x": 420,
+      "y": 1800,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t7",
+      "type": "text",
+      "name": "icon-thorns",
+      "x": 40,
+      "y": 2100,
+      "w": 320,
+      "fields": {
+        "text": "A mantle of black iron thorns and chains draped like a cloak, blood on the spikes. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    {
+      "id": "i7",
+      "type": "image",
+      "name": "icon-thorns",
+      "x": 420,
+      "y": 2100,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t8",
+      "type": "text",
+      "name": "icon-brand",
+      "x": 40,
+      "y": 2400,
+      "w": 320,
+      "fields": {
+        "text": "A glowing orange martyr's brand: a circle of flame around a bone cross on a dark iron disc. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    {
+      "id": "i8",
+      "type": "image",
+      "name": "icon-brand",
+      "x": 420,
+      "y": 2400,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t9",
+      "type": "text",
+      "name": "icon-seal",
+      "x": 40,
+      "y": 2700,
+      "w": 320,
+      "fields": {
+        "text": "An ornate golden wax seal stamp with a skull emblem, ribbon of crimson wax. Single centered game icon on a pure black background, dark gothic hand-painted 2D art, bone white, dried-blood red and hellfire orange accents, dramatic rim light, no text, no letters."
+      }
+    },
+    {
+      "id": "i9",
+      "type": "image",
+      "name": "icon-seal",
+      "x": 420,
+      "y": 2700,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    },
+    {
+      "id": "t10",
+      "type": "text",
+      "name": "dawn-art",
+      "x": 40,
+      "y": 3000,
+      "w": 320,
+      "fields": {
+        "text": "A ruined cathedral floor at a cold grey dawn: the ritual circle empty, broken towers of bone standing silent, skeletons lying still in heaps, pale light through shattered stained glass, embers dying. Somber, peaceful, hand-painted 2D game art, no characters standing, no text."
+      }
+    },
+    {
+      "id": "i10",
+      "type": "image",
+      "name": "dawn-art",
+      "x": 420,
+      "y": 3000,
+      "w": 260,
+      "fields": {
+        "model": "meta/muse-image/text-to-image",
+        "size": "1:1",
+        "variations": "1"
+      }
+    }
+  ],
+  "links": [
+    {
+      "id": "l1",
+      "from": {
+        "node": "t1",
+        "port": "text"
+      },
+      "to": {
+        "node": "i1",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l2",
+      "from": {
+        "node": "t2",
+        "port": "text"
+      },
+      "to": {
+        "node": "i2",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l3",
+      "from": {
+        "node": "t3",
+        "port": "text"
+      },
+      "to": {
+        "node": "i3",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l4",
+      "from": {
+        "node": "t4",
+        "port": "text"
+      },
+      "to": {
+        "node": "i4",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l5",
+      "from": {
+        "node": "t5",
+        "port": "text"
+      },
+      "to": {
+        "node": "i5",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l6",
+      "from": {
+        "node": "t6",
+        "port": "text"
+      },
+      "to": {
+        "node": "i6",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l7",
+      "from": {
+        "node": "t7",
+        "port": "text"
+      },
+      "to": {
+        "node": "i7",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l8",
+      "from": {
+        "node": "t8",
+        "port": "text"
+      },
+      "to": {
+        "node": "i8",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l9",
+      "from": {
+        "node": "t9",
+        "port": "text"
+      },
+      "to": {
+        "node": "i9",
+        "port": "prompt"
+      }
+    },
+    {
+      "id": "l10",
+      "from": {
+        "node": "t10",
+        "port": "text"
+      },
+      "to": {
+        "node": "i10",
+        "port": "prompt"
+      }
+    }
+  ],
+  "nid": 30,
+  "lid": 30,
+  "view": {
+    "panX": 30,
+    "panY": 280,
+    "scale": 0.6
+  }
+}

@@ -78,3 +78,40 @@ teaches movement while the build assembles.
 - Towers can't be sold or demolished — placement is a commitment, on purpose.
 - Twin Seal's per-bolt penalty in-game (×0.92/pull) is slightly kinder than
   the sim's (0.88^(proj−1)); kept, it feels better and the finale stays tight.
+
+## v2 — IMPACT pass (2026-11-10, expanded budget)
+Mikkel: "nothing should feel lame, everything should have impact... backgrounds
+and graphics should impact gameplay... high depth, unexpected interactions."
+- The arena art is gameplay now: 8 pillars block bolts (placement preview warns
+  "PILLARS BLIND THIS SPOT"), the ritual circle consecrates towers (+30% dmg)
+  and quickens the knight (+15% fire rate inside), 4 corner braziers burn the
+  dead, blood decals persist where things died.
+- Night Omens (6): Blood Moon, Silent Night, Ember Storm, Thin Veil, Pack
+  Rats, Still Air — rolled a night ahead so builds can plan around them.
+- 6 synergies: Thermal Shock, Kindled Bolts, Resonance, Storm Twins, The
+  Widow's Thorns, Sanguine Font — shown in the Grimmoire when live.
+- Pack depth: per-card trade (25 ash reroll), 3rd pack in a vigil is FOIL
+  (+1 rarity on everything), Gilded Seal fattens the next pack.
+- Enemies scheme back: plague bearers explode (both directions — chain them),
+  brutes wind up and CHARGE, wraiths flicker untargetable and LUNGE, cultists
+  drum nearby dead faster, elites ("Anointed") spawn at 4% and die rich.
+- Pressure systems: THE NIGHT DEEPENS every 20s (+4% speed/+3% bite per stack)
+  kills the kite-forever exploit; from Night 4 the dead sometimes rise in a
+  RING around you. Spawn windows compressed (×0.55, ×0.45 late), count growth
+  1.22→1.27, sustain trimmed (font 1.6→1.3, chalice regen 0.35→0.25).
+- New content: Gallows Tree + Blood Font towers, Plague Bearer, Abbot gets his
+  own portrait, 5 new cards (Gravechill, Storm Sigil, Thornmail, Martyr's
+  Brand, Gilded Seal) — 23 cards total. Dash (Space/Shift), Torment difficulty,
+  best-vigil records, touch movement, hit-stop, kill-streak Rampage bonuses,
+  and a generated dirge loop (Stable Audio 3, $0.024).
+- Fixed a v2-rewrite bug found by the playsim: spawn pacing read a
+  non-existent spec.interval (waves would have stalled after one knot) —
+  now derived from waveSpec.duration. Level scaling unified on the canonical
+  compounding ×1.45/level from sim.js; tower cap reads PACK.maxFieldTowers.
+- Balance method v2: tools/playsim.js — a bot plays full spatial runs
+  (kiting, dashing, real LoS placement, omens, synergies) vs the aggregate
+  sim.js (kept as the pessimistic bound). Final: bot/mastered Vigil 100% wins
+  but ~93 HP taken per run (max 683 — some runs are wars); bot Torment 86%,
+  deaths clustered exactly at the Abbot (N5) and Vesper (N10) gates, winners
+  ending at 86% HP. Human-first-run Vigil is the real difficulty; Torment is
+  the sweat mode. Nanoodle total for the game: $0.420 of the $5 budget.

@@ -33,3 +33,22 @@ usable — no re-rolls needed. Per-node costs are the API-reported figures from
 each run's `report.json` (cost_exact: true).
 
 Sound is synthesized in-browser with WebAudio (no audio files, no spend).
+
+## Batch D (v2 expansion, 2026-11-10)
+| file | subject | source |
+|---|---|---|
+| abbot.jpg | The Abbot (proper portrait, replaces cultist reuse) | graph batch-d, node i1 |
+| plague.jpg | Plague Bearer | batch-d i2 |
+| tower-gallows.jpg | Gallows Tree tower (card art) | batch-d i3 |
+| tower-font.jpg | Blood Font tower (card art) | batch-d i4 |
+| icon-chill.jpg | Gravechill Rounds | batch-d i5 |
+| icon-storm.jpg | Storm Sigil | batch-d i6 |
+| icon-thorns.jpg | Thornmail Mantle | batch-d i7 |
+| icon-brand.jpg | Martyr's Brand | batch-d i8 |
+| icon-seal.jpg | Gilded Seal | batch-d i9 |
+| dawn-art.jpg | victory / dawn art | batch-d i10 |
+| dirge.mp3 | looping dirge (stable-audio-3/small/music, ~23s, 192kbps) | batch-d-music graph, node m1 — $0.0239 |
+Batch D images: 10 × $0.011 = $0.110. Music: $0.024 (MiniMax Music 3 attempt
+failed free — it demands lyrics despite the instrumental flag; Stable Audio
+took the job). Running Nanoodle total for GRIMPACK: **$0.420** ($0.286 + $0.110
++ $0.024) of the $5 budget.

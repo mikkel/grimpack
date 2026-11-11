@@ -1,0 +1,59 @@
+{
+  "v": 1,
+  "nodes": [
+    {
+      "id": "c1",
+      "type": "comment",
+      "name": "GRIMPACK soundtrack",
+      "x": 40,
+      "y": -200,
+      "w": 640,
+      "fields": {
+        "text": "One instrumental dark-ambient track for GRIMPACK: loops under gameplay."
+      }
+    },
+    {
+      "id": "t1",
+      "type": "text",
+      "name": "direction",
+      "x": 40,
+      "y": 40,
+      "w": 340,
+      "fields": {
+        "text": "Seamless looping dark ambient music for a gothic video game: deep detuned synth drones, a distant tolling cathedral bell, sparse bowed strings, faint choir pad, slow heartbeat pulse, ominous, minor key, designed to loop forever under gameplay, no vocals, no drums."
+      }
+    },
+    {
+      "id": "m1",
+      "type": "music",
+      "name": "Grimpack dirge (stable audio)",
+      "x": 440,
+      "y": 40,
+      "w": 300,
+      "fields": {
+        "model": "stable-audio-3/small/music/text-to-audio",
+        "response_format": "mp3"
+      }
+    }
+  ],
+  "links": [
+    {
+      "id": "l1",
+      "from": {
+        "node": "t1",
+        "port": "text"
+      },
+      "to": {
+        "node": "m1",
+        "port": "prompt"
+      }
+    }
+  ],
+  "nid": 5,
+  "lid": 5,
+  "view": {
+    "panX": 30,
+    "panY": 240,
+    "scale": 0.7
+  }
+}

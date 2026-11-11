@@ -82,3 +82,12 @@ without the pity rule and the ash economy. Details in `DEVLOG.md`.
 ## License
 
 MIT — see `LICENSE`. Art was AI-generated for this project; use it with the code.
+
+## v2 — the IMPACT pass
+The arena fights back: pillars block bolts, the ritual circle consecrates
+towers placed inside it, braziers burn, blood stays. Every night rolls an
+**Omen** you can plan around. Cards **synergize** (six hidden marriages of
+gear). Packs can be traded into, streak into FOIL packs, and towers
+overcharged. The dead scheme back: charging brutes, lunging wraiths,
+exploding plague bearers, encirclement spawns — and every 20 seconds,
+**the night deepens**. Two difficulties: Vigil and Torment.

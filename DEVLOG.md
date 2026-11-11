@@ -115,3 +115,27 @@ and graphics should impact gameplay... high depth, unexpected interactions."
   deaths clustered exactly at the Abbot (N5) and Vesper (N10) gates, winners
   ending at 86% HP. Human-first-run Vigil is the real difficulty; Torment is
   the sweat mode. Nanoodle total for the game: $0.420 of the $5 budget.
+
+## v3 — the "it feels dead" pass (2026-11-10, Mikkel's playtest notes)
+His five charges: no animation; black boxes on sprites; no choices; no
+consequences; sit-in-center-and-win. Answers:
+- Sprites alpha-keyed properly (edge flood-fill from the border, baked warm
+  rim outline, slight lift) → assets/spr/*.webp; no more black tiles, and
+  canvas contact shadows ground everything.
+- Procedural animation everywhere: enemies bob/squash/tilt by gait, wraiths
+  hover, brutes crouch before charging, attackers pop on hit, THE DEAD FALL
+  (corpse topple → sink → blood decal), towers recoil and the bell swings,
+  the knight bobs, leans, and stretches mid-dash; ambient embers drift.
+- THE TITHE: every morning after Night 1 the cathedral demands a choice of
+  three offerings (of 8) — every one a boon with a price (Bar the Doors trades
+  tomorrow's free pack for a slower night; Blood the Circle pays 15 HP for a
+  doubled consecration; Open the Crypts pays in elites…). Begin is gated:
+  first click arms, so the choice is never skipped by accident. Skipping is
+  allowed and is itself the neutral choice.
+- Anti-camping: stand still 3.5s in a wave and grief ROOTS you (-45% fire
+  rate, +25% damage taken) until you've moved 130px. Ash shards gutter out
+  after 25s and the dawn vacuum now only recovers half — collection is a
+  mid-wave verb again.
+- Balance re-verified with playsim (bot takes no tithes, never roots): 96%
+  bot wins, deaths at N10 — the new pressure is aimed at passive human play,
+  which the bot never does.

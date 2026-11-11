@@ -245,12 +245,14 @@ function playRun(diff) {
       for (const e of [...enemies]) if (e.hp <= 0) {
         enemies.splice(enemies.indexOf(e), 1); kills++;
         const n = Math.round(e.ash * (omen.ashMult || 1));
-        for (let i = 0; i < n; i++) shards.push({ x: e.x + (Math.random() * 24 - 12), y: e.y + (Math.random() * 24 - 12) });
+        for (let i = 0; i < n; i++) shards.push({ x: e.x + (Math.random() * 24 - 12), y: e.y + (Math.random() * 24 - 12), age: 0 });
         if (e.type === "plague") { for (const o of [...enemies]) if (dist(o, e) < G.ENEMIES.plague.explodeR + o.r) hurt(o, G.ENEMIES.plague.explodeDmg); if (dist(P, e) < G.ENEMIES.plague.explodeR + P.r) damagePlayer(G.ENEMIES.plague.explodeDmg * 0.8, e); }
       }
       // shards
       const fontSyn = hasSyn("font-chalice");
       for (const s of shards) {
+        s.age = (s.age || 0) + dt;
+        if (s.age > 25) { s.got = true; continue; }
         let got = false;
         if (fontSyn) for (const f of towers) if (f.type === "font" && Math.hypot(f.x - s.x, f.y - s.y) < G.TOWERS.font.auraRange) { got = true; P.hp = Math.min(P.maxHp, P.hp + 0.35); break; }
         if (!got && dist(P, s) < P.collectR) { s.x += (P.x - s.x) * 6 * dt; s.y += (P.y - s.y) * 6 * dt; if (dist(P, s) < P.r + 8) { got = true; ashes++; } }
@@ -260,6 +262,7 @@ function playRun(diff) {
       if (P.hp <= 0) return { result: "dead", wave, hpEnter, dmgTaken: P.dmgTaken };
       if (!queue.length && !enemies.length) break;
     }
+    if (shards.length) { ashes += Math.ceil(shards.length / 2); shards = []; } // dawn vacuum, halved
     freePacks++;
     function hurt(e, dmg) { if (e.markT > 0) dmg *= 1.15; e.hp -= dmg; }
     function shock(e, base) { if (hasSyn("thermal") && e.chillT > 0 && e.burnT > 0) hurt(e, base * 0.6 + 6); }

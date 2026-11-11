@@ -105,3 +105,14 @@ aside p{margin:4px 0 10px;font-size:14px;line-height:1.45}
 .best-line { color:#8a7f6a; font-size:12.5px; margin-top:10px; }
 .end-art { width:min(420px,80%); border-radius:10px; border:1px solid #3a3450; margin-bottom:10px; }
 #hud-dash { font-weight:700; font-size:13px; }
+
+#tithe-box { border:1px solid #6b5a2e; background:rgba(30,24,14,.65); border-radius:10px; padding:10px; margin-bottom:10px; }
+#tithe-box h3 { color:#ffd94a; margin:0 0 8px; font-size:13.5px; }
+#tithe-box.flash { animation: titheflash .5s ease 2; }
+@keyframes titheflash { 50% { box-shadow:0 0 22px rgba(255,217,74,.75); } }
+.tithe-opt { display:block; width:100%; text-align:left; background:#17131f; color:#e8e2d4; border:1px solid #3a3450;
+  border-radius:8px; padding:7px 10px; margin:5px 0; cursor:pointer; font-size:13px; }
+.tithe-opt small { display:block; color:#a89a7d; font-size:11px; margin-top:2px; line-height:1.35; }
+.tithe-opt:hover { border-color:#ffd94a; }
+.tithe-opt:disabled { opacity:.45; cursor:default; }
+.tithe-opt.skip { color:#a89a7d; }

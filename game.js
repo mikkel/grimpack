@@ -12,11 +12,13 @@
   // ---------- images ----------
   const IMG = {};
   function loadImg(key, src) { const i = new Image(); i.src = src; IMG[key] = i; }
-  loadImg("arena", "assets/arena.jpg"); loadImg("hero", "assets/hero.jpg");
-  loadImg("husk", "assets/husk.jpg"); loadImg("cultist", "assets/cultist.jpg");
-  loadImg("wraith", "assets/wraith.jpg"); loadImg("brute", "assets/brute.jpg");
-  loadImg("plague", "assets/plague.jpg"); loadImg("abbot", "assets/abbot.jpg");
-  loadImg("vesper", "assets/boss.jpg");
+  loadImg("arena", "assets/arena.jpg"); loadImg("hero", "assets/spr/spr-hero.webp");
+  loadImg("husk", "assets/spr/spr-husk.webp"); loadImg("cultist", "assets/spr/spr-cultist.webp");
+  loadImg("wraith", "assets/spr/spr-wraith.webp"); loadImg("brute", "assets/spr/spr-brute.webp");
+  loadImg("plague", "assets/spr/spr-plague.webp"); loadImg("abbot", "assets/spr/spr-abbot.webp");
+  loadImg("vesper", "assets/spr/spr-vesper.webp");
+  const SPR_TOWER = { spire: "spr-spire", bell: "spr-bell", pyre: "spr-pyre", frost: "spr-frost", gallows: "spr-gallows", font: "spr-font" };
+  for (const [id, f] of Object.entries(SPR_TOWER)) loadImg("spr_" + id, "assets/spr/" + f + ".webp");
   const CARDMAP = {}; for (const c of G.CARDS) { CARDMAP[c.id] = c; loadImg("card_" + c.id, c.art); }
 
   // ---------- audio ----------
@@ -72,6 +74,7 @@
   let hand = {}, placedCount = {}, collection = [], owned = {};
   let selectedHand = null, moveTower = null, mouse = { x: 0, y: 0 }, touchTarget = null;
   let bossRef = null, shake = 0, hitFlash = 0, waveTime = 0, deepenStacks = 0, deepenShown = 0;
+  let corpses = [], embers = [], titheId = null, tonightTithe = null, tithePending = false, beginArmed = false;
   let diff = G.DIFFS.vigil, omen = null, nextOmen = null;
   let packsThisBuild = 0, bonusCards = 0, emberTimer = 5, strikeWarn = null;
   let best = JSON.parse(localStorage.getItem("grimpack-best") || '{"nights":0,"kills":0,"wins":0,"bestTime":0}');
@@ -82,9 +85,11 @@
     player = { x: W / 2, y: H / 2 + 60, hp: B.hp, maxHp: B.hp, dmg: B.dmg, rate: B.rate, proj: B.proj,
       pierce: B.pierce, critC: B.critC, critM: B.critM, speed: B.speed, collectR: B.collectR,
       regen: 0, shieldCd: 0, shieldMax: 0, shieldReady: false, revives: 0, wrathNext: false, wrathWave: false,
-      fireCd: 0, invuln: 0, r: B.radius, chillSlow: 0, chillSecs: 0, stormEvery: 0, hitCount: 0, vx: 0, vy: 0,
+      fireCd: 0, invuln: 0, r: B.radius, chillSlow: 0, chillSecs: 0, stormEvery: 0, hitCount: 0, vx: 0, vy: 0, stillT: 0, rooted: false, rootMove: 0, walkPh: 0,
       thorns: 0, brandPct: 0, dashCd: 0, dashT: 0, dashDx: 0, dashDy: 0, lastDx: 1, lastDy: 0 };
-    enemies = []; bolts = []; ebolts = []; towers = []; shards = []; zones = []; parts = []; texts = []; decals = []; zaps = [];
+    enemies = []; bolts = []; ebolts = []; towers = []; shards = []; zones = []; parts = []; texts = []; decals = []; zaps = []; corpses = []; embers = [];
+    for (let i = 0; i < 26; i++) embers.push({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - 0.5) * 9, vy: -6 - Math.random() * 12, ph: Math.random() * 6.28 });
+    titheId = null; tonightTithe = null; tithePending = false; beginArmed = false; $("tithe-box").classList.add("hidden");
     wave = 0; spawnQueue = []; waveActive = false; runTime = 0; hitStop = 0;
     ashes = 0; kills = 0; streak = 0; packsOpened = 0; packCost = G.PACK.baseCost; freePacks = 1; dryPacks = 0;
     hand = {}; placedCount = {}; collection = []; owned = {};
@@ -111,13 +116,42 @@
     if (bossRef && bossRef.hp > 0) { $("boss-bar").classList.remove("hidden"); $("boss-fill").style.width = Math.max(0, bossRef.hp / bossRef.maxHp * 100) + "%"; }
     else $("boss-bar").classList.add("hidden");
   }
+  function packPrice() { return titheId === "bell" ? Math.max(10, packCost - 12) : packCost; }
   function updatePackButton() {
-    const b = $("btn-pack");
+    const b = $("btn-pack"), price = packPrice();
     if (state === "wave") { b.disabled = true; return; }
     if (freePacks > 0) { b.disabled = false; $("pack-btn-label").textContent = `Open Pack — FREE (${freePacks})`; }
-    else if (ashes >= packCost) { b.disabled = false; $("pack-btn-label").textContent = `Buy Pack — ${packCost} ashes`; }
-    else { b.disabled = true; $("pack-btn-label").textContent = `Pack — ${packCost} ashes (need ${packCost - ashes} more)`; }
+    else if (ashes >= price) { b.disabled = false; $("pack-btn-label").textContent = `Buy Pack — ${price} ashes`; }
+    else { b.disabled = true; $("pack-btn-label").textContent = `Pack — ${price} ashes (need ${price - ashes} more)`; }
   }
+  function offerTithes() {
+    const pool = [...G.TITHES].sort(() => Math.random() - 0.5).slice(0, 3);
+    const box = $("tithe-box"), opts = $("tithe-opts"); opts.innerHTML = "";
+    for (const t of pool) {
+      const b = document.createElement("button"); b.className = "tithe-opt";
+      const afford = t.cost === "ash" ? ashes >= t.amt : t.cost === "hp" ? player.hp > t.amt + 5 : true;
+      b.disabled = !afford;
+      b.innerHTML = `${t.name} <small>${t.text}${afford ? "" : " (cannot pay)"}</small>`;
+      b.onclick = () => chooseTithe(t);
+      opts.appendChild(b);
+    }
+    box.classList.remove("hidden"); tithePending = true; beginArmed = false;
+  }
+  function chooseTithe(t) {
+    if (t) {
+      titheId = t.id;
+      if (t.cost === "ash") ashes -= t.amt;
+      if (t.cost === "hp") { player.hp -= t.amt; floatText(player.x, player.y - 40, "-" + t.amt + " HP — THE CIRCLE DRINKS", "#d7263d"); }
+      if (t.id === "crypts") { freePacks++; log("Something old wakes in the crypts. A pack slides out of the dark — free."); }
+      if (t.id === "hoard") { ashes += 25; log("You hoard the ash. The dead notice. They always notice."); }
+      if (t.id === "pray") { heal(30); log("You pray at the Font. It answers — once. Tonight it runs dry."); }
+      log(`Tithe chosen: ${t.name}.`, "rare");
+    } else log("No offering. The cathedral says nothing. It doesn't have to.");
+    tithePending = false;
+    $("tithe-box").classList.add("hidden");
+    updateHUD(); updatePackButton();
+  }
+  $("tithe-skip").addEventListener("click", () => chooseTithe(null));
   function showOmenPreview() {
     if (wave >= 10) return;
     $("phase-text").innerHTML = `Tonight's omen: <b style="color:#ffd94a">${nextOmen.name}</b> — ${nextOmen.desc}` +
@@ -258,7 +292,7 @@
   function openPack() {
     if (state !== "build") return;
     if (freePacks > 0) freePacks--;
-    else if (ashes >= packCost) { ashes -= packCost; packCost = Math.round(packCost * G.PACK.costGrowth); }
+    else if (ashes >= packPrice()) { ashes -= packPrice(); packCost = Math.round(packCost * G.PACK.costGrowth); }
     else return;
     packsOpened++; packsThisBuild++; state = "pack"; currentPack = null; flipped = 0;
     $("pack-modal").classList.remove("hidden");
@@ -363,12 +397,12 @@
     const isBoss = type === "abbot" || type === "vesper";
     let hp = base.hp * (isBoss ? spec.bossScale : spec.hpScale) * diff.hp;
     if (omen && omen.bruteHp && type === "brute") hp *= omen.bruteHp;
-    const elite = !isBoss && Math.random() < 0.04 * (omen && omen.eliteMult ? omen.eliteMult : 1);
+    const elite = !isBoss && Math.random() < 0.04 * (omen && omen.eliteMult ? omen.eliteMult : 1) * (tonightTithe === "crypts" ? 3 : 1);
     if (elite) hp *= 3.2;
-    const e = { type, x, y, hp, maxHp: hp, speed: base.speed * (0.9 + Math.random() * 0.2) * (omen && omen.enemySpeed ? omen.enemySpeed : 1),
+    const e = { type, x, y, hp, maxHp: hp, speed: base.speed * (0.9 + Math.random() * 0.2) * (omen && omen.enemySpeed ? omen.enemySpeed : 1) * (tonightTithe === "doors" ? 0.9 : 1),
       dmg: base.dmg * spec.dmgScale * diff.dmg * (elite ? 1.3 : 1), r: base.r * (elite ? 1.35 : 1), ash: base.ash * (elite ? 6 : 1),
       slowT: 0, slowF: 0, chillT: 0, burnT: 0, burnDps: 0, markT: 0, shockCd: 0, hitCd: 0, boss: isBoss, elite,
-      summonCd: 4, tollCd: 6, img: IMG[type], wob: Math.random() * 6.28, flickerT: Math.random() * 2, enraged: false, exploded: false, lungeCd: 2 + Math.random() * 2, lungeT: 0, chargeCd: 3 + Math.random() * 3, chargeT: 0, windT: 0 };
+      summonCd: 4, tollCd: 6, img: IMG[type], wob: Math.random() * 6.28, flickerT: Math.random() * 2, enraged: false, exploded: false, lungeCd: 2 + Math.random() * 2, lungeT: 0, chargeCd: 3 + Math.random() * 3, chargeT: 0, windT: 0, animT: Math.random() * 6.28, vx: 0, vy: 0, atkPop: 0 };
     enemies.push(e);
     if (isBoss) { bossRef = e; $("boss-name").textContent = type === "vesper" ? "VESPER, MOTHER OF BELLS" : "THE ABBOT"; SFX.toll(); setTimeout(() => SFX.toll(), 350); banner(type === "vesper" ? "☠ VESPER ☠" : "THE ABBOT TOLLS"); shake = 10; }
     return e;
@@ -376,12 +410,17 @@
   function banner(txt) { const b = $("wave-banner"); b.textContent = txt; b.classList.remove("hidden"); setTimeout(() => b.classList.add("hidden"), 2600); }
   function beginWave() {
     if (state !== "build") return;
+    if (tithePending && !beginArmed) { beginArmed = true; const b = $("tithe-box"); b.classList.add("flash"); setTimeout(() => b.classList.remove("flash"), 1100); log("The cathedral waits for an offering. Choose — or begin anyway (click Begin again)."); return; }
     if (freePacks > 0) log("You begin the night with an unopened pack. It will keep.");
     selectedHand = null; moveTower = null; renderHand();
     wave++; waveActive = true; state = "wave"; packsThisBuild = 0; waveTime = 0; deepenStacks = 0; deepenShown = 0;
     omen = nextOmen; nextOmen = G.OMENS[Math.floor(Math.random() * G.OMENS.length)];
     if (omen && omen.packBonus) bonusCards += omen.packBonus;
     spawnQueue = buildSpawnQueue(wave); spawnTimer = 0; emberTimer = 4;
+    tonightTithe = titheId; titheId = null;
+    if (tonightTithe === "bell") { waveTime = 40; log("The bell was rung early. The night begins already deepened."); }
+    if (tonightTithe === "silence") { omen = null; log("The omen is cast out. A plain night — chosen."); }
+    if (tonightTithe === "braziers") { const extra = Math.floor(spawnQueue.length * 0.15); for (let i = 0; i < extra; i++) spawnQueue.push(Math.random() < 0.7 ? "husk" : "cultist"); log("The brazier-light draws them. More dead tonight."); }
     if (player.wrathNext) { player.wrathWave = true; player.wrathNext = false; log("Wrath Draught: +25% damage this wave."); }
     banner((wave === 10 ? "☠ THE FINAL NIGHT ☠ " : "NIGHT " + wave) + (omen && !omen.plain ? " — " + omen.name.toUpperCase() : ""));
     $("phase-title").textContent = "Night " + wave + (omen ? " · " + omen.name : "");
@@ -391,15 +430,18 @@
   }
   function endWave() {
     waveActive = false; state = "build"; bossRef = null; omen = null; strikeWarn = null;
-    if (shards.length) { ashes += shards.length; log(`Dawn stirs the ash — it remembers its owner. +${shards.length} ashes gathered.`); shards = []; }
+    if (shards.length) { const kept = Math.ceil(shards.length / 2); ashes += kept; log(`Dawn stirs the ash — it remembers its owner. +${kept} ashes gathered (${shards.length - kept} guttered out in the dark).`); shards = []; }
     player.wrathWave = false;
     if (wave >= 10) return endRun(true);
-    freePacks++; SFX.toll();
+    if (tonightTithe === "doors") log("The barred doors cost you: no free pack this morning.");
+    else freePacks++;
+    tonightTithe = null; SFX.toll();
     log(`Night ${wave} survived. A fresh pack drops from the dark.`);
     $("phase-title").textContent = "Night " + wave + " Survived";
     showOmenPreview();
     $("btn-begin").disabled = false; $("btn-begin").textContent = "Begin Night " + (wave + 1) + " ☾";
     updatePackButton(); updateHUD();
+    if (wave >= 1 && wave < 10) offerTithes();
   }
   function endRun(wonGame) {
     state = wonGame ? "win" : "over";
@@ -433,10 +475,11 @@
     if (!silent) floatText(e.x + (Math.random() * 16 - 8), e.y - e.r - 4, String(Math.round(dmg)), crit ? "#ffd94a" : "#e8e2d4");
     if (e.hp <= 0 && !e.dead) {
       e.dead = true; kills++; streak++; SFX.die();
+      corpses.push({ img: e.img, x: e.x, y: e.y, s: e.r * 3.4, t: 0, dir: Math.random() < 0.5 ? -1 : 1, boss: e.boss }); if (corpses.length > 40) corpses.shift();
       burst(e.x, e.y, e.type === "wraith" ? "#9fd8ff" : e.type === "plague" ? "#b6d94a" : "#c93b2e", e.boss ? 46 : 10);
       decals.push({ x: e.x, y: e.y, r: e.r * (0.8 + Math.random() * 0.7), a: 0.34 }); if (decals.length > 260) decals.shift();
-      const ashN = Math.round(e.ash * (omen && omen.ashMult ? omen.ashMult : 1));
-      for (let i = 0; i < ashN; i++) shards.push({ x: e.x + (Math.random() * 24 - 12), y: e.y + (Math.random() * 24 - 12), vx: 0, vy: 0, t: Math.random() * 6 });
+      const ashN = Math.round(e.ash * (omen && omen.ashMult ? omen.ashMult : 1) * (tonightTithe === "hoard" ? 0.7 : 1));
+      for (let i = 0; i < ashN; i++) shards.push({ x: e.x + (Math.random() * 24 - 12), y: e.y + (Math.random() * 24 - 12), vx: 0, vy: 0, t: Math.random() * 6, age: 0 });
       if (streak > 0 && streak % 25 === 0) { ashes += 5; floatText(player.x, player.y - 40, "RAMPAGE +5 ash", "#ff7a26"); log(`Rampage — ${streak} slain without a scratch. The dead provide (+5 ashes).`); updatePackButton(); }
       if (e.elite) { hitStop = Math.max(hitStop, 0.05); log("An Anointed one falls. It died rich."); }
       if (e.type === "plague" && !e.exploded) explodePlague(e);
@@ -531,6 +574,8 @@
     if (hitFlash > 0) hitFlash -= dt * 2.4;
     // embers, floating texts, zaps, blood never forgets
     for (const p of parts) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.92; p.vy *= 0.92; }
+    for (const em of embers) { em.x += (em.vx + Math.sin(runTime * 0.7 + em.ph) * 6) * dt; em.y += em.vy * dt; if (em.y < -8) { em.y = H + 8; em.x = Math.random() * W; } if (em.x < -8) em.x = W + 8; if (em.x > W + 8) em.x = -8; }
+    for (const c of corpses) c.t += dt; corpses = corpses.filter(c => c.t < 1.1);
     parts = parts.filter(p => p.t < p.life);
     for (const t of texts) { t.t += dt; t.y -= 34 * dt; } texts = texts.filter(t => t.t < 0.9);
     for (const z of zaps) z.t += dt; zaps = zaps.filter(z => z.t < z.ttl);
@@ -553,6 +598,18 @@
     }
     player.x = Math.max(18, Math.min(W - 18, player.x)); player.y = Math.max(18, Math.min(H - 18, player.y));
     if (dt > 0) { player.vx = (player.x - px0) / dt; player.vy = (player.y - py0) / dt; }
+    const spd = Math.hypot(player.vx, player.vy);
+    if (waveActive && state === "wave") {
+      if (player.rooted) {
+        player.rootMove += spd * dt;
+        if (player.rootMove > 130) { player.rooted = false; player.stillT = 0; floatText(player.x, player.y - 44, "YOU TEAR FREE", "#7dff9a"); }
+      } else if (spd < 14 && player.dashT <= 0) {
+        player.stillT += dt;
+        if (player.stillT > 2.2 && player.stillT < 2.3) floatText(player.x, player.y - 44, "the grief gathers… MOVE", "#c9b8a3");
+        if (player.stillT >= 3.5) { player.rooted = true; player.rootMove = 0; SFX.hurt(); floatText(player.x, player.y - 52, "ROOTED IN GRIEF — MOVE!", "#ff5d2e"); log("You stood still too long. The grief takes root: slowed fire, softer flesh, until you tear free."); }
+      } else player.stillT = Math.max(0, player.stillT - dt * 2.5);
+    } else { player.stillT = 0; player.rooted = false; }
+    player.walkPh += dt * (2 + spd / 22);
     // --- spawns ---
     if (waveActive && spawnQueue.length) {
       spawnTimer -= dt;
@@ -586,10 +643,10 @@
     }
     // --- towers ---
     for (const tw of towers) {
-      const def = G.TOWERS[tw.type], lvM = Math.pow(G.PACK.towerLevelMult, tw.level - 1), cons = inCircle(tw.x, tw.y) ? 1.3 : 1;
+      const def = G.TOWERS[tw.type], lvM = Math.pow(G.PACK.towerLevelMult, tw.level - 1) * (tonightTithe === "blood" ? 1.15 : 1), cons = inCircle(tw.x, tw.y) ? (tonightTithe === "blood" ? 1.6 : 1.3) : 1;
       tw.cd -= dt;
       if (tw.type === "font") {
-        if (Math.hypot(player.x - tw.x, player.y - tw.y) < def.auraRange + player.r) heal(def.healPerSec * tw.mult * lvM * dt * (inCircle(tw.x, tw.y) ? 1.3 : 1));
+        if (tonightTithe !== "pray" && Math.hypot(player.x - tw.x, player.y - tw.y) < def.auraRange + player.r) heal(def.healPerSec * tw.mult * lvM * dt * (inCircle(tw.x, tw.y) ? 1.3 : 1));
         continue;
       }
       if (tw.type === "bell") {
@@ -617,7 +674,7 @@
         if (d < range && d < bd && !losBlocked(tw.x, tw.y, e.x, e.y)) { bd = d; tgt = e; }
       }
       if (tgt && tw.cd <= 0) {
-        tw.cd = 1 / towerFireRate(tw, def);
+        tw.cd = 1 / towerFireRate(tw, def); tw.recoil = 1; tw.faceA = Math.atan2(tgt.y - tw.y, tgt.x - tw.x);
         const dmg = def.dmg * tw.mult * lvM * cons;
         if (tw.type === "pyre") fireBolt(tw, tgt, dmg, { kind: "ember", speed: 460, zoneDps: def.burnDps * tw.mult * lvM * cons });
         else if (tw.type === "gallows") fireBolt(tw, tgt, dmg, { kind: "spike", speed: 760, mark: true, homing: true });
@@ -631,7 +688,7 @@
       let tgt = null, bd = 1e9;
       for (const e of enemies) { if (e.dead || (e.type === "wraith" && e.flickerT % 2.6 > 1.9)) continue; const d = Math.hypot(e.x - player.x, e.y - player.y); if (d < bd) { bd = d; tgt = e; } }
       if (tgt) {
-        const rateMult = (inCircle(player.x, player.y) ? 1.15 : 1);
+        const rateMult = (inCircle(player.x, player.y) ? 1.15 : 1) * (player.rooted ? 0.55 : 1);
         player.fireCd = 1 / (player.rate * rateMult);
         const missing = 1 - player.hp / player.maxHp;
         const dmgBase = player.dmg * (player.wrathWave ? 1.25 : 1) * (1 + player.brandPct * missing * 100);
@@ -716,20 +773,24 @@
       if (e.slowT > 0) { e.slowT -= dt; sp *= (1 - e.slowF); if (e.slowT <= 0) e.slowF = 0; }
       for (const c of enemies) if (!c.dead && c.type === "cultist" && c !== e && Math.hypot(c.x - e.x, c.y - e.y) < 95) { sp *= 1.12; break; }
       // braziers burn what wanders close
-      for (const bz of WORLD.braziers) if (Math.hypot(e.x - bz.x, e.y - bz.y) < WORLD.brazierR) { e.burnT = Math.max(e.burnT, 0.4); e.burnDps = Math.max(e.burnDps, WORLD.brazierDps); break; }
+      for (const bz of WORLD.braziers) if (Math.hypot(e.x - bz.x, e.y - bz.y) < WORLD.brazierR) { e.burnT = Math.max(e.burnT, 0.4); e.burnDps = Math.max(e.burnDps, WORLD.brazierDps * (tonightTithe === "braziers" ? 2 : 1)); break; }
       const lead = 0.22; // the dead learn: they run at where you WILL be
       const a = Math.atan2(player.y + player.vy * lead - e.y, player.x + player.vx * lead - e.x);
       let mx = Math.cos(a) * sp, my = Math.sin(a) * sp;
       for (const o of enemies) { if (o === e || o.dead) continue; const d = Math.hypot(o.x - e.x, o.y - e.y), rr = e.r + o.r; if (d > 0.01 && d < rr) { mx -= (o.x - e.x) / d * (rr - d) * 3.2; my -= (o.y - e.y) / d * (rr - d) * 3.2; } }
+      e.vx = dt > 0 ? mx : 0; e.vy = dt > 0 ? my : 0;
       e.x += mx * dt; e.y += my * dt;
+      e.animT += dt * (2.2 + Math.hypot(mx, my) / 26);
+      if (e.atkPop > 0) e.atkPop -= dt;
       e.hitCd -= dt;
-      if (Math.hypot(player.x - e.x, player.y - e.y) < e.r + player.r && e.hitCd <= 0) { e.hitCd = 0.85; hurtPlayer(e.dmg * (1 + 0.03 * deepenStacks), e); }
+      if (Math.hypot(player.x - e.x, player.y - e.y) < e.r + player.r && e.hitCd <= 0) { e.hitCd = 0.85; e.atkPop = 0.22; hurtPlayer(e.dmg * (1 + 0.03 * deepenStacks) * (player.rooted ? 1.25 : 1), e); }
     }
     enemies = enemies.filter(e => !e.dead);
     // --- shards (Sanguine Font drinks them) ---
     const fontSyn = hasSyn("font-chalice");
     for (const s of shards) {
-      s.t += dt * 3;
+      s.t += dt * 3; s.age = (s.age || 0) + dt;
+      if (s.age > 25) { s.got = true; parts.push({ x: s.x, y: s.y, vx: 0, vy: -14, life: 0.5, t: 0, color: "#5a5348", size: 2 }); continue; }
       const dP = Math.hypot(player.x - s.x, player.y - s.y);
       let target = null;
       if (fontSyn) for (const f of towers) if (f.type === "font" && Math.hypot(f.x - s.x, f.y - s.y) < G.TOWERS.font.auraRange) { target = f; break; }
@@ -749,12 +810,19 @@
   }
 
   // ---------- rendering ----------
-  function drawSprite(img, x, y, s, alpha) {
+  function drawSprite(img, x, y, s, alpha) { drawSpr(img, x, y, s, { alpha }); }
+  function drawSpr(img, x, y, s, o) {
+    o = o || {};
     if (!img || !img.complete || !img.naturalWidth) { ctx.fillStyle = "#554"; ctx.fillRect(x - s / 2, y - s / 2, s, s); return; }
-    const iw = img.naturalWidth, ih = img.naturalHeight, sc = Math.max(s / iw, s / ih);
-    ctx.save(); ctx.globalAlpha = alpha == null ? 1 : alpha; ctx.beginPath(); ctx.rect(x - s / 2, y - s / 2, s, s); ctx.clip();
-    ctx.drawImage(img, x - iw * sc / 2, y - ih * sc / 2, iw * sc, ih * sc); ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = o.alpha == null ? 1 : o.alpha;
+    ctx.translate(x, y);
+    if (o.rot) ctx.rotate(o.rot);
+    ctx.scale(o.sx || 1, o.sy || 1);
+    ctx.drawImage(img, -s / 2, -s / 2, s, s);
+    ctx.restore();
   }
+  function shadow(x, y, r) { ctx.fillStyle = "rgba(0,0,0,0.42)"; ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.36, 0, 0, 6.283); ctx.fill(); }
   function loop(ts) {
     requestAnimationFrame(loop);
     const rawDt = Math.min(0.05, (ts - lastT) / 1000 || 0.016); lastT = ts;
@@ -767,6 +835,7 @@
     ctx.save();
     if (shake > 0) { ctx.translate((Math.random() * 2 - 1) * shake, (Math.random() * 2 - 1) * shake); shake *= 0.88; if (shake < 0.4) shake = 0; }
     ctx.drawImage(IMG.arena, 0, 0, W, H);
+    for (const em of embers) { const tw2 = 0.35 + Math.sin(performance.now() / 300 + em.ph) * 0.2; ctx.fillStyle = `rgba(255,150,60,${tw2})`; ctx.fillRect(em.x - 1.2, em.y - 1.2, 2.4, 2.4); }
     // blood remembers
     for (const d of decals) { ctx.fillStyle = `rgba(120,10,16,${d.a})`; ctx.beginPath(); ctx.ellipse(d.x, d.y, d.r, d.r * 0.62, 0, 0, 6.283); ctx.fill(); }
     // ritual circle glow (stronger when the knight stands in it)
@@ -806,7 +875,12 @@
       if (tw.type === "bell") { ctx.fillStyle = "rgba(160,170,220,0.13)"; ctx.beginPath(); ctx.arc(tw.x, tw.y, def.auraRange, 0, 6.283); ctx.fill(); ctx.strokeStyle = "rgba(160,170,220,0.30)"; ctx.stroke(); }
       if (tw.type === "font") { ctx.fillStyle = "rgba(215,38,61,0.12)"; ctx.beginPath(); ctx.arc(tw.x, tw.y, def.auraRange, 0, 6.283); ctx.fill(); ctx.strokeStyle = "rgba(215,38,61,0.30)"; ctx.stroke(); }
       if (inCircle(tw.x, tw.y)) { ctx.strokeStyle = "rgba(255,217,74,0.55)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(tw.x, tw.y, 30, 0, 6.283); ctx.stroke(); }
-      drawSprite(IMG["card_" + tw.type], tw.x, tw.y, 56, 1);
+      if (tw.recoil > 0) tw.recoil = Math.max(0, tw.recoil - 0.09);
+      const rec = (tw.recoil || 0) * 3.2, rx = tw.x - Math.cos(tw.faceA || 0) * rec, ry = tw.y - Math.sin(tw.faceA || 0) * rec;
+      const swing = tw.type === "bell" ? Math.sin(performance.now() / 340 + tw.x) * 0.05 + (tw.tollAnim > 0 ? Math.sin(tw.tollAnim * 9) * 0.13 * tw.tollAnim : 0) : 0;
+      const fl = tw.type === "pyre" ? 1 + Math.sin(performance.now() / 90 + tw.y) * 0.045 : 1;
+      shadow(tw.x, tw.y + 17, 24);
+      drawSpr(IMG["spr_" + tw.type], rx, ry, 62, { rot: swing, sx: fl, sy: 2 - fl > 0 ? 1 / fl : 1 });
       ctx.fillStyle = "rgba(6,5,8,0.75)"; ctx.fillRect(tw.x - 22, tw.y + 30, 44, 13);
       ctx.fillStyle = "#ffd94a"; ctx.font = "bold 9.5px system-ui"; ctx.textAlign = "center";
       ctx.fillText(tw.level > 1 ? "LV " + tw.level : c.name.split(" ")[0].toUpperCase(), tw.x, tw.y + 40);
@@ -820,13 +894,28 @@
       ctx.beginPath(); ctx.arc(mouse.x, mouse.y, rng, 0, 6.283); ctx.fill();
       if (inCircle(mouse.x, mouse.y)) { ctx.fillStyle = "rgba(255,217,74,0.8)"; ctx.font = "bold 11px system-ui"; ctx.textAlign = "center"; ctx.fillText("CONSECRATED +30% DMG", mouse.x, mouse.y + 56); }
       if (losBlocked(mouse.x, mouse.y, W / 2, H / 2)) { ctx.fillStyle = "rgba(255,120,120,0.85)"; ctx.font = "bold 10px system-ui"; ctx.textAlign = "center"; ctx.fillText("PILLARS BLIND THIS SPOT", mouse.x, mouse.y - 48); }
-      drawSprite(IMG["card_" + type], mouse.x, mouse.y, 56, blockedSpot ? 0.35 : 0.65);
+      drawSprite(IMG["spr_" + type], mouse.x, mouse.y, 62, blockedSpot ? 0.35 : 0.65);
+    }
+    // the fallen: bodies topple, sink, and become the blood decals below them
+    for (const c of corpses) {
+      const rot = c.dir * Math.min(1, c.t / 0.38) * 1.35;
+      const sink = c.t > 0.55 ? (c.t - 0.55) * 14 : 0;
+      const al = c.t < 0.7 ? 0.95 : Math.max(0, 0.95 - (c.t - 0.7) * 2.4);
+      shadow(c.x, c.y + c.s * 0.30, c.s * 0.34);
+      drawSpr(c.img, c.x, c.y + sink, c.s, { rot, alpha: al });
     }
     // enemies
     for (const e of enemies) {
-      const wob = Math.sin(performance.now() / 160 + e.wob) * 2;
+      const ph = e.animT * 2.1;
+      const bob = e.type === "wraith" ? Math.sin(ph * 0.9) * 4.5 : Math.abs(Math.sin(ph)) * -2.4;
+      const squash = 1 + Math.sin(ph) * (e.type === "brute" ? 0.05 : 0.035);
+      const tilt = Math.max(-0.14, Math.min(0.14, (e.vx || 0) * 0.00045));
+      let sc = e.r * 3.4, sy = squash, sx = 2 - squash > 0 ? 1 / squash : 1;
+      if (e.windT > 0) { sy *= 0.88; sx *= 1.1; }
+      if (e.atkPop > 0) { const p = 1 + e.atkPop * 0.9; sx *= p; sy *= p; }
       const flick = e.type === "wraith" && e.flickerT % 2.6 > 1.9;
-      drawSprite(e.img, e.x, e.y + wob * 0.4, e.r * 2.9, flick ? 0.25 : 0.96);
+      shadow(e.x, e.y + e.r * 1.15, e.r * 1.05);
+      drawSpr(e.img, e.x, e.y + bob, sc, { rot: tilt, sx, sy, alpha: flick ? 0.25 : 0.98 });
       if (e.flash > 0) { ctx.fillStyle = `rgba(255,240,220,${e.flash * 5})`; ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, 6.283); ctx.fill(); }
       if (e.elite) { ctx.strokeStyle = "#ffd94a"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 5 + Math.sin(performance.now() / 200) * 1.5, 0, 6.283); ctx.stroke(); }
       if (e.enraged) { ctx.strokeStyle = "rgba(255,60,30,0.8)"; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 3, 0, 6.283); ctx.stroke(); }
@@ -842,7 +931,17 @@
     if (state !== "over") {
       if (player.shieldReady) { ctx.strokeStyle = "rgba(170,200,255,0.7)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(player.x, player.y, 30 + Math.sin(performance.now() / 300) * 2, 0, 6.283); ctx.stroke(); }
       if (player.dashT > 0) { ctx.strokeStyle = "rgba(215,38,61,0.7)"; ctx.beginPath(); ctx.arc(player.x, player.y, 26, 0, 6.283); ctx.stroke(); }
-      drawSprite(IMG.hero, player.x, player.y, 56, player.invuln > 0 && state === "wave" ? 0.65 : 1);
+      const moving = Math.hypot(player.vx, player.vy) > 20;
+      const bobY = moving ? Math.abs(Math.sin(player.walkPh)) * -3 : Math.sin(performance.now() / 600) * 0.8;
+      const lean = Math.max(-0.12, Math.min(0.12, player.vx * 0.0004));
+      let psx = 1, psy = 1;
+      if (player.dashT > 0) { const along = Math.abs(player.dashDx) >= Math.abs(player.dashDy); psx = along ? 1.22 : 0.86; psy = along ? 0.86 : 1.22; }
+      if (player.rooted) {
+        ctx.strokeStyle = "rgba(140,130,120,0.85)"; ctx.lineWidth = 2.4;
+        for (let k = 0; k < 5; k++) { const a = k / 5 * 6.283 + 0.5; ctx.beginPath(); ctx.moveTo(player.x + Math.cos(a) * 26, player.y + 14 + Math.sin(a) * 5); ctx.quadraticCurveTo(player.x + Math.cos(a) * 14, player.y + 4, player.x + Math.cos(a) * 6, player.y - 4); ctx.stroke(); }
+      }
+      shadow(player.x, player.y + 19, 22);
+      drawSpr(IMG.hero, player.x, player.y + bobY, 62, { rot: lean, sx: psx, sy: psy, alpha: player.invuln > 0 && state === "wave" ? 0.65 : 1 });
       ctx.fillStyle = "rgba(6,5,8,0.7)"; ctx.fillRect(player.x - 20, player.y + 30, 40, 5);
       ctx.fillStyle = "#7dff9a"; ctx.fillRect(player.x - 20, player.y + 30, 40 * Math.max(0, player.hp / player.maxHp), 5);
     }
@@ -886,7 +985,7 @@
       if (pillarHit(p.x, p.y)) { log("The pillars swallow that spot. Choose open ground."); return; }
       if (towers.length >= G.PACK.maxFieldTowers) { log(`The floor holds only ${G.PACK.maxFieldTowers} towers.`); return; }
       const h = hand[selectedHand];
-      const tw = { type: selectedHand, x: p.x, y: p.y, level: 1, mult: h.bestMult, cd: 0, tollAnim: 0 };
+      const tw = { type: selectedHand, x: p.x, y: p.y, level: 1, mult: h.bestMult, cd: 0, tollAnim: 0, recoil: 0, faceA: 0 };
       towers.push(tw); placedCount[selectedHand] = placedCount[selectedHand] || []; placedCount[selectedHand].push(tw);
       h.count--; if (h.count <= 0) selectedHand = null;
       SFX.place(); burst(p.x, p.y, "#e8e2d4", 8); renderHand(); return;

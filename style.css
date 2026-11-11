@@ -116,3 +116,5 @@ aside p{margin:4px 0 10px;font-size:14px;line-height:1.45}
 .tithe-opt:hover { border-color:#ffd94a; }
 .tithe-opt:disabled { opacity:.45; cursor:default; }
 .tithe-opt.skip { color:#a89a7d; }
+
+.hidden { display: none !important; }

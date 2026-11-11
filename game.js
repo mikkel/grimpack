@@ -575,7 +575,7 @@
     // embers, floating texts, zaps, blood never forgets
     for (const p of parts) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.92; p.vy *= 0.92; }
     for (const em of embers) { em.x += (em.vx + Math.sin(runTime * 0.7 + em.ph) * 6) * dt; em.y += em.vy * dt; if (em.y < -8) { em.y = H + 8; em.x = Math.random() * W; } if (em.x < -8) em.x = W + 8; if (em.x > W + 8) em.x = -8; }
-    for (const c of corpses) c.t += dt; corpses = corpses.filter(c => c.t < 1.1);
+    for (const c of corpses) c.t += dt; corpses = corpses.filter(c => c.t < 2.3);
     parts = parts.filter(p => p.t < p.life);
     for (const t of texts) { t.t += dt; t.y -= 34 * dt; } texts = texts.filter(t => t.t < 0.9);
     for (const z of zaps) z.t += dt; zaps = zaps.filter(z => z.t < z.ttl);
@@ -606,7 +606,7 @@
       } else if (spd < 14 && player.dashT <= 0) {
         player.stillT += dt;
         if (player.stillT > 2.2 && player.stillT < 2.3) floatText(player.x, player.y - 44, "the grief gathers… MOVE", "#c9b8a3");
-        if (player.stillT >= 3.5) { player.rooted = true; player.rootMove = 0; SFX.hurt(); floatText(player.x, player.y - 52, "ROOTED IN GRIEF — MOVE!", "#ff5d2e"); log("You stood still too long. The grief takes root: slowed fire, softer flesh, until you tear free."); }
+        if (player.stillT >= 3.0) { player.rooted = true; player.rootMove = 0; SFX.hurt(); floatText(player.x, player.y - 52, "ROOTED IN GRIEF — MOVE!", "#ff5d2e"); log("You stood still too long. The grief takes root: slowed fire, softer flesh, until you tear free."); }
       } else player.stillT = Math.max(0, player.stillT - dt * 2.5);
     } else { player.stillT = 0; player.rooted = false; }
     player.walkPh += dt * (2 + spd / 22);
@@ -758,7 +758,7 @@
       e.flickerT += dt;
       if (e.type === "brute" && !e.enraged && e.hp < e.maxHp * 0.3) { e.enraged = true; floatText(e.x, e.y - e.r - 10, "ENRAGED", "#ff5d2e"); }
       if (e.burnT > 0) { e.burnT -= dt; e.burnAcc = (e.burnAcc || 0) + e.burnDps * dt; if (e.burnAcc >= 1) { const d = Math.floor(e.burnAcc); e.burnAcc -= d; damageEnemySilent(e, d); } if (e.dead) continue; }
-      let sp = e.speed * (e.enraged ? 1.45 : 1) * (1 + 0.04 * deepenStacks);
+      let sp = e.speed * (e.enraged ? 1.45 : 1) * (1 + 0.04 * deepenStacks) * (player.rooted ? 1.25 : 1); // they smell stillness
       if (e.type === "wraith") {
         e.lungeCd -= dt;
         if (e.lungeT > 0) { e.lungeT -= dt; sp *= 1.9; }
@@ -898,18 +898,18 @@
     }
     // the fallen: bodies topple, sink, and become the blood decals below them
     for (const c of corpses) {
-      const rot = c.dir * Math.min(1, c.t / 0.38) * 1.35;
-      const sink = c.t > 0.55 ? (c.t - 0.55) * 14 : 0;
-      const al = c.t < 0.7 ? 0.95 : Math.max(0, 0.95 - (c.t - 0.7) * 2.4);
+      const rot = c.dir * Math.min(1, c.t / 0.45) * 1.45;
+      const sink = c.t > 1.2 ? (c.t - 1.2) * 9 : 0;
+      const al = c.t < 1.5 ? 0.95 : Math.max(0, 0.95 - (c.t - 1.5) * 1.2);
       shadow(c.x, c.y + c.s * 0.30, c.s * 0.34);
       drawSpr(c.img, c.x, c.y + sink, c.s, { rot, alpha: al });
     }
     // enemies
     for (const e of enemies) {
       const ph = e.animT * 2.1;
-      const bob = e.type === "wraith" ? Math.sin(ph * 0.9) * 4.5 : Math.abs(Math.sin(ph)) * -2.4;
-      const squash = 1 + Math.sin(ph) * (e.type === "brute" ? 0.05 : 0.035);
-      const tilt = Math.max(-0.14, Math.min(0.14, (e.vx || 0) * 0.00045));
+      const bob = e.type === "wraith" ? Math.sin(ph * 0.9) * 6.5 : Math.abs(Math.sin(ph)) * -4.6;
+      const squash = 1 + Math.sin(ph) * (e.type === "brute" ? 0.075 : 0.06);
+      const tilt = Math.max(-0.2, Math.min(0.2, (e.vx || 0) * 0.00045 + Math.sin(ph) * 0.05));
       let sc = e.r * 3.4, sy = squash, sx = 2 - squash > 0 ? 1 / squash : 1;
       if (e.windT > 0) { sy *= 0.88; sx *= 1.1; }
       if (e.atkPop > 0) { const p = 1 + e.atkPop * 0.9; sx *= p; sy *= p; }
@@ -937,8 +937,10 @@
       let psx = 1, psy = 1;
       if (player.dashT > 0) { const along = Math.abs(player.dashDx) >= Math.abs(player.dashDy); psx = along ? 1.22 : 0.86; psy = along ? 0.86 : 1.22; }
       if (player.rooted) {
-        ctx.strokeStyle = "rgba(140,130,120,0.85)"; ctx.lineWidth = 2.4;
-        for (let k = 0; k < 5; k++) { const a = k / 5 * 6.283 + 0.5; ctx.beginPath(); ctx.moveTo(player.x + Math.cos(a) * 26, player.y + 14 + Math.sin(a) * 5); ctx.quadraticCurveTo(player.x + Math.cos(a) * 14, player.y + 4, player.x + Math.cos(a) * 6, player.y - 4); ctx.stroke(); }
+        ctx.strokeStyle = "rgba(196,186,170,0.95)"; ctx.lineWidth = 4;
+        for (let k = 0; k < 6; k++) { const a = k / 6 * 6.283 + 0.4 + Math.sin(performance.now() / 500) * 0.05; ctx.beginPath(); ctx.moveTo(player.x + Math.cos(a) * 34, player.y + 18 + Math.sin(a) * 7); ctx.quadraticCurveTo(player.x + Math.cos(a) * 18, player.y + 6, player.x + Math.cos(a) * 7, player.y - 6); ctx.stroke(); }
+        ctx.fillStyle = `rgba(255,93,46,${0.75 + Math.sin(performance.now() / 200) * 0.25})`; ctx.font = "bold 13px system-ui"; ctx.textAlign = "center";
+        ctx.fillText("☠ ROOTED — MOVE! ☠", player.x, player.y - 46);
       }
       shadow(player.x, player.y + 19, 22);
       drawSpr(IMG.hero, player.x, player.y + bobY, 62, { rot: lean, sx: psx, sy: psy, alpha: player.invuln > 0 && state === "wave" ? 0.65 : 1 });
@@ -973,6 +975,7 @@
     ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
     if (hitFlash > 0) { ctx.fillStyle = `rgba(215,38,61,${hitFlash * 0.30})`; ctx.fillRect(0, 0, W, H); }
     if (player.hp < player.maxHp * 0.30 && state === "wave") { const pulse = 0.10 + Math.sin(performance.now() / 240) * 0.05; ctx.fillStyle = `rgba(215,38,61,${pulse})`; ctx.fillRect(0, 0, W, H); }
+    if (player.rooted && state === "wave") { const gv = ctx.createRadialGradient(W / 2, H / 2, H * 0.30, W / 2, H / 2, H * 0.78); gv.addColorStop(0, "rgba(90,84,76,0)"); gv.addColorStop(1, "rgba(90,84,76,0.42)"); ctx.fillStyle = gv; ctx.fillRect(0, 0, W, H); }
   }
   // ---------- input ----------
   function canvasPos(ev) { const r = cv.getBoundingClientRect(); return { x: (ev.clientX - r.left) * W / r.width, y: (ev.clientY - r.top) * H / r.height, inside: true }; }

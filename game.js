@@ -61,7 +61,7 @@
     win:   () => { [392, 523, 659, 784].forEach((f, i) => setTimeout(() => tone(f, 0.35, "triangle", 0.06), i * 140)); },
     lose:  () => { [330, 262, 196, 131].forEach((f, i) => setTimeout(() => tone(f, 0.4, "triangle", 0.06), i * 170)); },
   };
-  function setMusic(on) { if (!dirge) return; dirge.volume = 0.32; if (on && !muted) dirge.play().catch(() => {}); else dirge.pause(); }
+  function setMusic(on) { if (!dirge) return; dirge.volume = 0.42; if (on && !muted) dirge.play().catch(() => {}); else dirge.pause(); }
 
   // ---------- state ----------
   let state = "title";
@@ -286,12 +286,14 @@
             <span class="crar" style="color:${R.color}">${R.name} · ${pull.def.kind}</span>
             <span class="cstat">${describeCard(pull)}</span>
             <span class="cblurb">${pull.def.blurb}</span>
+            <button class="trade-btn" title="Burn 25 ashes to trade this card for a new pull">↻ trade · 25 ash</button>
           </div></div></div>`;
-      const trade = d.querySelector(".trade-btn");
-      if (ashes < 25) trade.disabled = true;
-      trade.onclick = ev => {
+      const trades = d.querySelectorAll(".trade-btn");
+      trades.forEach(tr => { if (ashes < 25) tr.disabled = true; });
+      const doTrade = ev => {
         ev.stopPropagation();
-        if (ashes < 25 || d.classList.contains("flipped")) return;
+        if (ashes < 25 || d.dataset.traded) return;
+        d.dataset.traded = "1";
         ashes -= 25;
         let nri = rollRarityIdx(diff.luck); if (pull.foil) nri = Math.min(4, nri + 1);
         const np = { def: rollCard(), rarityIdx: nri, foil: pull.foil };
@@ -302,9 +304,10 @@
         const cr = d.querySelector(".crar"); cr.textContent = `${G.RARITIES[np.rarityIdx].name} · ${np.def.kind}`; cr.style.color = G.RARITIES[np.rarityIdx].color;
         d.querySelector(".cstat").textContent = describeCard(np);
         d.querySelector(".cblurb").textContent = np.def.blurb;
-        trade.remove(); noiseBurst(0.15, 0.08);
+        trades.forEach(tr => tr.remove()); noiseBurst(0.15, 0.08);
         log("The dead accept your trade."); updateHUD(); updatePackButton();
       };
+      trades.forEach(tr => tr.onclick = doTrade);
       d.onclick = () => {
         if (d.classList.contains("flipped")) return;
         d.classList.add("flipped"); SFX.flip(pull.rarityIdx);
@@ -814,8 +817,8 @@
       const blockedSpot = pillarHit(mouse.x, mouse.y);
       ctx.fillStyle = blockedSpot ? "rgba(215,38,61,0.14)" : "rgba(255,255,255,0.10)";
       ctx.beginPath(); ctx.arc(mouse.x, mouse.y, rng, 0, 6.283); ctx.fill();
-      if (inCircle(mouse.x, mouse.y)) { ctx.fillStyle = "rgba(255,217,74,0.8)"; ctx.font = "bold 11px system-ui"; ctx.textAlign = "center"; ctx.fillText("CONSECRATED +30% DMG", mouse.x, mouse.y - rng - 8); }
-      if (losBlocked(mouse.x, mouse.y, W / 2, H / 2)) { ctx.fillStyle = "rgba(255,120,120,0.85)"; ctx.font = "bold 10px system-ui"; ctx.textAlign = "center"; ctx.fillText("PILLARS BLIND THIS SPOT", mouse.x, mouse.y + rng + 14); }
+      if (inCircle(mouse.x, mouse.y)) { ctx.fillStyle = "rgba(255,217,74,0.8)"; ctx.font = "bold 11px system-ui"; ctx.textAlign = "center"; ctx.fillText("CONSECRATED +30% DMG", mouse.x, mouse.y + 56); }
+      if (losBlocked(mouse.x, mouse.y, W / 2, H / 2)) { ctx.fillStyle = "rgba(255,120,120,0.85)"; ctx.font = "bold 10px system-ui"; ctx.textAlign = "center"; ctx.fillText("PILLARS BLIND THIS SPOT", mouse.x, mouse.y - 48); }
       drawSprite(IMG["card_" + type], mouse.x, mouse.y, 56, blockedSpot ? 0.35 : 0.65);
     }
     // enemies
@@ -908,6 +911,7 @@
   cv.addEventListener("touchmove", ev => { const t = ev.touches[0]; touchTarget = canvasPos(t); }, { passive: true });
   cv.addEventListener("touchend", () => touchTarget = null);
   $("btn-begin").addEventListener("click", () => { if (state === "build") beginWave(); });
+  document.addEventListener("click", e => { const b = e.target.closest("button"); if (b) b.blur(); });
   // ---------- title / difficulty / restart ----------
   function selectDiff(key2) {
     diff = G.DIFFS[key2];

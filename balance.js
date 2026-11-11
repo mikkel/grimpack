@@ -138,32 +138,26 @@
      bolts and sight), 'r' rubble (impassable until smashed, low — bolts pass),
      'f' grave-fog (passable; hides whatever stands in it from towers, bolts
      and cultist eyes — unless a brazier's light burns it off). */
-  const TILE = 36, COLS = 25, ROWS = 21;
+  const TILE = 40, COLS = 24, ROWS = 16;
   const MAP = [
-    ".........................",
-    ".........................",
-    "....#.......#.......#....",
-    ".....ff...#####...ff.....",
-    ".....ff...#...#...ff.....",
-    ".....ff...#...#...ff.....",
-    ".........................",
-    ".#.r....f.......f....r.#.",
-    ".....##...........##.....",
-    ".......f.........f.......",
-    "....r....#.....#....r....",
-    ".......f.........f.......",
-    ".....##...........##.....",
-    ".#.r....f.......f....r.#.",
-    ".........................",
-    ".....ff...#...#...ff.....",
-    ".....ff...#...#...ff.....",
-    ".....ff...#####...ff.....",
-    "....#.......#.......#....",
-    ".........................",
-    "........................."
+    "........................",
+    "........#......#........",
+    "...ff.....####.....ff...",
+    "...ff.....#..#.....ff...",
+    "...ff.r..........r.ff...",
+    ".#....................#.",
+    "....##.f........f.##....",
+    "...r.....#....#.....r...",
+    "...r.....#....#.....r...",
+    "....##.f........f.##....",
+    ".#....................#.",
+    "...ff.r..........r.ff...",
+    "...ff.....#..#.....ff...",
+    "...ff.....####.....ff...",
+    "........#......#........",
+    "........................",
   ];
   const TERRAIN = { rubbleHp: 45, barrierCost: 15, barrierHp: 130, barrierMax: 8 };
-
   const api = { RARITIES, KIND_WEIGHTS, CARDS, TOWERS, PLAYER_BASE, ENEMIES, waveSpec, PACK, WORLD, OMENS, DIFFS, SYNERGIES, TITHES, TILE, COLS, ROWS, MAP, TERRAIN };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   root.GRIM = api;

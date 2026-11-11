@@ -231,3 +231,31 @@ and unreachable. Fix: collision skips off-grid tiles entirely, plus a hard
 position clamp. Verified after the fix: Night 1 completes standing still in
 19 seconds, spawns streaming from all four edges; Night 2 in 25 seconds.
 Lesson: every "it stalls" report was real. The testers were right all along.
+
+## v7 — THE CATHEDRAL PRESENTS ITSELF (presentation overhaul)
+Mikkel: menu needs help; HUD key hints that appear then dissolve, wrong and
+strange; point at open packs obviously; show what items DO and where they
+land; music is a short loop. Also found while in there: the v5 tile grid
+(36px, 900x756) never matched the actual 960x640 stage — the bottom three
+rows lived below the canvas. The floor is rebuilt at 40px tiles, 24x16:
+32 walls, 8 rubble, 28 fog, symmetric, fully connected, centered on the
+real ritual circle (480,312).
+- MENU: full-screen title — candle-flickering GRIMPACK wordmark over slow-
+  zooming key art, floating pack, three plain how-to rows, rite cards.
+- KEY HINTS: at Night 1 the arrow caps SLAM into the bottom-right with a
+  dust burst, breathe, twitch wrong, grow a black drip — then fracture into
+  sliding slices and ash. SPACE-DASH cap beneath. Gone by ~4.7s.
+- PACK HAND: a skeletal hand (new art) creeps in from the panel edge and
+  jabs at the pack button whenever a pack is openable; the button breathes;
+  a label whispers "a pack waits. the dead insist."
+- BOONS MADE VISIBLE: "The Knight, As Modified" — a live stats bar (DMG /
+  RATE / BOLTS / CRIT / SPEED / MEND); on Collect, each card physically
+  flies to where it applies (buffs -> stats bar, towers -> hand) and lands
+  with the stat chip pulsing blood-red; in-arena, a beam of light hits the
+  knight with floating text naming the exact effect ("Hellfire Rounds:
+  +12 bolt damage").
+- MUSIC: three generated tracks rotate by moment with crossfades — sparse
+  bell-and-cello dread for title/build, the dirge for battle, drums-and-
+  choir for boss nights. No more single 22s loop.
+v7 spend $0.0587 (hand $0.011 + two music tracks $0.0477); cumulative
+$0.881 of $5.

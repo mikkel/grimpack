@@ -4,11 +4,33 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GRIMPACK — Crack the seal. Survive the night.</title>
-<link rel="stylesheet" href="style.css?v=39">
+<link rel="stylesheet" href="style.css?v=40">
 <link rel="icon" href="assets/pack.jpg">
 </head>
 <body>
 <div id="app">
+  <div id="title-screen">
+    <img class="title-art" src="assets/title-art.jpg" alt="">
+    <div class="title-shade"></div>
+    <div class="title-content">
+      <p class="title-kicker">✦ a booster-pack tower-defense of the dead ✦</p>
+      <h1 class="game-title">GRIM<span>PACK</span></h1>
+      <p class="tagline">Crack the seal. Raise your towers. Survive the night.</p>
+      <img class="title-pack" src="assets/pack.jpg" alt="A sealed grimpack">
+      <div class="howto-rows">
+        <p><b>Move</b> with WASD or the arrow keys — <b>dash</b> with Space. Your crossbow fires on its own; your job is to be somewhere worth firing from.</p>
+        <p><b>Survive a night</b> → tear open a booster pack → towers, weapons, relics. The floor itself fights: walls blind, fog hides, barricades hold — and everything has weight.</p>
+        <p><b>Ten nights.</b> The fifth tolls for <b>The Abbot</b>. The tenth, for <b>Vesper</b>. The night deepens the longer you take.</p>
+      </div>
+      <div class="diff-row">
+        <button id="diff-vigil" class="diff-btn diff-on">☾ Vigil <small>the intended night</small></button>
+        <button id="diff-torment" class="diff-btn">☠ Torment <small>harder dead, luckier packs</small></button>
+      </div>
+      <button id="btn-start" class="big-btn title-begin">✦ Begin the Vigil ✦</button>
+      <p id="best-line" class="best-line"></p>
+      <p class="fineprint">Every image, voice of the dirge and bone in the cathedral was generated with Nanoodle → NanoGPT for $0.91. No install. No mercy.</p>
+    </div>
+  </div>
   <header id="topbar">
     <div class="brand">GRIM<span>PACK</span></div>
     <div id="hud">
@@ -26,29 +48,7 @@
     <div id="stage">
       <canvas id="game" width="960" height="640"></canvas>
 
-      <div id="title-screen" class="overlay">
-        <img class="title-art" src="assets/title-art.jpg" alt="Grimpack key art">
-        <div class="title-shade"></div>
-        <div class="title-content">
-          <h1>GRIM<span>PACK</span></h1>
-          <p class="tagline">Crack the seal. Raise your towers. Survive the night.</p>
-          <p class="howto">
-            <b>WASD / arrows</b> — move &nbsp;·&nbsp; <b>Space / Shift</b> — dash &nbsp;·&nbsp; your crossbow <b>fires on its own</b><br>
-            Clear a wave → <b>tear open a booster pack</b> → place towers, stack weapons &amp; relics.<br>
-            The arena fights: <b>pillars block bolts</b>, the <b>ritual circle consecrates</b> towers inside it.<br>
-            Ten nights. The fifth tolls for <b>The Abbot</b>. The tenth, for <b>Vesper</b>. And the night deepens…
-          </p>
-          <div class="diff-row">
-            <button id="diff-vigil" class="diff-btn diff-on">☾ Vigil <small>the intended night</small></button>
-            <button id="diff-torment" class="diff-btn">☠ Torment <small>harder dead, luckier packs</small></button>
-          </div>
-          <button id="btn-start" class="big-btn">Begin the Vigil</button>
-          <p id="best-line" class="best-line"></p>
-          <p class="fineprint">Every image and the dirge itself generated with Nanoodle → NanoGPT for $0.82. No install, no mercy.</p>
-        </div>
-      </div>
-
-      <div id="end-screen" class="overlay hidden">
+      <div id="boss-bar" class="hidden"><label id="boss-name">VESPER</label><div class="bar"><div id="boss-fill"></div></div></div>
         <div class="title-content">
           <img id="end-art" class="end-art" src="assets/title-art.jpg" alt="">
           <h1 id="end-title">THE NIGHT TAKES YOU</h1>
@@ -81,12 +81,26 @@
           <img src="assets/pack.jpg" alt="Booster pack">
           <span id="pack-btn-label">Open Pack — FREE</span>
         </button>
+        <img id="pack-hand" src="assets/spr/spr-packhand.webp" alt="">
+        <p id="pack-hand-label" class="hidden">a pack waits. the dead insist.</p>
         <div id="hand-wrap">
           <h3> Towers in hand <span id="hand-hint">(click a tower, then click the arena — double-click a standing tower to overcharge it)</span></h3>
           <div id="hand"></div>
         </div>
         <button id="btn-barrier" class="hidden">🧱 Raise Barricade — 15 ash</button>
         <button id="btn-begin" class="big-btn">Begin Night 1 ☾</button>
+      </section>
+
+      <section id="stats-wrap">
+        <h3>The Knight, As Modified</h3>
+        <div id="stats-bar">
+          <span class="stat-chip" id="st-dmg">DMG <b>—</b></span>
+          <span class="stat-chip" id="st-rate">RATE <b>—</b></span>
+          <span class="stat-chip" id="st-proj">BOLTS <b>—</b></span>
+          <span class="stat-chip" id="st-crit">CRIT <b>—</b></span>
+          <span class="stat-chip" id="st-spd">SPEED <b>—</b></span>
+          <span class="stat-chip" id="st-regen">MEND <b>—</b></span>
+        </div>
       </section>
 
       <section id="collection-wrap">
@@ -115,7 +129,7 @@
 </div>
 
 <audio id="dirge" src="assets/dirge2.mp3" loop preload="auto"></audio>
-<script src="balance.js?v=39"></script>
-<script src="game.js?v=39"></script>
+<script src="balance.js?v=40"></script>
+<script src="game.js?v=40"></script>
 </body>
 </html>

@@ -1,0 +1,93 @@
+{
+ "v": 1,
+ "nodes": [
+  {
+   "id": "c1",
+   "type": "comment",
+   "name": "GRIMPACK v7 music variants",
+   "x": 40,
+   "y": -260,
+   "w": 700,
+   "fields": {
+    "text": "GRIMPACK v7 music variants"
+   }
+  },
+  {
+   "id": "t1",
+   "type": "text",
+   "name": "music-calm",
+   "x": 40,
+   "y": 300,
+   "w": 340,
+   "fields": {
+    "text": "Seamless looping dark ambient game music for a quiet build phase: a single distant cathedral bell tolling rarely, sparse bowed cello notes with long silences, deep organ pedal drone underneath, cold and spacious, minor key, no drums, no vocals, designed to loop forever."
+   }
+  },
+  {
+   "id": "m1",
+   "type": "music",
+   "name": "music-calm",
+   "x": 460,
+   "y": 300,
+   "w": 300,
+   "fields": {
+    "model": "stable-audio-3/small/music/text-to-audio",
+    "response_format": "mp3"
+   }
+  },
+  {
+   "id": "t2",
+   "type": "text",
+   "name": "music-boss",
+   "x": 40,
+   "y": 560,
+   "w": 340,
+   "fields": {
+    "text": "Seamless looping dark orchestral boss-battle game music: pounding war drums, frantic bowed string ostinato, tolling cathedral bells, deep brass stabs, male choir pad, terrifying and relentless, minor key, no vocals, no lyrics, designed to loop forever."
+   }
+  },
+  {
+   "id": "m2",
+   "type": "music",
+   "name": "music-boss",
+   "x": 460,
+   "y": 560,
+   "w": 300,
+   "fields": {
+    "model": "stable-audio-3/small/music/text-to-audio",
+    "response_format": "mp3"
+   }
+  }
+ ],
+ "links": [
+  {
+   "id": "l1",
+   "from": {
+    "node": "t1",
+    "port": "text"
+   },
+   "to": {
+    "node": "m1",
+    "port": "prompt"
+   }
+  },
+  {
+   "id": "l2",
+   "from": {
+    "node": "t2",
+    "port": "text"
+   },
+   "to": {
+    "node": "m2",
+    "port": "prompt"
+   }
+  }
+ ],
+ "nid": 99,
+ "lid": 99,
+ "view": {
+  "panX": 30,
+  "panY": 280,
+  "scale": 0.6
+ }
+}

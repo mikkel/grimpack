@@ -25,6 +25,9 @@
   // ---------- audio ----------
   let AC = null, muted = false;
   const dirge = $("dirge");
+  const audioCalm = new Audio("assets/music-calm.mp3"); audioCalm.loop = true; audioCalm.volume = 0;
+  const audioBoss = new Audio("assets/music-boss.mp3"); audioBoss.loop = true; audioBoss.volume = 0;
+  if (dirge) { dirge.volume = 0; }
   function ac() { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === "suspended") AC.resume(); return AC; }
   function tone(freq, dur, type, vol, slideTo) {
     if (muted) return;
@@ -77,7 +80,24 @@
     win:   () => { if (!playSnd("win", 0.8, 0)) [392, 523, 659, 784].forEach((f, i) => setTimeout(() => tone(f, 0.35, "triangle", 0.06), i * 140)); },
     lose:  () => { if (!playSnd("lose", 0.8, 0)) [330, 262, 196, 131].forEach((f, i) => setTimeout(() => tone(f, 0.4, "triangle", 0.06), i * 170)); },
   };
-  function setMusic(on) { if (!dirge) return; dirge.volume = 0.42; if (on && !muted) dirge.play().catch(() => {}); else dirge.pause(); }
+  const TRACKS = { calm: audioCalm, battle: dirge, boss: audioBoss };
+  let musicOn = false;
+  function musicTarget() {
+    if (!musicOn || muted) return null;
+    if (state === "wave") return (wave === 5 || wave === 10) ? TRACKS.boss : TRACKS.battle;
+    return TRACKS.calm;
+  }
+  function musicTick(dt) {
+    const tgt = musicTarget();
+    for (const k of Object.keys(TRACKS)) {
+      const el = TRACKS[k]; if (!el) continue;
+      const goal = el === tgt ? (k === "calm" ? 0.30 : 0.42) : 0;
+      if (goal > 0 && el.paused) el.play().catch(() => {});
+      if (Math.abs(el.volume - goal) > 0.01) el.volume = Math.max(0, Math.min(1, el.volume + Math.sign(goal - el.volume) * dt * 0.45));
+      else if (goal === 0 && !el.paused) el.pause();
+    }
+  }
+  function setMusic(on) { musicOn = on; }
 
   // ---------- state ----------
   let state = "title";
@@ -132,8 +152,24 @@
     $("hud-dash").style.color = player.dashCd > 0 ? "#8a7f6a" : "#ffd94a";
     if (bossRef && bossRef.hp > 0) { $("boss-bar").classList.remove("hidden"); $("boss-fill").style.width = Math.max(0, bossRef.hp / bossRef.maxHp * 100) + "%"; }
     else $("boss-bar").classList.add("hidden");
+    refreshStats(); updatePackHand();
   }
   function packPrice() { return titheId === "bell" ? Math.max(10, packCost - 12) : packCost; }
+  function updatePackHand() {
+    const show = state === "build" && (freePacks > 0 || ashes >= packPrice());
+    $("pack-hand").classList.toggle("show", show);
+    $("pack-hand-label").classList.toggle("hidden", !show);
+    $("btn-pack").classList.toggle("pulse", show);
+  }
+  function refreshStats() {
+    const vals = { dmg: Math.round(player.dmg), rate: player.rate.toFixed(1) + "/s", proj: player.proj + (player.pierce ? "+" + player.pierce + "⤢" : ""), crit: Math.round((player.critC || 0) * 100) + "%", spd: Math.round(player.speed), regen: (player.regen || 0).toFixed(1) + "/s" };
+    for (const k of Object.keys(vals)) {
+      const el = $("st-" + k); if (!el) continue;
+      const v = String(vals[k]);
+      if (statPrev[k] !== undefined && statPrev[k] !== v) { el.classList.remove("pulse"); void el.offsetWidth; el.classList.add("pulse"); }
+      statPrev[k] = v; el.querySelector("b").textContent = v;
+    }
+  }
   function updatePackButton() {
     const b = $("btn-pack"), price = packPrice();
     if (state === "wave") { b.disabled = true; return; }
@@ -300,12 +336,16 @@
       if (def.id === "candle") player.revives += 1;
       if (def.id === "seal") { bonusCards += 1; dryPacks = Math.max(0, dryPacks - 1); log("The Gilded Seal promises a fatter, luckier pack."); }
     }
+    if (def.kind === "tower") floatText(player.x, player.y - 60, `${def.name} joins the vigil`, "#ffd94a");
+    else { beams.push({ x: player.x, y: player.y, t: 0 }); floatText(player.x, player.y - 62, `${def.name}: ${describeCard(pull)}`, R.color); burst(player.x, player.y - 10, R.color, 10); }
     renderCollection(); updateHUD();
   }
   function heal(n) { player.hp = Math.min(player.maxHp, player.hp + n); }
 
   // pack modal flow
   let currentPack = null, flipped = 0;
+  let hintT = -1, hintSlammed = false, beams = [];
+  const statPrev = {};
   function openPack() {
     if (state !== "build") return;
     if (freePacks > 0) freePacks--;
@@ -370,12 +410,25 @@
       setTimeout(() => { if (!d.classList.contains("flipped")) d.click(); }, 2500 + i * 900);
     });
   });
+  function flyCard(el, pull) {
+    const r = el.getBoundingClientRect();
+    const target = (pull.def.kind === "tower" ? $("hand-wrap") : $("stats-wrap")).getBoundingClientRect();
+    const ghost = el.cloneNode(true);
+    ghost.style.cssText = `position:fixed;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;margin:0;z-index:95;pointer-events:none;`;
+    document.body.appendChild(ghost); el.style.visibility = "hidden";
+    ghost.animate([
+      { transform: "translate(0,0) rotate(0deg) scale(1)", opacity: 1 },
+      { transform: `translate(${target.left + target.width / 2 - (r.left + r.width / 2)}px, ${target.top + target.height / 2 - (r.top + r.height / 2)}px) rotate(${Math.random() * 26 - 13}deg) scale(0.2)`, opacity: 0.2 }
+    ], { duration: 500, easing: "cubic-bezier(.5,-0.1,.3,1)" }).onfinish = () => ghost.remove();
+  }
   $("btn-collect").addEventListener("click", () => {
     if (!currentPack) return;
-    for (const pull of currentPack) applyCard(pull);
-    currentPack = null; state = "build";
-    $("pack-modal").classList.add("hidden");
-    updatePackButton(); updateHUD();
+    const pack = currentPack; currentPack = null;
+    const els = [...$("pack-cards").children];
+    pack.forEach((pull, i) => {
+      setTimeout(() => { if (els[i]) flyCard(els[i], pull); setTimeout(() => applyCard(pull), els[i] ? 460 : 0); }, i * 150);
+    });
+    setTimeout(() => { $("pack-modal").classList.add("hidden"); state = "build"; updatePackButton(); updateHUD(); }, pack.length * 150 + 560);
   });
   $("btn-pack").addEventListener("click", openPack);
   function updateBarrierButton() {
@@ -498,14 +551,14 @@
   function damageBlocker(c, r, dmg) {
     const b = barrierAt(c, r);
     if (b) {
-      b.hp -= dmg; burst(c * TILE + 18, r * TILE + 18, "#a98a54", 3);
-      if (b.hp <= 0) { barriers = barriers.filter(x => x !== b); burst(c * TILE + 18, r * TILE + 18, "#a98a54", 16); SFX.place(); log("A barricade is smashed apart."); buildFlow(); }
+      b.hp -= dmg; burst(c * TILE + 20, r * TILE + 20, "#a98a54", 3);
+      if (b.hp <= 0) { barriers = barriers.filter(x => x !== b); burst(c * TILE + 20, r * TILE + 20, "#a98a54", 16); SFX.place(); log("A barricade is smashed apart."); buildFlow(); }
       return;
     }
     const k = c + "," + r;
     if (rubbleHp[k] != null) {
-      rubbleHp[k] -= dmg; burst(c * TILE + 18, r * TILE + 18, "#8a7f6a", 3);
-      if (rubbleHp[k] <= 0) { delete rubbleHp[k]; grid[r][c] = '.'; burst(c * TILE + 18, r * TILE + 18, "#8a7f6a", 18); SFX.place(); buildFlow(); }
+      rubbleHp[k] -= dmg; burst(c * TILE + 20, r * TILE + 20, "#8a7f6a", 3);
+      if (rubbleHp[k] <= 0) { delete rubbleHp[k]; grid[r][c] = '.'; burst(c * TILE + 20, r * TILE + 20, "#8a7f6a", 18); SFX.place(); buildFlow(); }
     }
   }
 
@@ -544,6 +597,7 @@
   }
   function banner(txt) { const b = $("wave-banner"); b.textContent = txt; b.classList.remove("hidden"); setTimeout(() => b.classList.add("hidden"), 2600); }
   function beginWave() {
+    if (wave === 0) { hintT = 0; hintSlammed = false; }
     placingBarrier = false;
     if (state !== "build") return;
     if (tithePending && !beginArmed) { beginArmed = true; const b = $("tithe-box"); b.classList.add("flash"); setTimeout(() => b.classList.remove("flash"), 1100); log("The cathedral waits for an offering. Choose — or begin anyway (click Begin again)."); return; }
@@ -672,7 +726,7 @@
   });
   addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
   function togglePause() { paused = !paused; $("pause-overlay").classList.toggle("hidden", !paused); }
-  function toggleMute() { muted = !muted; $("btn-mute").textContent = muted ? "🔇" : "🔊"; if (dirge) { muted ? dirge.pause() : (state === "wave" || state === "build") && dirge.play().catch(() => {}); } }
+  function toggleMute() { muted = !muted; $("btn-mute").textContent = muted ? "🔇" : "🔊"; }
   $("btn-mute").addEventListener("click", toggleMute);
   $("btn-pause").addEventListener("click", () => { if (state === "wave" || state === "build") togglePause(); });
   function tryDash() {
@@ -736,6 +790,8 @@
       }
     }
     corpses = corpses.filter(c => c.t < 3.4);
+    beams = beams.filter(b => (b.t += dt) < 0.85);
+    if (hintT >= 0) hintT += dt;
     parts = parts.filter(p => p.t < p.life);
     for (const t of texts) { t.t += dt; t.y -= 34 * dt; } texts = texts.filter(t => t.t < 0.9);
     for (const z of zaps) z.t += dt; zaps = zaps.filter(z => z.t < z.ttl);
@@ -1074,6 +1130,7 @@
   function loop(ts) {
     requestAnimationFrame(loop);
     const rawDt = Math.min(0.05, (ts - lastT) / 1000 || 0.016); lastT = ts;
+    musicTick(rawDt);
     if (paused || state === "title" || state === "pack" || state === "win" || state === "over") { render(); return; }
     let dt = rawDt;
     if (hitStop > 0) { hitStop -= rawDt; dt = 0; }
@@ -1086,8 +1143,8 @@
     // THE FLOOR ITSELF: walls, rubble, grave-fog
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
       const ch = grid[r] ? grid[r][c] : '.';
-      if (ch === '#') { shadow(c * TILE + 18, r * TILE + 32, 20); ctx.drawImage(IMG.wall, c * TILE - 2, r * TILE - 2, TILE + 4, TILE + 4); }
-      else if (ch === 'r') { shadow(c * TILE + 18, r * TILE + 30, 19); drawSpr(IMG.rubble, c * TILE + 18, r * TILE + 18, TILE * 1.3, {}); const hpF = (rubbleHp[c + "," + r] || G.TERRAIN.rubbleHp) / G.TERRAIN.rubbleHp; if (hpF < 1) { ctx.fillStyle = `rgba(0,0,0,${(1 - hpF) * 0.45})`; ctx.fillRect(c * TILE + 3, r * TILE + 3, TILE - 6, TILE - 6); } }
+      if (ch === '#') { shadow(c * TILE + 20, r * TILE + 36, 20); ctx.drawImage(IMG.wall, c * TILE - 2, r * TILE - 2, TILE + 4, TILE + 4); }
+      else if (ch === 'r') { shadow(c * TILE + 20, r * TILE + 34, 19); drawSpr(IMG.rubble, c * TILE + 20, r * TILE + 20, TILE * 1.3, {}); const hpF = (rubbleHp[c + "," + r] || G.TERRAIN.rubbleHp) / G.TERRAIN.rubbleHp; if (hpF < 1) { ctx.fillStyle = `rgba(0,0,0,${(1 - hpF) * 0.45})`; ctx.fillRect(c * TILE + 3, r * TILE + 3, TILE - 6, TILE - 6); } }
     }
     for (const em of embers) { const tw2 = 0.35 + Math.sin(performance.now() / 300 + em.ph) * 0.2; ctx.fillStyle = `rgba(255,150,60,${tw2})`; ctx.fillRect(em.x - 1.2, em.y - 1.2, 2.4, 2.4); }
     if (state === "wave") for (const bz of WORLD.braziers) {
@@ -1133,8 +1190,8 @@
     }
     // towers
     for (const b of barriers) {
-      shadow(b.c * TILE + 18, b.r * TILE + 32, 20);
-      drawSpr(IMG.barricade, b.c * TILE + 18, b.r * TILE + 18, TILE * 1.35, {});
+      shadow(b.c * TILE + 20, b.r * TILE + 36, 20);
+      drawSpr(IMG.barricade, b.c * TILE + 20, b.r * TILE + 20, TILE * 1.35, {});
       const f = b.hp / b.max;
       if (f < 1) {
         ctx.fillStyle = "rgba(6,5,8,0.7)"; ctx.fillRect(b.c * TILE + 4, b.r * TILE + TILE - 7, TILE - 8, 4);
@@ -1171,7 +1228,7 @@
       const [c, r] = tileOf(mouse.x, mouse.y);
       ctx.fillStyle = charAt(c, r) === '#' || charAt(c, r) === 'r' || barrierAt(c, r) ? "rgba(215,38,61,0.35)" : "rgba(169,138,84,0.35)";
       ctx.fillRect(c * TILE + 1, r * TILE + 1, TILE - 2, TILE - 2);
-      drawSprite(IMG.barricade, c * TILE + 18, r * TILE + 18, TILE * 1.35, 0.6);
+      drawSprite(IMG.barricade, c * TILE + 20, r * TILE + 20, TILE * 1.35, 0.6);
     }
     // the fallen: bodies topple, sink, and become the blood decals below them
     for (const c of corpses) {
@@ -1184,7 +1241,7 @@
     // GRAVE-FOG pools: filled mist with a silhouette — drawn late so nothing washes it out
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
       if (!grid[r] || grid[r][c] !== 'f') continue;
-      const x = c * TILE + 18, y = r * TILE + 18, ph = Math.sin(performance.now() / 1500 + c * 1.7 + r * 2.3) * 0.5 + 0.5;
+      const x = c * TILE + 20, y = r * TILE + 20, ph = Math.sin(performance.now() / 1500 + c * 1.7 + r * 2.3) * 0.5 + 0.5;
       ctx.fillStyle = `rgba(169,184,206,${0.30 + ph * 0.08})`;
       ctx.beginPath(); ctx.arc(x, y, 27, 0, 6.283); ctx.fill();
       ctx.fillStyle = `rgba(198,210,228,${0.20 + ph * 0.07})`;
@@ -1222,7 +1279,7 @@
     // mist wraps the figures too (thin upper veil over anything standing in fog)
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
       if (!grid[r] || grid[r][c] !== 'f') continue;
-      const x = c * TILE + 18, y = r * TILE + 18;
+      const x = c * TILE + 20, y = r * TILE + 20;
       const gr = ctx.createRadialGradient(x, y, 2, x, y, TILE * 0.8);
       gr.addColorStop(0, "rgba(190,203,224,0.13)"); gr.addColorStop(1, "rgba(190,203,224,0)");
       ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, TILE * 0.8, 0, 6.283); ctx.fill();
@@ -1272,8 +1329,59 @@
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
       if (!grid[r] || grid[r][c] !== 'f') continue;
       ctx.fillStyle = "rgba(190,203,224,0.10)";
-      ctx.beginPath(); ctx.arc(c * TILE + 18, r * TILE + 18, 24, 0, 6.283); ctx.fill();
+      ctx.beginPath(); ctx.arc(c * TILE + 20, r * TILE + 20, 24, 0, 6.283); ctx.fill();
     }
+    // boon beams: heaven notices what the pack gave you
+    for (const b of beams) {
+      const a = Math.sin((b.t / 0.85) * Math.PI) * 0.34;
+      const bg = ctx.createLinearGradient(b.x - 26, 0, b.x + 26, 0);
+      bg.addColorStop(0, "rgba(255,220,150,0)"); bg.addColorStop(0.5, `rgba(255,220,150,${a})`); bg.addColorStop(1, "rgba(255,220,150,0)");
+      ctx.fillStyle = bg; ctx.fillRect(b.x - 26, 0, 52, b.y + 8);
+      ctx.fillStyle = `rgba(255,240,200,${a * 0.8})`; ctx.beginPath(); ctx.ellipse(b.x, b.y + 6, 30, 9, 0, 0, 6.283); ctx.fill();
+    }
+    drawKeyHints();
+  }
+  function drawKeyHints() {
+    if (hintT < 0) return;
+    const t = hintT;
+    if (t > 4.7) { hintT = -1; return; }
+    if (!hintSlammed) { hintSlammed = true; burst(W - 96, H - 118, "#cbbd93", 18); }
+    let alpha = 1, scale = 1;
+    if (t < 0.45) { const k = t / 0.45; scale = 1.9 - 0.9 * (1 - Math.pow(1 - k, 3)); alpha = Math.min(1, k * 1.6); }
+    else if (t > 3.4) alpha = Math.max(0, 1 - (t - 3.4) / 1.25);
+    const dissolving = t > 3.4;
+    const cx = W - 96, cy = H - 118;
+    const caps = [ { dx: 0, dy: -47, ch: "↑" }, { dx: -47, dy: 0, ch: "←" }, { dx: 0, dy: 0, ch: "↓", drip: true }, { dx: 47, dy: 0, ch: "→" } ];
+    ctx.save();
+    ctx.translate(cx, cy); ctx.scale(scale, scale); ctx.translate(-cx, -cy);
+    for (const c of caps) {
+      const jx = t < 0.5 ? (Math.random() * 2 - 1) * (0.5 - t) * 7 : 0;
+      const tw = Math.sin(performance.now() / 97 + c.dx * 3.7 + c.dy * 1.3) > 0.986 ? 1 : 0;
+      const x = cx + c.dx + jx, y = cy + c.dy;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(tw * 0.045);
+      if (dissolving) {
+        for (let s = 0; s < 4; s++) { ctx.fillStyle = s % 2 ? "#251c31" : "#1d1626"; ctx.globalAlpha = alpha; const off = (s - 1.5) * (t - 3.4) * 15; ctx.fillRect(-20 + off, -20 + s * 10, 40, 9); }
+        if (Math.random() < 0.55) parts.push({ x: x + (Math.random() * 36 - 18), y: y + (Math.random() * 36 - 18), vx: (Math.random() * 30 - 15), vy: 30 + Math.random() * 46, life: 0.9, t: 0, color: "#9a8fb5", size: 1.6 + Math.random() * 2 });
+      } else {
+        ctx.globalAlpha = alpha * (0.9 + Math.sin(performance.now() / 640 + c.dx) * 0.07);
+        ctx.fillStyle = "#1d1626"; ctx.strokeStyle = "#7a6896"; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.roundRect(-20, -20, 40, 40, 7); ctx.fill(); ctx.stroke();
+        if (c.drip) { const dl = Math.min(26, Math.max(0, t - 0.9) * 9); if (dl > 1) { ctx.fillStyle = "rgba(16,6,8,0.9)"; ctx.fillRect(-2.5, 20, 5, dl); ctx.beginPath(); ctx.arc(0, 20 + dl, 3.4, 0, 6.283); ctx.fill(); } }
+      }
+      ctx.globalAlpha = alpha; ctx.fillStyle = "#e8ddc4"; ctx.font = "bold 19px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(c.ch, 0, 1);
+      ctx.restore();
+    }
+    // the dash cap
+    ctx.save(); ctx.translate(cx, cy + 48);
+    if (dissolving) { for (let s = 0; s < 3; s++) { ctx.fillStyle = s % 2 ? "#251c31" : "#1d1626"; ctx.globalAlpha = alpha; ctx.fillRect(-66 + (s - 1) * (t - 3.4) * 15, -15 + s * 10, 132, 9); } }
+    else { ctx.globalAlpha = alpha * 0.94; ctx.fillStyle = "#1d1626"; ctx.strokeStyle = "#7a6896"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.roundRect(-66, -15, 132, 30, 7); ctx.fill(); ctx.stroke(); }
+    ctx.globalAlpha = alpha; ctx.fillStyle = "#e8ddc4"; ctx.font = "bold 12.5px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("SPACE — DASH ↯", 0, 1);
+    ctx.restore();
+    ctx.font = "italic 12px Georgia, serif"; ctx.fillStyle = `rgba(201,168,106,${alpha * 0.9})`; ctx.textAlign = "center";
+    ctx.fillText("the dead are coming. move.", cx, cy - 108);
+    ctx.restore();
   }
   // ---------- input ----------
   function canvasPos(ev) { const r = cv.getBoundingClientRect(); return { x: (ev.clientX - r.left) * W / r.width, y: (ev.clientY - r.top) * H / r.height, inside: true }; }
@@ -1295,7 +1403,7 @@
       if (ashes < G.TERRAIN.barrierCost) { log("Barricades cost 15 ash."); placingBarrier = false; updateBarrierButton(); return; }
       ashes -= G.TERRAIN.barrierCost;
       barriers.push({ c, r, hp: G.TERRAIN.barrierHp, max: G.TERRAIN.barrierHp });
-      SFX.place(); burst(c * TILE + 18, r * TILE + 18, "#a98a54", 10); buildFlow();
+      SFX.place(); burst(c * TILE + 20, r * TILE + 20, "#a98a54", 10); buildFlow();
       log("Barricade raised. The dead must chew through it — or go around.");
       if (ashes < G.TERRAIN.barrierCost) placingBarrier = false;
       updateHUD(); updateBarrierButton(); return;

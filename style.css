@@ -158,3 +158,30 @@ aside p{margin:4px 0 10px;font-size:14px;line-height:1.45}
 #pack-wrap{position:relative}
 #pack-hand{left:-104px;top:-22px;width:158px}
 #pack-hand-label{margin:30px 0 2px 104px}
+
+/* ==== v8: dawn rewards, the circle speaks, THE RITUAL ==== */
+.legend{font-size:11.5px;color:#9a8fb5;line-height:1.5;margin:7px 0 0}
+.stat-chip.lit{border-color:#ffd94a;color:#ffd94a;box-shadow:0 0 12px rgba(255,217,74,.35)}
+.tithe-opt{padding:8px 11px}
+#pack-modal{background:rgba(2,1,2,.95)}
+#pack-closed img{width:300px;max-width:70vw;border-radius:10px;cursor:pointer;animation:packbreathe 2.6s ease-in-out infinite;box-shadow:0 0 60px rgba(255,90,40,.22),0 24px 60px rgba(0,0,0,.9)}
+@keyframes packbreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+#pack-closed img.tearing{animation:tearshake .43s linear}
+@keyframes tearshake{0%,100%{transform:translate(0,0) rotate(0)}20%{transform:translate(-7px,3px) rotate(-2.4deg)}40%{transform:translate(6px,-4px) rotate(2deg)}60%{transform:translate(-5px,-2px) rotate(-1.4deg)}80%{transform:translate(4px,3px) rotate(1deg)}}
+.pack-breathe-label{font-style:italic;color:#ff9d5c;letter-spacing:2px;animation:candle 2.2s ease-in-out infinite}
+#pack-cards{display:flex;gap:18px;justify-content:center;align-items:flex-start}
+#pack-cards.hidden{display:none}
+.gcard.risen{animation:risein .8s cubic-bezier(.2,.9,.3,1.2) backwards;transition:transform .25s}
+@keyframes risein{from{transform:translateY(76px) rotate(0deg) scale(.82);opacity:0}to{transform:translateY(0) rotate(var(--fan,0deg)) scale(1);opacity:1}}
+.gcard.risen{transform:rotate(var(--fan,0deg))}
+.gcard.flipped:hover{transform:translateY(-13px) rotate(var(--fan,0deg)) scale(1.045)}
+.gcard.nudge{animation:nudge .38s}
+@keyframes nudge{0%,100%{transform:rotate(var(--fan,0deg))}30%{transform:rotate(var(--fan,0deg)) translateX(-6px)}65%{transform:rotate(var(--fan,0deg)) translateX(6px)}}
+.gcard.chosen{animation:chosenflare .95s ease-out forwards;z-index:5}
+@keyframes chosenflare{0%{filter:brightness(1)}30%{filter:brightness(2.1) drop-shadow(0 0 34px rgba(255,217,74,.95));transform:translateY(-26px) rotate(0deg) scale(1.13)}100%{filter:brightness(1.25) drop-shadow(0 0 18px rgba(255,217,74,.6));transform:translateY(-18px) rotate(0deg) scale(1.07)}}
+.gcard.burning{animation:burnaway 1.6s ease-in forwards;pointer-events:none}
+@keyframes burnaway{0%{filter:brightness(1)}18%{filter:brightness(1.7) sepia(1) hue-rotate(-32deg)}45%{filter:brightness(.55) sepia(.8) hue-rotate(-40deg);transform:translateY(9px) rotate(var(--fan,0deg)) scale(.985)}100%{filter:brightness(.06) contrast(1.3);transform:translateY(46px) rotate(calc(var(--fan,0deg) + 5deg)) scale(.94);opacity:0}}
+#pack-prompt{text-align:center;font-size:30px;letter-spacing:5px;color:#e8ddc4;margin:20px 0 0;animation:candle 1.7s ease-in-out infinite}
+#pack-prompt span{font-size:17px;color:#ff5d2e;letter-spacing:3px}
+#pack-prompt.hidden{display:none}
+.ember-p{position:fixed;width:5px;height:5px;border-radius:50%;background:#ff9d3c;box-shadow:0 0 7px 2px rgba(255,120,40,.65);pointer-events:none;z-index:96}

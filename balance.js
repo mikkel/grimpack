@@ -123,15 +123,15 @@
 
   /* THE TITHE — every morning the cathedral demands a choice.
      Every offering is a boon with a price. Refusing is also a choice. */
-  const TITHES = [
-    { id: "braziers", name: "Burn the Tithe",   text: "Pay 30 ash. The braziers burn double tonight — but their light draws +15% more dead.", cost: "ash", amt: 30 },
-    { id: "doors",    name: "Bar the Doors",    text: "The dead come 10% slower tonight — but the timber costs you tomorrow's free pack.", cost: "none", amt: 0 },
-    { id: "blood",    name: "Blood the Circle", text: "Pay 15 HP, for good. Towers deal +15% tonight; consecration rises to +90%.", cost: "hp", amt: 15 },
-    { id: "crypts",   name: "Open the Crypts",  text: "A free pack, right now. But something old wakes — Anointed elites triple tonight.", cost: "none", amt: 0 },
-    { id: "hoard",    name: "Hoard the Ash",    text: "Gain 25 ash now. The dead provide 30% less ash tonight. Misers are remembered.", cost: "none", amt: 0 },
-    { id: "silence",  name: "Refuse the Omen",  text: "Cast tonight's omen out — boon and curse alike. A plain night, chosen by you.", cost: "none", amt: 0 },
-    { id: "bell",     name: "Ring the Bell Early", text: "Packs cost 12 less today — but the night begins already deepened (+2 stacks).", cost: "none", amt: 0 },
-    { id: "pray",     name: "Pray at the Font", text: "Heal 30 HP now. Tonight the Blood Font runs dry — it will not heal.", cost: "none", amt: 0 },
+  const REWARDS = [
+    { id: "braziers", name: "Stoke the Braziers", text: "The braziers burn double tonight." },
+    { id: "doors",    name: "Bar the Doors",      text: "The dead come 10% slower tonight." },
+    { id: "blood",    name: "Blood the Circle",   text: "Towers deal +15% tonight; consecration rises to +90%." },
+    { id: "crypts",   name: "Open the Crypts",    text: "A free pack, right now." },
+    { id: "hoard",    name: "Gather the Ash",     text: "Gain 60 ash now." },
+    { id: "silence",  name: "Refuse the Omen",    text: "Cast tonight's omen out — boon and curse alike. A plain night, chosen by you." },
+    { id: "bell",     name: "Cheap Bells",        text: "Packs cost 12 less today." },
+    { id: "pray",     name: "Pray at the Font",   text: "Heal 40 HP now." },
   ];
 
   /* THE CATHEDRAL FLOOR — 25x21 tiles of 36px. '#' wall (impassable, blocks
@@ -147,8 +147,8 @@
     "...ff.r..........r.ff...",
     ".#....................#.",
     "....##.f........f.##....",
-    "...r.....#....#.....r...",
-    "...r.....#....#.....r...",
+    "...r................r...",
+    "...r................r...",
     "....##.f........f.##....",
     ".#....................#.",
     "...ff.r..........r.ff...",
@@ -158,7 +158,7 @@
     "........................",
   ];
   const TERRAIN = { rubbleHp: 45, barrierCost: 15, barrierHp: 130, barrierMax: 8 };
-  const api = { RARITIES, KIND_WEIGHTS, CARDS, TOWERS, PLAYER_BASE, ENEMIES, waveSpec, PACK, WORLD, OMENS, DIFFS, SYNERGIES, TITHES, TILE, COLS, ROWS, MAP, TERRAIN };
+  const api = { RARITIES, KIND_WEIGHTS, CARDS, TOWERS, PLAYER_BASE, ENEMIES, waveSpec, PACK, WORLD, OMENS, DIFFS, SYNERGIES, REWARDS, TILE, COLS, ROWS, MAP, TERRAIN };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   root.GRIM = api;
 })(typeof window !== "undefined" ? window : globalThis);

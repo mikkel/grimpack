@@ -259,3 +259,25 @@ real ritual circle (480,312).
   choir for boss nights. No more single 22s loop.
 v7 spend $0.0587 (hand $0.011 + two music tracks $0.0477); cumulative
 $0.881 of $5.
+
+## v8 — THE RITUAL (Mikkel's playtest notes, screenshot in hand)
+1. CIRCLE: the two rim-shrine walls inside the ritual circle are GONE —
+   nothing impassable stands in the circle. And the circle now explains
+   itself: step in and the rim flares gold, a halo rings the knight, a
+   callout names it ("CONSECRATED — +45% DAMAGE · THE GROUND HOLDS YOU"),
+   and the stats bar's ⛪ chip lights. (The omen preview also said +30%
+   for a +45% effect — a stale lie, fixed.)
+2. PANEL: THE TITHE IS DEAD. In its place, a DAWN REWARD: survive a
+   night and the cathedral pays its debts — pick 1 of 3, all upside, no
+   prices (heal, ash, a free pack, cheaper packs, blood liturgy...). The
+   begin-blocking "offering" gate is gone; the panel reads top-down as a
+   checklist now.
+3. PACKS ARE A RITUAL, AND A THEFT: the sealed pack is huge and it
+   BREATHES ("it breathes. tear the seal."). Tearing it shakes the foil
+   apart; three cards rise in a fan and flip one by one; then the demand
+   appears — CHOOSE ONE. THE REST BURN. Whispers start under the modal.
+   Click your card: it flares gold and flies to where it applies; the
+   other two ignite, char black, and crumble to embers. You walk away
+   stronger and slightly worse. Packs grant ONE card now (the choice is
+   the power: best of three, aimed at your build). The old 25-ash trade
+   buttons are gone — choosing replaced them.

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GRIMPACK — Crack the seal. Survive the night.</title>
-<link rel="stylesheet" href="style.css?v=42">
+<link rel="stylesheet" href="style.css?v=43">
 <link rel="icon" href="assets/pack.jpg">
 </head>
 <body>
@@ -73,9 +73,9 @@
         <h2 id="phase-title">The Vigil Begins</h2>
         <p id="phase-text">Open your first pack, place what the dead provide, then begin the night.</p>
         <div id="tithe-box" class="hidden">
-          <h3>☗ The Tithe — the cathedral demands a choice</h3>
+          <h3>☀ Dawn Reward — the cathedral pays its debts. Choose one.</h3>
           <div id="tithe-opts"></div>
-          <button id="tithe-skip" class="tithe-opt skip">Make no offering <small>walk in as you are</small></button>
+          <button id="tithe-skip" class="tithe-opt skip">Take nothing <small>a closed fist is also an answer</small></button>
         </div>
         <div id="pack-wrap">
           <button id="btn-pack" class="pack-btn">
@@ -86,7 +86,7 @@
         </div>
         <p id="pack-hand-label" class="hidden">a pack waits. the dead insist.</p>
         <div id="hand-wrap">
-          <h3> Towers in hand <span id="hand-hint">(click a tower, then click the arena — double-click a standing tower to overcharge it)</span></h3>
+          <h3> Towers in hand <span id="hand-hint">(click a tower, then the arena — double-click to overcharge)</span></h3>
           <div id="hand"></div>
         </div>
         <button id="btn-barrier" class="hidden">🧱 Raise Barricade — 15 ash</button>
@@ -102,7 +102,9 @@
           <span class="stat-chip" id="st-crit">CRIT <b>—</b></span>
           <span class="stat-chip" id="st-spd">SPEED <b>—</b></span>
           <span class="stat-chip" id="st-regen">MEND <b>—</b></span>
+          <span class="stat-chip" id="st-cons">⛪ —</span>
         </div>
+        <p class="legend">⛪ the ritual circle: +45% damage inside it, and the ground halves every shove against you · fog hides · walls blind · rubble breaks</p>
       </section>
 
       <section id="collection-wrap">
@@ -122,16 +124,17 @@
   <div class="pack-stage">
     <div id="pack-closed">
       <img id="pack-img" src="assets/pack.jpg" alt="Sealed grimpack">
-      <p>Click the pack to tear the seal…</p>
+      <p class="pack-breathe-label">it breathes. tear the seal.</p>
     </div>
     <p id="foil-note"></p>
     <div id="pack-cards" class="hidden"></div>
+    <p id="pack-prompt" class="hidden">CHOOSE ONE.<br><span>the rest burn.</span></p>
     <button id="btn-collect" class="big-btn hidden">Collect All</button>
   </div>
 </div>
 
 <audio id="dirge" src="assets/dirge2.mp3" loop preload="auto"></audio>
-<script src="balance.js?v=42"></script>
-<script src="game.js?v=42"></script>
+<script src="balance.js?v=43"></script>
+<script src="game.js?v=43"></script>
 </body>
 </html>

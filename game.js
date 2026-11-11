@@ -110,7 +110,7 @@
   let selectedHand = null, moveTower = null, mouse = { x: 0, y: 0 }, touchTarget = null;
   let bossRef = null, shake = 0, hitFlash = 0, waveTime = 0, deepenStacks = 0, deepenShown = 0;
   let placingBarrier = false;
-  let corpses = [], embers = [], titheId = null, tonightTithe = null, tithePending = false, beginArmed = false;
+  let corpses = [], embers = [], titheId = null, tonightTithe = null;
   let diff = G.DIFFS.vigil, omen = null, nextOmen = null;
   let packsThisBuild = 0, bonusCards = 0, emberTimer = 5, strikeWarn = null;
   let best = JSON.parse(localStorage.getItem("grimpack-best") || '{"nights":0,"kills":0,"wins":0,"bestTime":0}');
@@ -125,7 +125,7 @@
       thorns: 0, brandPct: 0, dashCd: 0, dashT: 0, dashDx: 0, dashDy: 0, lastDx: 1, lastDy: 0 };
     enemies = []; bolts = []; ebolts = []; towers = []; shards = []; zones = []; parts = []; texts = []; decals = []; zaps = []; corpses = []; embers = [];
     for (let i = 0; i < 26; i++) embers.push({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - 0.5) * 9, vy: -6 - Math.random() * 12, ph: Math.random() * 6.28 });
-    titheId = null; tonightTithe = null; tithePending = false; beginArmed = false; $("tithe-box").classList.add("hidden");
+    titheId = null; tonightTithe = null; $("tithe-box").classList.add("hidden"); $("pack-prompt").classList.add("hidden");
     buildGrid(); placingBarrier = false;
     wave = 0; spawnQueue = []; waveActive = false; runTime = 0; hitStop = 0;
     ashes = 0; kills = 0; streak = 0; packsOpened = 0; packCost = G.PACK.baseCost; freePacks = 1; dryPacks = 0;
@@ -154,6 +154,7 @@
     if (bossRef && bossRef.hp > 0) { $("boss-bar").classList.remove("hidden"); $("boss-fill").style.width = Math.max(0, bossRef.hp / bossRef.maxHp * 100) + "%"; }
     else $("boss-bar").classList.add("hidden");
     refreshStats(); updatePackHand();
+    { const cc = $("st-cons"); if (cc) { const on = inCircle(player.x, player.y); cc.textContent = on ? "⛪ CONSECRATED +45%" : "⛪ —"; cc.classList.toggle("lit", on); } }
   }
   function packPrice() { return titheId === "bell" ? Math.max(10, packCost - 12) : packCost; }
   function updatePackHand() {
@@ -178,38 +179,34 @@
     else if (ashes >= price) { b.disabled = false; $("pack-btn-label").textContent = `Buy Pack — ${price} ashes`; }
     else { b.disabled = true; $("pack-btn-label").textContent = `Pack — ${price} ashes (need ${price - ashes} more)`; }
   }
-  function offerTithes() {
-    const pool = [...G.TITHES].sort(() => Math.random() - 0.5).slice(0, 3);
+  function offerRewards() {
+    const pool = [...G.REWARDS].sort(() => Math.random() - 0.5).slice(0, 3);
     const box = $("tithe-box"), opts = $("tithe-opts"); opts.innerHTML = "";
     for (const t of pool) {
       const b = document.createElement("button"); b.className = "tithe-opt";
-      const afford = t.cost === "ash" ? ashes >= t.amt : t.cost === "hp" ? player.hp > t.amt + 5 : true;
-      b.disabled = !afford;
-      b.innerHTML = `${t.name} <small>${t.text}${afford ? "" : " (cannot pay)"}</small>`;
-      b.onclick = () => chooseTithe(t);
+      b.innerHTML = `${t.name} <small>${t.text}</small>`;
+      b.onclick = () => chooseReward(t);
       opts.appendChild(b);
     }
-    box.classList.remove("hidden"); tithePending = true; beginArmed = false;
+    box.classList.remove("hidden");
   }
-  function chooseTithe(t) {
+  function chooseReward(t) {
     if (t) {
       titheId = t.id;
-      if (t.cost === "ash") ashes -= t.amt;
-      if (t.cost === "hp") { player.hp -= t.amt; floatText(player.x, player.y - 40, "-" + t.amt + " HP — THE CIRCLE DRINKS", "#d7263d"); }
-      if (t.id === "crypts") { freePacks++; log("Something old wakes in the crypts. A pack slides out of the dark — free."); }
-      if (t.id === "hoard") { ashes += 25; log("You hoard the ash. The dead notice. They always notice."); }
-      if (t.id === "pray") { heal(30); log("You pray at the Font. It answers — once. Tonight it runs dry."); }
-      log(`Tithe chosen: ${t.name}.`, "rare");
-    } else log("No offering. The cathedral says nothing. It doesn't have to.");
-    tithePending = false;
+      if (t.id === "crypts") { freePacks++; log("The crypts open. A pack slides out of the dark — free."); }
+      if (t.id === "hoard") { ashes += 60; log("You gather the ash while it is still warm."); }
+      if (t.id === "pray") { heal(40); log("You pray at the Font. It answers."); }
+      log(`Dawn reward: ${t.name}.`, "rare");
+      floatText(player.x, player.y - 46, t.name.toUpperCase(), "#ffd94a");
+    } else log("You take nothing. The cathedral respects a closed fist.");
     $("tithe-box").classList.add("hidden");
     updateHUD(); updatePackButton();
   }
-  $("tithe-skip").addEventListener("click", () => chooseTithe(null));
+  $("tithe-skip").addEventListener("click", () => chooseReward(null));
   function showOmenPreview() {
     if (wave >= 10) return;
     $("phase-text").innerHTML = `Tonight's omen: <b style="color:#ffd94a">${nextOmen.name}</b> — ${nextOmen.desc}` +
-      `<br><span style="opacity:.75">Open packs, place towers (the ritual circle consecrates them: +30% damage), then begin.</span>`;
+      `<br><span style="opacity:.75">Open packs, place towers, then begin. The circle below explains itself — stand in it and see.</span>`;
   }
   function renderHand() {
     const el = $("hand"); el.innerHTML = "";
@@ -345,7 +342,7 @@
 
   // pack modal flow
   let currentPack = null, flipped = 0;
-  let hintT = -1, hintSlammed = false, beams = [];
+  let hintT = -1, hintSlammed = false, beams = [], wasInCircle = false, circleMsgCd = 0;
   const statPrev = {};
   function openPack() {
     if (state !== "build") return;
@@ -355,61 +352,74 @@
     packsOpened++; packsThisBuild++; state = "pack"; currentPack = null; flipped = 0;
     $("pack-modal").classList.remove("hidden");
     $("pack-closed").style.display = ""; $("pack-cards").classList.add("hidden");
-    $("pack-cards").innerHTML = ""; $("btn-collect").classList.add("hidden");
+    $("pack-cards").innerHTML = ""; $("btn-collect").classList.add("hidden"); $("pack-prompt").classList.add("hidden"); $("pack-img").classList.remove("tearing"); ritualChosen = false;
     $("foil-note").textContent = packsThisBuild >= 3 ? "" : (packsThisBuild === 2 ? "One more pack this vigil and it turns FOIL — every card +1 rarity." : "");
     updatePackButton(); updateHUD();
   }
+  let whisperTimer = null, ritualChosen = false;
+  function startWhispers() { stopWhispers(); whisperTimer = setInterval(() => noiseBurst(0.5, 0.02), 2700); }
+  function stopWhispers() { if (whisperTimer) { clearInterval(whisperTimer); whisperTimer = null; } }
+  function burnCard(el) {
+    el.classList.add("burning");
+    const r = el.getBoundingClientRect();
+    for (let i = 0; i < 14; i++) {
+      const s = document.createElement("span"); s.className = "ember-p";
+      s.style.left = (r.left + Math.random() * r.width) + "px"; s.style.top = (r.top + r.height * (0.4 + Math.random() * 0.6)) + "px";
+      document.body.appendChild(s);
+      s.animate([
+        { transform: "translate(0,0) scale(1)", opacity: 1 },
+        { transform: `translate(${Math.random() * 44 - 22}px, ${-70 - Math.random() * 90}px) scale(0.2)`, opacity: 0 }
+      ], { duration: 900 + Math.random() * 800, easing: "ease-out" }).onfinish = () => s.remove();
+    }
+  }
+  function chooseCard(pull, el) {
+    if (ritualChosen) return; ritualChosen = true;
+    stopWhispers();
+    el.classList.add("chosen"); SFX.toll(); SFX.shock();
+    [...$("pack-cards").children].forEach(c => { if (c !== el) burnCard(c); });
+    playSnd("boom", 0.30); noiseBurst(0.4, 0.10);
+    log(`You take the ${pull.def.name}. The rest burn. The pack does not forgive — but it respects.`, "epic");
+    setTimeout(() => { flyCard(el, pull); setTimeout(() => applyCard(pull), 700); }, 950);
+    setTimeout(() => { currentPack = null; $("pack-modal").classList.add("hidden"); state = "build"; updatePackButton(); updateHUD(); }, 2000);
+  }
   $("pack-img").addEventListener("click", () => {
     if (currentPack) return;
-    SFX.rip(); currentPack = rollPack();
-    if (currentPack[0] && currentPack[0].foil) { $("foil-note").textContent = "✦ FOIL PACK — every card raised a rarity ✦"; hitStop = Math.max(hitStop, 0.08); }
-    $("pack-closed").style.display = "none";
-    const wrap = $("pack-cards"); wrap.classList.remove("hidden");
-    currentPack.forEach((pull, i) => {
-      const R = G.RARITIES[pull.rarityIdx], d = document.createElement("div");
-      d.className = "gcard";
-      d.innerHTML = `<div class="inner">
-        <div class="face back"><img src="assets/card-back.jpg" alt="">
-          <button class="trade-btn" title="Burn 25 ashes to trade this card for a new pull">↻ trade · 25 ash</button></div>
-        <div class="face front" style="border-color:${R.color}">
-          <img src="${pull.def.art}" alt="">
-          <div class="cbody">
-            <span class="cname">${pull.def.name}</span>
-            <span class="crar" style="color:${R.color}">${R.name} · ${pull.def.kind}</span>
-            <span class="cstat">${describeCard(pull)}</span>
-            <span class="cblurb">${pull.def.blurb}</span>
-            <button class="trade-btn" title="Burn 25 ashes to trade this card for a new pull">↻ trade · 25 ash</button>
-          </div></div></div>`;
-      const trades = d.querySelectorAll(".trade-btn");
-      trades.forEach(tr => { if (ashes < 25) tr.disabled = true; });
-      const doTrade = ev => {
-        ev.stopPropagation();
-        if (ashes < 25 || d.dataset.traded) return;
-        d.dataset.traded = "1";
-        ashes -= 25;
-        let nri = rollRarityIdx(diff.luck); if (pull.foil) nri = Math.min(4, nri + 1);
-        const np = { def: rollCard(), rarityIdx: nri, foil: pull.foil };
-        currentPack[i] = np;
-        d.querySelector(".front").style.borderColor = G.RARITIES[np.rarityIdx].color;
-        d.querySelector(".front img").src = np.def.art;
-        d.querySelector(".cname").textContent = np.def.name;
-        const cr = d.querySelector(".crar"); cr.textContent = `${G.RARITIES[np.rarityIdx].name} · ${np.def.kind}`; cr.style.color = G.RARITIES[np.rarityIdx].color;
-        d.querySelector(".cstat").textContent = describeCard(np);
-        d.querySelector(".cblurb").textContent = np.def.blurb;
-        trades.forEach(tr => tr.remove()); noiseBurst(0.15, 0.08);
-        log("The dead accept your trade."); updateHUD(); updatePackButton();
-      };
-      trades.forEach(tr => tr.onclick = doTrade);
-      d.onclick = () => {
-        if (d.classList.contains("flipped")) return;
-        d.classList.add("flipped"); SFX.flip(pull.rarityIdx);
-        if (pull.rarityIdx >= 4) { hitStop = Math.max(hitStop, 0.1); SFX.toll(); }
-        flipped++;
-        if (flipped >= currentPack.length) $("btn-collect").classList.remove("hidden");
-      };
-      wrap.appendChild(d);
-      setTimeout(() => { if (!d.classList.contains("flipped")) d.click(); }, 2500 + i * 900);
-    });
+    $("pack-img").classList.add("tearing"); SFX.rip(); noiseBurst(0.3, 0.12);
+    setTimeout(() => {
+      currentPack = rollPack(); ritualChosen = false;
+      if (currentPack[0] && currentPack[0].foil) { $("foil-note").textContent = "✦ FOIL PACK — every card raised a rarity ✦"; hitStop = Math.max(hitStop, 0.08); }
+      $("pack-closed").style.display = "none";
+      const wrap = $("pack-cards"); wrap.classList.remove("hidden");
+      currentPack.forEach((pull, i) => {
+        const R = G.RARITIES[pull.rarityIdx], d = document.createElement("div");
+        d.className = "gcard risen";
+        d.style.setProperty("--fan", (i - (currentPack.length - 1) / 2) * 7 + "deg");
+        d.innerHTML = `<div class="inner">
+          <div class="face back"><img src="assets/card-back.jpg" alt=""></div>
+          <div class="face front" style="border-color:${R.color}">
+            <img src="${pull.def.art}" alt="">
+            <div class="cbody">
+              <span class="cname">${pull.def.name}</span>
+              <span class="crar" style="color:${R.color}">${R.name} · ${pull.def.kind}</span>
+              <span class="cstat">${describeCard(pull)}</span>
+              <span class="cblurb">${pull.def.blurb}</span>
+            </div></div></div>`;
+        d.onclick = () => {
+          if (ritualChosen) return;
+          if (!d.classList.contains("flipped")) {
+            d.classList.add("flipped"); SFX.flip(pull.rarityIdx);
+            if (pull.rarityIdx >= 4) { hitStop = Math.max(hitStop, 0.1); SFX.toll(); }
+            flipped++;
+            if (flipped >= currentPack.length) { $("pack-prompt").classList.remove("hidden"); startWhispers(); }
+            return;
+          }
+          if (flipped >= currentPack.length) chooseCard(pull, d);
+          else { d.classList.add("nudge"); setTimeout(() => d.classList.remove("nudge"), 400); }
+        };
+        wrap.appendChild(d);
+        setTimeout(() => { if (!d.classList.contains("flipped")) d.click(); }, 700 + i * 650);
+      });
+    }, 430);
   });
   function flyCard(el, pull) {
     const r = el.getBoundingClientRect();
@@ -585,7 +595,7 @@
     const isBoss = type === "abbot" || type === "vesper";
     let hp = base.hp * (isBoss ? spec.bossScale : spec.hpScale) * diff.hp;
     if (omen && omen.bruteHp && type === "brute") hp *= omen.bruteHp;
-    const elite = !isBoss && Math.random() < 0.04 * (omen && omen.eliteMult ? omen.eliteMult : 1) * (tonightTithe === "crypts" ? 3 : 1);
+    const elite = !isBoss && Math.random() < 0.04 * (omen && omen.eliteMult ? omen.eliteMult : 1) ;
     if (elite) hp *= 3.2;
     if (type !== "wraith") { const [sx, sy] = nearestPassable(x, y); x = sx; y = sy; }
     const e = { type, x, y, hp, maxHp: hp, speed: base.speed * (0.9 + Math.random() * 0.2) * (omen && omen.enemySpeed ? omen.enemySpeed : 1) * (tonightTithe === "doors" ? 0.9 : 1),
@@ -601,7 +611,6 @@
     if (wave === 0) { hintT = 0; hintSlammed = false; }
     placingBarrier = false;
     if (state !== "build") return;
-    if (tithePending && !beginArmed) { beginArmed = true; $("btn-begin").textContent = "Begin Anyway — Night " + (wave + 1) + " ☾"; const b = $("tithe-box"); b.classList.add("flash"); setTimeout(() => b.classList.remove("flash"), 1100); log("The cathedral waits for an offering. Choose — or begin anyway (click Begin again)."); return; }
     if (freePacks > 0) log("You begin the night with an unopened pack. It will keep.");
     selectedHand = null; moveTower = null; renderHand();
     wave++; waveActive = true; state = "wave"; packsThisBuild = 0; waveTime = 0; deepenStacks = 0; deepenShown = 0;
@@ -609,9 +618,7 @@
     if (omen && omen.packBonus) bonusCards += omen.packBonus;
     spawnQueue = buildSpawnQueue(wave); spawnTimer = 0; emberTimer = 4;
     tonightTithe = titheId; titheId = null;
-    if (tonightTithe === "bell") { waveTime = 40; log("The bell was rung early. The night begins already deepened."); }
     if (tonightTithe === "silence") { omen = null; log("The omen is cast out. A plain night — chosen."); }
-    if (tonightTithe === "braziers") { const extra = Math.floor(spawnQueue.length * 0.15); for (let i = 0; i < extra; i++) spawnQueue.push(Math.random() < 0.7 ? "husk" : "cultist"); log("The brazier-light draws them. More dead tonight."); }
     if (player.wrathNext) { player.wrathWave = true; player.wrathNext = false; log("Wrath Draught: +25% damage this wave."); }
     banner((wave === 10 ? "☠ THE FINAL NIGHT ☠ " : "NIGHT " + wave) + (omen && !omen.plain ? " — " + omen.name.toUpperCase() : ""));
     $("phase-title").textContent = "Night " + wave + (omen ? " · " + omen.name : "");
@@ -624,7 +631,6 @@
     if (shards.length) { const kept = Math.ceil(shards.length / 2); ashes += kept; log(`Dawn stirs the ash — it remembers its owner. +${kept} ashes gathered (${shards.length - kept} guttered out in the dark).`); shards = []; }
     player.wrathWave = false;
     if (wave >= 10) return endRun(true);
-    if (tonightTithe === "doors") log("The barred doors cost you: no free pack this morning.");
     else freePacks++;
     tonightTithe = null; SFX.toll();
     log(`Night ${wave} survived. A fresh pack drops from the dark.`);
@@ -632,7 +638,7 @@
     showOmenPreview();
     $("btn-begin").disabled = false; $("btn-begin").textContent = "Begin Night " + (wave + 1) + " ☾";
     updatePackButton(); updateHUD();
-    if (wave >= 1 && wave < 10) offerTithes();
+    if (wave >= 1 && wave < 10) offerRewards();
   }
   function endRun(wonGame) {
     state = wonGame ? "win" : "over";
@@ -669,7 +675,7 @@
       corpses.push({ img: e.img, x: e.x, y: e.y, s: e.r * 3.4, t: 0, dir: Math.random() < 0.5 ? -1 : 1, boss: e.boss, vx: (e.vx || 0) * 1.2 + (e.lastKbX || 0), vy: (e.vy || 0) * 1.2 + (e.lastKbY || 0), spin: 0, av: (Math.random() - 0.5) * 3 + ((e.lastKbX || 0) * 0.004), smear: 0 }); if (corpses.length > 40) corpses.shift();
       burst(e.x, e.y, e.type === "wraith" ? "#9fd8ff" : e.type === "plague" ? "#b6d94a" : "#c93b2e", e.boss ? 46 : 10);
       decals.push({ x: e.x, y: e.y, r: e.r * (0.8 + Math.random() * 0.7), a: 0.34 }); if (decals.length > 260) decals.shift();
-      const ashN = Math.round(e.ash * (omen && omen.ashMult ? omen.ashMult : 1) * (tonightTithe === "hoard" ? 0.7 : 1));
+      const ashN = Math.round(e.ash * (omen && omen.ashMult ? omen.ashMult : 1));
       for (let i = 0; i < ashN; i++) shards.push({ x: e.x + (Math.random() * 24 - 12), y: e.y + (Math.random() * 24 - 12), vx: 0, vy: 0, t: Math.random() * 6, age: 0 });
       if (streak > 0 && streak % 25 === 0) { ashes += 5; floatText(player.x, player.y - 40, "RAMPAGE +5 ash", "#ff7a26"); log(`Rampage — ${streak} slain without a scratch. The dead provide (+5 ashes).`); updatePackButton(); }
       if (e.elite) { hitStop = Math.max(hitStop, 0.05); log("An Anointed one falls. It died rich."); }
@@ -769,6 +775,9 @@
     runTime += dt;
     if (waveActive) {
       waveTime += dt;
+      { const ic = inCircle(player.x, player.y); circleMsgCd -= dt;
+        if (ic && !wasInCircle && waveActive && circleMsgCd <= 0) { floatText(player.x, player.y - 66, "✦ CONSECRATED — +45% DAMAGE · THE GROUND HOLDS YOU", "#ffd94a"); circleMsgCd = 7; }
+        wasInCircle = ic; }
       const st = Math.floor(waveTime / 20);
       if (st > deepenStacks) {
         deepenStacks = st;
@@ -865,7 +874,7 @@
       const def = G.TOWERS[tw.type], lvM = Math.pow(G.PACK.towerLevelMult, tw.level - 1) * (tonightTithe === "blood" ? 1.15 : 1), cons = inCircle(tw.x, tw.y) ? (tonightTithe === "blood" ? 1.9 : WORLD.consecration) : 1;
       tw.cd -= dt;
       if (tw.type === "font") {
-        if (tonightTithe !== "pray" && Math.hypot(player.x - tw.x, player.y - tw.y) < def.auraRange + player.r) heal(def.healPerSec * tw.mult * lvM * dt * (inCircle(tw.x, tw.y) ? WORLD.consecration : 1));
+        if (Math.hypot(player.x - tw.x, player.y - tw.y) < def.auraRange + player.r) heal(def.healPerSec * tw.mult * lvM * dt * (inCircle(tw.x, tw.y) ? WORLD.consecration : 1));
         continue;
       }
       if (tw.type === "bell") {
@@ -1162,6 +1171,13 @@
     const cActive = inCircle(player.x, player.y);
     ctx.strokeStyle = `rgba(255,60,60,${cActive ? 0.5 : 0.22})`; ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.arc(WORLD.circle.x, WORLD.circle.y, WORLD.circle.r, 0, 6.283); ctx.stroke();
+    if (inCircle(player.x, player.y)) {
+      const pu = 0.5 + Math.sin(performance.now() / 300) * 0.22;
+      ctx.strokeStyle = `rgba(255,217,74,${pu})`; ctx.lineWidth = 3.5;
+      ctx.beginPath(); ctx.arc(WORLD.circle.x, WORLD.circle.y, WORLD.circle.r, 0, 6.283); ctx.stroke();
+      ctx.strokeStyle = `rgba(255,240,190,${pu * 0.8})`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(player.x, player.y, player.r + 10 + Math.sin(performance.now() / 260) * 2, 0, 6.283); ctx.stroke();
+    }
     ctx.strokeStyle = `rgba(255,217,74,${cActive ? 0.35 : 0.10})`; ctx.lineWidth = 9;
     ctx.beginPath(); ctx.arc(WORLD.circle.x, WORLD.circle.y, WORLD.circle.r - 8, performance.now() / 2400, performance.now() / 2400 + 4.4); ctx.stroke();
     // braziers flicker

@@ -391,6 +391,7 @@
   }
   function endWave() {
     waveActive = false; state = "build"; bossRef = null; omen = null; strikeWarn = null;
+    if (shards.length) { ashes += shards.length; log(`Dawn stirs the ash — it remembers its owner. +${shards.length} ashes gathered.`); shards = []; }
     player.wrathWave = false;
     if (wave >= 10) return endRun(true);
     freePacks++; SFX.toll();

@@ -541,3 +541,27 @@ again. unnerving."
 - Enemy hex bolts wobble sideways as they come and pulse as they
   breathe, with violet afterimages — straight lines were too honest
   for something a cultist threw at you.
+
+## v17.1 (2026-11-11) — v17 was too faint, and one bug was not
+- Verification of v17: only the cultist swell confirmed. Eyes sat on
+  the ribcage at 1.9px (invisible), trails drew as the same thin lines
+  they replaced (7 frames of trail at bolt speed IS a 70px line),
+  leak drops were 4px at 0.20 alpha on a dark floor, and the lurch
+  hid inside crowd jams. Everything got bigger, brighter, deeper.
+- THE ✦ BUG: a cultist whose shot is blocked (no line of sight, out
+  of range, knight in fog) never reset fireT — it ran negative
+  forever, and the charge glyph scaled with (0.5 - fireT): unbounded.
+  One tester frame caught a ~200px star. Fixed three ways: fireT
+  retries at 0.45s when the shot is not there, the charge is clamped
+  0..1, and the swell is capped — the telegraph is now a violet ring
+  that closes around the cultist as the shot comes.
+- Eyes moved to each sprite's skull-line (per-type offsets), 2.7px
+  (3.4 for brutes/bosses), glowing, wraiths get dark sockets so the
+  pale pupils read on a pale wisp. Lurch deepened: near-stop troughs
+  (x0.14) and lunging surges (x2.7), slower cycle, and the body
+  slumps/stretches with the pulse so the gait shows in the silhouette,
+  not just the speed. Leak drops doubled in size and opacity. Comet
+  trails shortened and fattened (alpha .52, width to 5.6), heads
+  enlarged with real glow, spike darts lengthened. Hex bolts slowed
+  (245 -> 215) and thickened (r6 -> r7) so a human eye — or a camera —
+  can actually catch one.

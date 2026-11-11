@@ -1514,7 +1514,7 @@
     for (const b of bolts) {
       if (b.homing && !b.homing.dead) { const a = Math.atan2(b.homing.y - b.y, b.homing.x - b.x), sp = Math.hypot(b.vx, b.vy); b.vx = Math.cos(a) * sp; b.vy = Math.sin(a) * sp; }
       // v17: every bolt drags a fading trail; pyre embers ARC and smoke
-      b.trail = b.trail || []; b.trail.unshift({ x: b.x, y: b.y }); if (b.trail.length > 7) b.trail.pop();
+      b.trail = b.trail || []; b.trail.unshift({ x: b.x, y: b.y }); if (b.trail.length > 5) b.trail.pop();
       if (b.kind === "ember") { b.vy += 300 * dt; if (Math.random() < 0.55) parts.push({ x: b.x, y: b.y - 2, vx: (Math.random() - 0.5) * 12, vy: -22 - Math.random() * 14, life: 0.55, t: 0, color: "#4a4238", size: 2.6 }); }
       b.x += b.vx * dt; b.y += b.vy * dt;
       if (pillarHit(b.x, b.y)) { b.dead = true; burst(b.x, b.y, "#8a7f6a", 3); continue; }
@@ -1600,19 +1600,20 @@
       // are exempt: their smoothness is what makes them worse.
       e.gaitT = (e.gaitT || 0) + dt;
       if (e.type !== "wraith") {
-        const gf = e.type === "brute" || e.boss ? 1.5 : e.type === "cultist" ? 2.1 : e.type === "plague" ? 2.4 : 3.0;
-        const pulse = Math.pow(Math.max(0, Math.sin(e.gaitT * gf + e.wob)), 2);
-        sp *= (0.30 + 1.05 * pulse) * 1.6; // deep stalls, hard surges; the 1.6 keeps the night's average pace honest
+        const gf = e.type === "brute" || e.boss ? 1.2 : e.type === "cultist" ? 1.8 : e.type === "plague" ? 2.0 : 2.3;
+        const pulse = Math.pow(Math.max(0, Math.sin(e.gaitT * gf + e.wob)), 1.2);
+        e.gaitPulse = pulse;
+        sp *= 0.14 + 2.6 * pulse; // near-stop troughs, lunging surges; mean pace ≈ the old glide
         if (e.hp < e.maxHp * 0.5) sp *= 0.85; // the wounded drag themselves
       }
       // twitches: brief, wrong little spasms (render reads twitchFx)
       e.twitchT = e.twitchT == null ? 1 + Math.random() * 3.5 : e.twitchT - dt;
-      if (e.twitchT <= 0) { e.twitchT = 1.4 + Math.random() * 3.8; e.twitchFx = 0.16; }
+      if (e.twitchT <= 0) { e.twitchT = 1.4 + Math.random() * 3.8; e.twitchFx = 0.22; }
       if (e.twitchFx > 0) e.twitchFx -= dt;
       // the wounded leak: a dotted blood trail behind anything half-dead
       if (e.hp < e.maxHp * 0.5 && Math.hypot(e.vx || 0, e.vy || 0) > 12) {
         e.dripT = (e.dripT || 0) - dt;
-        if (e.dripT <= 0) { e.dripT = 0.34; decals.push({ x: e.x + (Math.random() * 10 - 5), y: e.y + e.r * 0.7, r: 3.5 + Math.random() * 3, a: 0.20 }); if (decals.length > 260) decals.shift(); }
+        if (e.dripT <= 0) { e.dripT = 0.27; decals.push({ x: e.x + (Math.random() * 10 - 5), y: e.y + e.r * 0.7, r: 5 + Math.random() * 3.5, a: 0.30 }); if (decals.length > 260) decals.shift(); }
       }
       const dpE = Math.hypot(player.x - e.x, player.y - e.y);
       let mx, my;
@@ -1706,10 +1707,11 @@
       if (e.type !== "cultist" || e.dead) continue;
       e.fireT = (e.fireT == null ? 0.6 + Math.random() * 0.7 : e.fireT) - dt;
       const dp = Math.hypot(player.x - e.x, player.y - e.y);
+      if (e.fireT <= 0 && !(dp < 235 && !losBlocked(e.x, e.y, player.x, player.y) && !inFogAt(player.x, player.y))) e.fireT = 0.45; // shot not there: breathe and retry — never let the charge run away below zero (v17's unbounded ✦)
       if (e.fireT <= 0 && dp < 235 && !losBlocked(e.x, e.y, player.x, player.y) && !inFogAt(player.x, player.y)) {
         e.fireT = 2.3;
         const a = Math.atan2(player.y - e.y, player.x - e.x);
-        ebolts.push({ x: e.x, y: e.y, vx: Math.cos(a) * 245, vy: Math.sin(a) * 245, r: 6, dmg: e.dmg, kind: "hex" });
+        ebolts.push({ x: e.x, y: e.y, vx: Math.cos(a) * 215, vy: Math.sin(a) * 215, r: 7, dmg: e.dmg, kind: "hex" });
         burst(e.x, e.y - 10, "#b48be0", 3);
       }
     }
@@ -1886,25 +1888,31 @@
         continue;
       }
       shadow(e.x, e.y + e.r * 1.15, e.r * 1.05);
-      const twJ = e.twitchFx > 0 ? Math.sin(performance.now() * 1.9) * 0.14 : 0;
-      const twX = e.twitchFx > 0 ? Math.sin(performance.now() * 2.3) * 1.6 : 0;
-      drawSpr(e.img, e.x + twX, e.y + bob, sc, { rot: tilt + twJ, sx, sy, alpha: flick ? 0.25 : 0.98 });
-      // EYES THAT WATCH (v17): two ember pupils that track the knight —
-      // they sit toward his side of the face and flare when the thing twitches
+      const twJ = e.twitchFx > 0 ? Math.sin(performance.now() * 1.9) * 0.20 : 0;
+      const twX = e.twitchFx > 0 ? Math.sin(performance.now() * 2.3) * 2.4 : 0;
+      const gsy = e.type !== "wraith" ? 0.93 + 0.12 * (e.gaitPulse || 0) : 1; // the body slumps in the trough of the lurch, stretches on the surge
+      drawSpr(e.img, e.x + twX, e.y + bob, sc, { rot: tilt + twJ, sx: sx * (1 + (1 - gsy) * 0.7), sy: sy * gsy, alpha: flick ? 0.25 : 0.98 });
+      // EYES THAT WATCH (v17.1): two lit pupils perched on the skull-line of
+      // each sprite (v17 put them on the ribcage at 1.9px — invisible), with
+      // a glow, a dark socket for the pale wraith, and a gaze that shifts
+      // toward the knight. They flare when the thing twitches.
       if (!flick) {
         const fa = Math.atan2(player.y - e.y, player.x - e.x), fx = Math.cos(fa), fy = Math.sin(fa);
-        const ex = e.x + twX + fx * e.r * 0.34, ey = e.y + bob - e.r * 0.30 + fy * e.r * 0.16;
-        const px2 = -fy, py2 = fx, sep = e.r * 0.30, er = (e.boss || e.type === "brute") ? 2.6 : 1.9;
-        ctx.fillStyle = e.type === "cultist" ? "rgba(201,154,255,0.95)" : e.type === "wraith" ? "rgba(191,230,255,0.95)" : e.type === "plague" ? "rgba(182,217,74,0.95)" : e.boss ? "rgba(255,46,74,0.98)" : "rgba(255,74,46,0.92)";
-        ctx.globalAlpha = e.twitchFx > 0 ? 1 : 0.72 + Math.sin(performance.now() / 340 + e.wob) * 0.16;
+        const oy = e.boss || e.type === "brute" ? -1.0 : e.type === "husk" ? -0.98 : e.type === "plague" ? -0.85 : e.type === "cultist" ? -0.82 : -0.55;
+        const ex = e.x + twX + fx * e.r * 0.16, ey = e.y + bob + oy * e.r + fy * e.r * 0.08;
+        const px2 = -fy, py2 = fx, sep = e.r * 0.34, er = (e.boss || e.type === "brute") ? 3.4 : 2.7;
+        const ecol = e.type === "cultist" ? "#c99aff" : e.type === "wraith" ? "#dff4ff" : e.type === "plague" ? "#b6d94a" : e.boss ? "#ff2e4a" : "#ff4a2e";
+        if (e.type === "wraith") { ctx.fillStyle = "rgba(8,10,26,0.6)"; ctx.beginPath(); ctx.arc(ex + px2 * sep, ey + py2 * sep, er + 1.8, 0, 6.283); ctx.arc(ex - px2 * sep, ey - py2 * sep, er + 1.8, 0, 6.283); ctx.fill(); }
+        ctx.fillStyle = ecol; ctx.shadowColor = ecol; ctx.shadowBlur = 7;
+        ctx.globalAlpha = e.twitchFx > 0 ? 1 : 0.78 + Math.sin(performance.now() / 340 + e.wob) * 0.14;
         ctx.beginPath(); ctx.arc(ex + px2 * sep, ey + py2 * sep, er, 0, 6.283); ctx.arc(ex - px2 * sep, ey - py2 * sep, er, 0, 6.283); ctx.fill();
-        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0; ctx.globalAlpha = 1;
       }
       if (e.flash > 0) { ctx.fillStyle = `rgba(255,240,220,${e.flash * 5})`; ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, 6.283); ctx.fill(); }
       if (e.elite) { ctx.strokeStyle = "#ffd94a"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 5 + Math.sin(performance.now() / 200) * 1.5, 0, 6.283); ctx.stroke(); }
       if (e.enraged) { ctx.strokeStyle = "rgba(255,60,30,0.8)"; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 3, 0, 6.283); ctx.stroke(); }
       if (e.markT > 0) { ctx.fillStyle = "#ffd94a"; ctx.font = "bold 12px system-ui"; ctx.textAlign = "center"; ctx.fillText("✛", e.x, e.y - e.r - 14); }
-      if (e.type === "cultist") { const chg = e.fireT != null && e.fireT < 0.5 ? (0.5 - e.fireT) / 0.5 : 0; ctx.fillStyle = `rgba(200,140,255,${0.65 + chg * 0.35})`; ctx.font = `bold ${11 + chg * 13}px system-ui`; ctx.textAlign = "center"; ctx.shadowColor = "#b366ff"; ctx.shadowBlur = chg * 14; ctx.fillText("✦", e.x, e.y - e.r - 13 - chg * 4); ctx.shadowBlur = 0; }
+      if (e.type === "cultist") { const chg = e.fireT != null ? Math.max(0, Math.min(1, (0.5 - e.fireT) / 0.5)) : 0; ctx.fillStyle = `rgba(200,140,255,${0.65 + chg * 0.35})`; ctx.font = `bold ${11 + chg * 5}px system-ui`; ctx.textAlign = "center"; ctx.shadowColor = "#b366ff"; ctx.shadowBlur = chg * 10; ctx.fillText("✦", e.x, e.y - e.r - 11); ctx.shadowBlur = 0; if (chg > 0) { ctx.strokeStyle = `rgba(179,102,255,${0.35 + chg * 0.5})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 7, -Math.PI / 2, -Math.PI / 2 + chg * 6.283); ctx.stroke(); } }
       if (e.chillT > 0) { ctx.fillStyle = "rgba(160,220,255,0.85)"; ctx.font = "10px system-ui"; ctx.textAlign = "center"; ctx.fillText("❄", e.x + e.r, e.y - e.r); }
       if (e.burnT > 0) { ctx.fillStyle = "rgba(255,140,40,0.9)"; ctx.font = "10px system-ui"; ctx.textAlign = "center"; ctx.fillText("🔥", e.x - e.r, e.y - e.r); }
       if (e.hp < e.maxHp) {
@@ -1967,23 +1975,23 @@
       ctx.lineCap = "round";
       for (let i = tr.length - 1; i >= 0; i--) {
         const p = tr[i], q = i === 0 ? b : tr[i - 1], k = 1 - i / Math.max(1, tr.length);
-        ctx.strokeStyle = col; ctx.globalAlpha = 0.34 * k; ctx.lineWidth = 0.8 + 2.6 * k;
+        ctx.strokeStyle = col; ctx.globalAlpha = 0.52 * k; ctx.lineWidth = 1.2 + 4.4 * k;
         ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
       }
       ctx.globalAlpha = 1;
       if (b.kind === "ember") {
-        const fl = 4.6 + Math.sin(performance.now() / 37 + b.x) * 1.3;
-        ctx.fillStyle = "#ff9a3c"; ctx.shadowColor = "#ff7a26"; ctx.shadowBlur = 13;
+        const fl = 5.6 + Math.sin(performance.now() / 37 + b.x) * 1.5;
+        ctx.fillStyle = "#ff9a3c"; ctx.shadowColor = "#ff7a26"; ctx.shadowBlur = 15;
         ctx.beginPath(); ctx.arc(b.x, b.y, fl, 0, 6.283); ctx.fill(); ctx.shadowBlur = 0;
-        ctx.fillStyle = "#ffe9a8"; ctx.beginPath(); ctx.arc(b.x, b.y, 1.9, 0, 6.283); ctx.fill();
+        ctx.fillStyle = "#ffe9a8"; ctx.beginPath(); ctx.arc(b.x, b.y, 2.3, 0, 6.283); ctx.fill();
       } else if (b.kind === "spike") {
         const a = Math.atan2(b.vy, b.vx);
-        ctx.fillStyle = "#fff3cf"; ctx.shadowColor = "#ffd94a"; ctx.shadowBlur = 7;
-        ctx.beginPath(); ctx.moveTo(b.x + Math.cos(a) * 8, b.y + Math.sin(a) * 8); ctx.lineTo(b.x + Math.cos(a + 2.5) * 4.4, b.y + Math.sin(a + 2.5) * 4.4); ctx.lineTo(b.x + Math.cos(a - 2.5) * 4.4, b.y + Math.sin(a - 2.5) * 4.4); ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0;
+        ctx.fillStyle = "#fff3cf"; ctx.shadowColor = "#ffd94a"; ctx.shadowBlur = 9;
+        ctx.beginPath(); ctx.moveTo(b.x + Math.cos(a) * 13, b.y + Math.sin(a) * 13); ctx.lineTo(b.x + Math.cos(a + 2.5) * 6.5, b.y + Math.sin(a + 2.5) * 6.5); ctx.lineTo(b.x + Math.cos(a - 2.5) * 6.5, b.y + Math.sin(a - 2.5) * 6.5); ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0;
       } else {
-        ctx.fillStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 8;
-        ctx.beginPath(); ctx.arc(b.x, b.y, 3.1, 0, 6.283); ctx.fill(); ctx.shadowBlur = 0;
-        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(b.x, b.y, 1.7, 0, 6.283); ctx.fill();
+        ctx.fillStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 12;
+        ctx.beginPath(); ctx.arc(b.x, b.y, 4.2, 0, 6.283); ctx.fill(); ctx.shadowBlur = 0;
+        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(b.x, b.y, 2.1, 0, 6.283); ctx.fill();
       }
     }
     // enemy bolts — v17: they wobble as they come, breathing violet, with afterimages

@@ -311,3 +311,7 @@ And the skeletal hand: my v9 aside had overflow:hidden, which guillotined
 the hand at the panel edge, and it hung too high (over the phase text).
 Overflow released; the hand now sits at the button's mid-height with its
 fingertip landing on the button's left edge, jabbing into it.
+v9.2: the title-screen pack still showed a black slab — box-shadow paints
+the element's rectangle, not the art's silhouette. On keyed art the
+shadow must be filter: drop-shadow, which follows the alpha shape.
+Applied to the title pack and the ritual modal's sealed pack.

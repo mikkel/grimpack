@@ -132,7 +132,7 @@ aside p{margin:4px 0 10px;font-size:14px;line-height:1.45}
   text-shadow:0 0 34px rgba(255,60,30,.30),0 6px 0 #18060a,0 12px 34px #000;animation:candle 4.7s ease-in-out infinite}
 .game-title span{color:var(--hell);text-shadow:0 0 26px rgba(255,60,30,.55),0 6px 0 #18060a}
 #title-screen .tagline{font-size:19px;color:#e5d9bd;margin:6px 0 4px}
-.title-pack{width:118px;border-radius:8px;margin:14px auto 4px;display:block;box-shadow:0 18px 44px rgba(0,0,0,.85),0 0 0 1px #4a2b18;animation:packfloat 3.6s ease-in-out infinite}
+.title-pack{width:118px;margin:14px auto 4px;display:block;filter:drop-shadow(0 16px 20px rgba(0,0,0,.85)) drop-shadow(0 0 16px rgba(255,110,40,.28));animation:packfloat 3.6s ease-in-out infinite}
 @keyframes packfloat{0%,100%{transform:translateY(0) rotate(-2.2deg)}50%{transform:translateY(-11px) rotate(1.6deg)}}
 .howto-rows{max-width:560px;margin:12px auto;text-align:left}
 .howto-rows p{margin:8px 0;color:#cfc6ad;font-size:14.5px;line-height:1.55;background:rgba(10,8,16,.55);border-left:2px solid #6b4423;padding:8px 12px;border-radius:0 6px 6px 0}
@@ -164,7 +164,7 @@ aside p{margin:4px 0 10px;font-size:14px;line-height:1.45}
 .stat-chip.lit{border-color:#ffd94a;color:#ffd94a;box-shadow:0 0 12px rgba(255,217,74,.35)}
 .tithe-opt{padding:8px 11px}
 #pack-modal{background:rgba(2,1,2,.95)}
-#pack-closed img{width:300px;max-width:70vw;border-radius:10px;cursor:pointer;animation:packbreathe 2.6s ease-in-out infinite;box-shadow:0 0 60px rgba(255,90,40,.22),0 24px 60px rgba(0,0,0,.9)}
+#pack-closed img{width:300px;max-width:70vw;cursor:pointer;animation:packbreathe 2.6s ease-in-out infinite;filter:drop-shadow(0 0 34px rgba(255,90,40,.30)) drop-shadow(0 24px 30px rgba(0,0,0,.9))}
 @keyframes packbreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
 #pack-closed img.tearing{animation:tearshake .43s linear}
 @keyframes tearshake{0%,100%{transform:translate(0,0) rotate(0)}20%{transform:translate(-7px,3px) rotate(-2.4deg)}40%{transform:translate(6px,-4px) rotate(2deg)}60%{transform:translate(-5px,-2px) rotate(-1.4deg)}80%{transform:translate(4px,3px) rotate(1deg)}}

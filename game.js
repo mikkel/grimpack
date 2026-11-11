@@ -430,13 +430,13 @@
   const SEG_W = [1.25, 1.0, 0.9, 1.2, 1.35, 1.1, 0.8, 0.62];
   const W_SUM = SEG_W.reduce((a, b) => a + b, 0);
   let rip = null, ripLive = false;
-  function stallMap(u) { return u < 0.3 ? 0 : (u - 0.3) / 0.7; }
+  function stallMap(u) { return u < 0.45 ? 0 : (u - 0.45) / 0.55; }
   function rawToF(raw) {
     let budget = raw * W_SUM, F = 0, strain = 0;
     for (let k = 0; k < 8; k++) {
       const i = 7 - k, w = SEG_W[i];
       if (budget >= w) { F += 1; budget -= w; }
-      else { const u = budget / w; strain = u < 0.3 ? u / 0.3 : 0; F += stallMap(u); break; }
+      else { const u = budget / w; strain = u < 0.45 ? u / 0.45 : 0; F += stallMap(u); break; }
     }
     return { F, strain };
   }
@@ -456,6 +456,8 @@
   }
   function ripPop(i) {
     SFX.crinkle(0.55); rip.flash = 1;
+    rip.os[i] = 1; rip.impP[i] = Math.min(1, rip.impP[i] + 0.75); rip.impP[i + 1] = Math.min(1, rip.impP[i + 1] + 0.75);
+    if (i === 3 || i === 4) playSnd("rip", 0.30, 0.1);
     const a = SEAM[i], b = SEAM[i + 1];
     foilFlecksAt((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, 4);
     const now = performance.now();
@@ -466,24 +468,34 @@
     const dt = Math.min(0.05, rip.lastT ? (t - rip.lastT) / 1000 : 0.016); rip.lastT = t;
     const { F, strain } = rawToF(rip.raw); rip.F = F; rip.strain = strain;
     for (let i = 0; i < 8; i++) {
-      const target = Math.max(0, Math.min(1, F - (7 - i)));
-      if (rip.prevP[i] === 0 && target > 0 && !rip.done) ripPop(i);
-      rip.prevP[i] = target;
-      rip.segS[i] += (target - rip.segS[i]) * Math.min(1, dt * 15);
+      const base = Math.max(0, Math.min(1, F - (7 - i)));
+      if (rip.prevP[i] === 0 && base > 0 && !rip.done) ripPop(i);
+      rip.prevP[i] = base;
+      rip.os[i] = Math.max(0, rip.os[i] - dt * 4.2);
+      const target = base + 0.28 * rip.os[i] * (base > 0 ? 1 : 0);
+      rip.segS[i] += (target - rip.segS[i]) * Math.min(1, dt * 19);
     }
+    for (let j = 0; j < 9; j++) rip.impP[j] = Math.max(0, rip.impP[j] - dt * 6.5);
     rip.flash = Math.max(0, rip.flash - dt * 5);
     if (strain > 0.4 && t - rip.lastCreak > 150 && Math.random() < 0.5) { rip.lastCreak = t; SFX.crinkle(0.10); }
     const S = rip.segS, sep = [];
     for (let j = 0; j < 9; j++) sep[j] = j === 0 ? S[0] : j === 8 ? S[7] : (S[j - 1] + S[j]) / 2;
     const meanS = S.reduce((a, b) => a + b, 0) / 8;
+    const fi2 = 8 - F;
     const fx = [], fy = [], bx = [], by = [];
     for (let j = 0; j < 9; j++) {
-      const lift = sep[j] * (24 + 78 * Math.pow(j / 8, 1.35)) + meanS * 5;
+      const behind = j - fi2;
+      let bend = 0;
+      if (behind >= 0) bend = 32 * Math.exp(-behind / 1.8);
+      else if (behind > -1) bend = 8 * (1 + behind);
+      const lift = sep[j] * (18 + 46 * Math.pow(j / 8, 1.3)) + bend * Math.min(1, sep[j] + strain * 0.35) + rip.impP[j] * 8 + meanS * 4;
       fx.push(SEAM[j][0] - sep[j] * (j / 8) * 12); fy.push(SEAM[j][1] - lift);
       bx.push(SEAM[j][0]); by.push(SEAM[j][1] + sep[j] * 8);
     }
-    const trx = 453 - sep[8] * 30, try_ = -12 - sep[8] * 30, tlx = -12 + sep[0] * 26, tly = -12 - sep[0] * 26;
-    const flapD = `M${fx[0]},${fy[0]} ` + fx.slice(1).map((x, i) => `L${x},${fy[i + 1]}`).join(" ") + ` L${trx},${try_} L${tlx},${tly} Z`;
+    const trx = 453 - sep[8] * 22, try_ = -12 + sep[8] * 24, tlx = -12 + sep[0] * 20, tly = -12 + sep[0] * 14;
+    const tmx = 220, tmy = -12 + meanS * 10;
+    const rmx = (fx[8] + trx) / 2 + meanS * 7, rmy = (fy[8] + try_) / 2;
+    const flapD = `M${fx[0]},${fy[0]} ` + fx.slice(1).map((x, i) => `L${x},${fy[i + 1]}`).join(" ") + ` L${rmx},${rmy} L${trx},${try_} L${tmx},${tmy} L${tlx},${tly} Z`;
     const bodyD = `M${bx[0]},${by[0]} ` + bx.slice(1).map((x, i) => `L${x},${by[i + 1]}`).join(" ") + ` L453,610 L-12,610 Z`;
     const gapD = `M${fx[0]},${fy[0]} ` + fx.slice(1).map((x, i) => `L${x},${fy[i + 1]}`).join(" ") + ` ` + bx.slice().reverse().map((x, i) => `L${x},${by[8 - i]}`).join(" ") + ` Z`;
     $("clip-top-path").setAttribute("d", flapD);
@@ -500,7 +512,10 @@
     const frontX = SEAM[i0][0] + (SEAM[i1][0] - SEAM[i0][0]) * fr, frontY = SEAM[i0][1] + (SEAM[i1][1] - SEAM[i0][1]) * fr;
     const fg = $("front-glow");
     fg.setAttribute("cx", frontX.toFixed(1)); fg.setAttribute("cy", frontY.toFixed(1));
-    fg.setAttribute("opacity", F < 8 ? (0.28 + strain * 0.55 + rip.flash * 0.35).toFixed(2) : "0");
+    fg.setAttribute("opacity", F < 8 ? (0.45 + strain * 0.5 + rip.flash * 0.4).toFixed(2) : "0");
+    const fc = $("front-core");
+    fc.setAttribute("cx", frontX.toFixed(1)); fc.setAttribute("cy", frontY.toFixed(1));
+    fc.setAttribute("opacity", F < 8 ? (0.30 + strain * 0.45 + rip.flash * 0.5).toFixed(2) : "0");
     const sl = $("stress-line");
     sl.setAttribute("points", SEAM.slice(0, Math.max(2, Math.ceil(fi) + 1)).map(p => `${p[0]},${p[1] + 1}`).join(" "));
     sl.setAttribute("opacity", F < 8 ? (0.07 + strain * 0.48).toFixed(2) : "0");
@@ -508,7 +523,7 @@
     for (const [id, j] of creases) {
       const el = $(id), liftJ = fy[j] - SEAM[j][1];
       el.setAttribute("d", `M${fx[j]},${fy[j]} Q${fx[j] - 12 - j * 3},${fy[j] - 62 + liftJ * 0.3} ${fx[j] - 34 - j * 7},${fy[j] - 128 + liftJ * 0.45}`);
-      el.setAttribute("opacity", (sep[j] * 0.85).toFixed(2));
+      el.setAttribute("opacity", Math.min(1, sep[j] * 1.15).toFixed(2));
     }
     const flapG = $("pack-flap");
     if (rip.flying) {
@@ -517,7 +532,7 @@
       flapG.setAttribute("transform", `translate(${(-180 * e).toFixed(1)} ${(-80 * e - 34 * k).toFixed(1)}) rotate(${(-14 - 108 * e + flut).toFixed(1)} 78 150)`);
       flapG.setAttribute("opacity", (1 - k * 0.92).toFixed(2));
     } else {
-      flapG.setAttribute("transform", `translate(${(-meanS * 10).toFixed(1)} ${(-meanS * 16).toFixed(1)}) rotate(${(-meanS * 7).toFixed(1)} 240 300)`);
+      flapG.setAttribute("transform", `translate(${(-meanS * 6).toFixed(1)} ${(-meanS * 9).toFixed(1)}) rotate(${(-meanS * 4).toFixed(1)} 240 300)`);
       flapG.style.filter = `brightness(${(1 - 0.22 * meanS).toFixed(2)})`;
     }
     if (F >= 7.9 && !rip.done) theGive();
@@ -531,7 +546,7 @@
     setTimeout(showPackCards, 800);
   }
   function resetRip() {
-    rip = { raw: 0, segS: [0, 0, 0, 0, 0, 0, 0, 0], prevP: [0, 0, 0, 0, 0, 0, 0, 0], F: 0, strain: 0, flash: 0, done: false, flying: false, flyK: 0, lastCreak: 0, lastShake: 0, lastT: 0, drag: null, dragAcc: 0 };
+    rip = { raw: 0, segS: [0, 0, 0, 0, 0, 0, 0, 0], prevP: [0, 0, 0, 0, 0, 0, 0, 0], os: [0, 0, 0, 0, 0, 0, 0, 0], impP: [0, 0, 0, 0, 0, 0, 0, 0, 0], F: 0, strain: 0, flash: 0, done: false, flying: false, flyK: 0, lastCreak: 0, lastShake: 0, lastT: 0, drag: null, dragAcc: 0 };
     const flap = $("pack-flap"); if (flap) { flap.setAttribute("transform", ""); flap.setAttribute("opacity", "1"); flap.style.filter = ""; }
     const gh = $("grab-hint"); if (gh) gh.style.display = "";
     ripLive = true; rip.lastT = 0;

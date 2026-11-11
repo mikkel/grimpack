@@ -670,3 +670,15 @@ all — blocked your OWN bolts (rubble never did). Now:
 - Damage you can read: they lean and slump as HP falls.
 - Death with a tail: a smashed barricade leaves WRECKAGE for
   3.5s that slows the dead 45% as they pick through it.
+
+## v19.1 (2026-11-11) — the target was in the floorboards
+The v19 verification found it: assets/arena.jpg itself had a giant
+WHITE painted target (three concentric rings + crosshairs, ~440px)
+baked into the floor art at centre. The coded ring could whisper;
+the JPEG still shouted. Fixed at the source: a luminance-gated
+crush (only the bright paint, cracks/stone untouched) ground the
+rings down to a worn ghost scar — measured: ring-band p75
+luminance 100 -> 44 vs floor p75 24. Old file kept as arena.jpg;
+the game loads arena-v19.jpg (cache-bust by name). The dead
+circle stays in the stone as a scar. The live one is small,
+etched, and earned.

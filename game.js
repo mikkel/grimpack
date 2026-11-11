@@ -12,7 +12,7 @@
   // ---------- images ----------
   const IMG = {};
   function loadImg(key, src) { const i = new Image(); i.src = src; IMG[key] = i; }
-  loadImg("arena", "assets/arena.jpg"); loadImg("hero", "assets/spr/spr-hero.webp");
+  loadImg("arena", "assets/arena-v19.jpg"); loadImg("hero", "assets/spr/spr-hero.webp"); // v19.1: the old arena art had a giant WHITE target painted in its centre — the loudest "circle" in the game was baked into the floor. Crushed to a ghost scar; the etched ring is the only circle now.
   loadImg("husk", "assets/spr/spr-husk.webp"); loadImg("cultist", "assets/spr/spr-cultist.webp");
   loadImg("wraith", "assets/spr/spr-wraith.webp"); loadImg("brute", "assets/spr/spr-brute.webp");
   loadImg("plague", "assets/spr/spr-plague.webp"); loadImg("abbot", "assets/spr/spr-abbot.webp");

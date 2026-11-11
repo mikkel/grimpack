@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GRIMPACK — Crack the seal. Survive the night.</title>
-<link rel="stylesheet" href="style.css?v=44">
+<link rel="stylesheet" href="style.css?v=45">
 <link rel="icon" href="assets/pack.jpg">
 </head>
 <body>
@@ -66,25 +66,26 @@
 
       <div id="boss-bar" class="hidden"><label id="boss-name">VESPER</label><div class="bar"><div id="boss-fill"></div></div></div>
       <div id="wave-banner" class="hidden"></div>
+        <div id="tithe-box" class="reward-dock hidden">
+          <h3>☀ Dawn Reward — the cathedral pays its debts. Choose one.</h3>
+          <div id="tithe-opts"></div>
+          <button id="tithe-skip" class="tithe-opt skip">Take nothing <small>a closed fist is also an answer</small></button>
+        </div>
+
     </div>
 
     <aside id="side">
       <section id="build-panel">
         <h2 id="phase-title">The Vigil Begins</h2>
         <p id="phase-text">Open your first pack, place what the dead provide, then begin the night.</p>
-        <div id="tithe-box" class="hidden">
-          <h3>☀ Dawn Reward — the cathedral pays its debts. Choose one.</h3>
-          <div id="tithe-opts"></div>
-          <button id="tithe-skip" class="tithe-opt skip">Take nothing <small>a closed fist is also an answer</small></button>
-        </div>
         <div id="pack-wrap">
           <button id="btn-pack" class="pack-btn">
             <img src="assets/pack.jpg" alt="Booster pack">
             <span id="pack-btn-label">Open Pack — FREE</span>
           </button>
           <img id="pack-hand" src="assets/spr/spr-packhand.webp" alt="">
+          <p id="pack-hand-label" class="hidden">a pack waits. the dead insist.</p>
         </div>
-        <p id="pack-hand-label" class="hidden">a pack waits. the dead insist.</p>
         <div id="hand-wrap">
           <h3> Towers in hand <span id="hand-hint">(click a tower, then the arena — double-click to overcharge)</span></h3>
           <div id="hand"></div>
@@ -134,7 +135,7 @@
 </div>
 
 <audio id="dirge" src="assets/dirge2.mp3" loop preload="auto"></audio>
-<script src="balance.js?v=44"></script>
-<script src="game.js?v=44"></script>
+<script src="balance.js?v=45"></script>
+<script src="game.js?v=45"></script>
 </body>
 </html>

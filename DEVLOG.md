@@ -281,3 +281,24 @@ $0.881 of $5.
    stronger and slightly worse. Packs grant ONE card now (the choice is
    the power: best of three, aimed at your build). The old 25-ash trade
    buttons are gone — choosing replaced them.
+
+## v9 — ONE PANEL, NOTHING MOVES (Mikkel: "whats with the css. and it
+keeps moving where things are up and down.")
+He was right on both counts. The sidebar was eight versions of CSS in a
+trenchcoat: the base theme (warm brown/gold) fighting a purple theme left
+over from v3 (tithe options, stat chips), boxes inside boxes, and the
+barricade button wearing NO styles at all — a raw white browser button.
+And the jumping had a specific cause: the pack hand's whisper label sat
+in normal flow with a 30px margin, so every time your ashes crossed the
+pack price the whole panel breathed up and down by ~48px; stat chips
+re-wrapped as their text changed; the reward box landed mid-panel at
+dawn and shoved the Begin button away.
+- ONE system: the aside is a single panel; sections are hairline-divided
+  rows, no nested boxes; one button family (dark stone, gold hover);
+  the purple is purged; the barricade button is dressed like the rest.
+- NOTHING MOVES: the dawn reward is now a dock over the arena's lower
+  edge (a presentation moment, not a landslide in the panel); the pack
+  whisper is absolutely positioned in reserved space under the button;
+  the stats are a fixed 3x2 grid with the consecration chip on its own
+  permanent row; the tower shelf and phase text hold reserved heights.
+  Values change. Layout doesn't.

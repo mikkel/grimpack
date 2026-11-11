@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GRIMPACK — Crack the seal. Survive the night.</title>
-<link rel="stylesheet" href="style.css?v=50">
+<link rel="stylesheet" href="style.css?v=52">
 <link rel="icon" href="assets/pack.jpg">
 </head>
 <body>
@@ -124,6 +124,10 @@
 <div id="pack-modal" class="hidden">
   <div class="pack-stage">
     <div id="pack-closed">
+      <div id="pack-vid-wrap" class="hidden">
+        <video id="pack-vid" src="assets/pack-tear.mp4" muted playsinline preload="auto" poster="assets/pack.jpg"></video>
+        <div id="vid-hint"><span class="vring"></span><span class="vdot"></span></div>
+      </div>
       <svg id="pack-svg" viewBox="0 0 443 598" role="img" aria-label="Sealed grimpack - drag the torn corner to rip it open">
         <defs>
           <clipPath id="clip-top"><path id="clip-top-path" d=""/></clipPath>
@@ -171,6 +175,6 @@
 
 <audio id="dirge" src="assets/dirge2.mp3" loop preload="auto"></audio>
 <script src="balance.js?v=48"></script>
-<script src="game.js?v=51"></script>
+<script src="game.js?v=52"></script>
 </body>
 </html>

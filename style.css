@@ -242,3 +242,12 @@ aside h3{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#a89a7
 @keyframes sheensweep{0%,68%{transform:rotate(18deg) translateX(0)}90%,100%{transform:rotate(18deg) translateX(780px)}}
 #grab-hint{animation:hintpulse 1.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
 @keyframes hintpulse{0%,100%{opacity:.95;transform:scale(1)}50%{opacity:.45;transform:scale(1.25)}}
+
+/* ==== v12: the tear, rendered — drag-scrubbed video ==== */
+#pack-vid-wrap{position:relative;width:min(400px,80vw);margin:0 auto;cursor:grab;touch-action:none}
+#pack-vid-wrap:active{cursor:grabbing}
+#pack-vid-wrap.hidden{display:none}
+#pack-vid{width:100%;display:block;border-radius:10px;box-shadow:0 24px 60px rgba(0,0,0,.9)}
+#vid-hint{position:absolute;left:74%;top:13%;width:30px;height:30px;margin:-15px 0 0 -15px;pointer-events:none}
+#vid-hint .vring{position:absolute;inset:0;border:2px solid #ffb35c;border-radius:50%;animation:hintpulse 1.6s ease-in-out infinite}
+#vid-hint .vdot{position:absolute;left:50%;top:50%;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;background:#ffb35c;border-radius:50%}

@@ -354,7 +354,7 @@
     packsOpened++; packsThisBuild++; state = "pack"; currentPack = null; flipped = 0;
     $("pack-modal").classList.remove("hidden");
     $("pack-closed").style.display = ""; $("pack-cards").classList.add("hidden");
-    $("pack-cards").innerHTML = ""; $("btn-collect").classList.add("hidden"); $("pack-prompt").classList.add("hidden"); resetRip(); ritualChosen = false;
+    $("pack-cards").innerHTML = ""; $("btn-collect").classList.add("hidden"); $("pack-prompt").classList.add("hidden"); resetRipAny(); ritualChosen = false;
     $("foil-note").textContent = packsThisBuild >= 3 ? "" : (packsThisBuild === 2 ? "One more pack this vigil and it turns FOIL — every card +1 rarity." : "");
     updatePackButton(); updateHUD();
   }
@@ -385,7 +385,8 @@
     setTimeout(() => { currentPack = null; $("pack-modal").classList.add("hidden"); state = "build"; updatePackButton(); updateHUD(); }, 2000);
   }
   function showPackCards() {
-    ripLive = false;
+    ripLive = false; ripVidLive = false;
+    const v = $("pack-vid"); if (v) v.pause();
     currentPack = rollPack(); ritualChosen = false;
     if (currentPack[0] && currentPack[0].foil) { $("foil-note").textContent = "\u2726 FOIL PACK \u2014 every card raised a rarity \u2726"; hitStop = Math.max(hitStop, 0.08); }
     $("pack-closed").style.display = "none";
@@ -581,6 +582,96 @@
     while (rip.dragAcc > 16) { rip.dragAcc -= 16; if (Math.random() < 0.75) SFX.crinkle(0.05 + Math.random() * 0.07); }
   });
   packSvg.addEventListener("pointerup", () => {
+    if (!rip || !rip.drag) return;
+    const wasClick = rip.drag.moved < 7 && performance.now() - rip.drag.t < 350;
+    rip.drag = null;
+    if (wasClick && !rip.done) autoRip();
+  });
+
+
+  // ---- v12: the tear, rendered — drag scrubs a Seedance clip ----
+  // The SVG rig is the fallback; the film is the real material. Same
+  // resistance model: stalls hold the frame while the wrapper strains,
+  // pops lurch it forward.
+  let ripMode = "svg", ripVidLive = false, vidOK = false, vidErr = false;
+  const packVid = $("pack-vid"), vidWrap = $("pack-vid-wrap");
+  packVid.addEventListener("loadedmetadata", () => { vidOK = true; });
+  packVid.addEventListener("error", () => { vidErr = true; }, true);
+  function resetRipAny() {
+    ripMode = (vidOK && !vidErr) ? "vid" : "svg";
+    if (ripMode === "vid") resetRipVid();
+    else { vidWrap.classList.add("hidden"); $("pack-svg").style.display = ""; resetRip(); }
+  }
+  function resetRipVid() {
+    ripLive = false;
+    rip = { raw: 0, segS: [0, 0, 0, 0, 0, 0, 0, 0], prevP: [0, 0, 0, 0, 0, 0, 0, 0], os: [0, 0, 0, 0, 0, 0, 0, 0], impP: [0, 0, 0, 0, 0, 0, 0, 0, 0], F: 0, strain: 0, flash: 0, done: false, flying: false, flyK: 0, lastCreak: 0, lastShake: 0, lastT: 0, drag: null, dragAcc: 0, segIdx: 0, vt: 0 };
+    $("pack-svg").style.display = "none";
+    vidWrap.classList.remove("hidden");
+    packVid.pause(); try { packVid.currentTime = 0; } catch (e) {}
+    $("vid-hint").style.display = "";
+    ripVidLive = true; rip.lastT = 0;
+    requestAnimationFrame(ripVidFrame);
+  }
+  function vidPop() {
+    SFX.crinkle(0.55);
+    if (rip.segIdx === 4 || rip.segIdx === 5) playSnd("rip", 0.30, 0.1);
+    const now = performance.now();
+    if (now - rip.lastShake > 140) { rip.lastShake = now; const pc = $("pack-closed"); pc.classList.remove("snapshake"); void pc.offsetWidth; pc.classList.add("snapshake"); }
+    const r = vidWrap.getBoundingClientRect();
+    for (let i = 0; i < 5; i++) {
+      const s = document.createElement("span"); s.className = "foil-fleck";
+      s.style.left = (r.left + r.width * (0.45 + Math.random() * 0.4)) + "px";
+      s.style.top = (r.top + r.height * (0.10 + Math.random() * 0.16)) + "px";
+      document.body.appendChild(s);
+      s.animate([
+        { transform: "translate(0,0) rotate(0deg)", opacity: 1 },
+        { transform: `translate(${Math.random() * 90 - 45}px, ${50 + Math.random() * 80}px) rotate(${Math.random() * 320 - 160}deg)`, opacity: 0 }
+      ], { duration: 700 + Math.random() * 500, easing: "cubic-bezier(.2,.7,.3,1)" }).onfinish = () => s.remove();
+    }
+  }
+  function ripVidFrame(t) {
+    if (!ripVidLive || !rip) return;
+    const dt = Math.min(0.05, rip.lastT ? (t - rip.lastT) / 1000 : 0.016); rip.lastT = t;
+    const { F, strain } = rawToF(rip.raw); rip.F = F; rip.strain = strain;
+    const idx = Math.floor(F);
+    if (idx > rip.segIdx && !rip.done) { rip.segIdx = idx; vidPop(); }
+    if (strain > 0.4 && t - rip.lastCreak > 150 && Math.random() < 0.5) { rip.lastCreak = t; SFX.crinkle(0.10); }
+    vidWrap.style.transform = rip.done ? "" : `scale(${(1 + strain * 0.010).toFixed(4)}) rotate(${(strain * 0.5).toFixed(2)}deg)`;
+    if (!rip.done) {
+      const dur = packVid.duration || 5.17;
+      const target = (F / 8) * (dur - 0.45);
+      rip.vt += (target - rip.vt) * Math.min(1, dt * 11);
+      if (Math.abs(packVid.currentTime - rip.vt) > 0.02) { try { packVid.currentTime = rip.vt; } catch (e) {} }
+      if (F >= 7.9) theGiveVid();
+    }
+    if (ripVidLive) requestAnimationFrame(ripVidFrame);
+  }
+  function theGiveVid() {
+    rip.done = true;
+    SFX.tear(); playSnd("rip", 0.45, 0.1); setTimeout(() => SFX.boom(), 260); noiseBurst(0.5, 0.10);
+    vidWrap.style.transform = "";
+    packVid.play().catch(() => {});
+    setTimeout(showPackCards, 950);
+  }
+  vidWrap.addEventListener("pointerdown", e => {
+    if (!rip || rip.done || currentPack || ripMode !== "vid") return;
+    try { vidWrap.setPointerCapture(e.pointerId); } catch (err) {}
+    rip.drag = { x: e.clientX, y: e.clientY, raw0: rip.raw, t: performance.now(), moved: 0 };
+    $("vid-hint").style.display = "none";
+    e.preventDefault();
+  });
+  vidWrap.addEventListener("pointermove", e => {
+    if (!rip || !rip.drag || rip.done) return;
+    const dx = e.clientX - rip.drag.x, dy = e.clientY - rip.drag.y;
+    rip.drag.moved = Math.max(rip.drag.moved, Math.hypot(dx, dy));
+    const proj = dx * -0.52 + dy * -0.86;
+    const dist = Math.max(proj, Math.hypot(dx, dy) * 0.35);
+    const newRaw = Math.min(1, Math.max(rip.drag.raw0, rip.drag.raw0 + dist / 300));
+    rip.dragAcc += (newRaw - rip.raw) * 300;
+    rip.raw = newRaw;
+    while (rip.dragAcc > 16) { rip.dragAcc -= 16; if (Math.random() < 0.75) SFX.crinkle(0.05 + Math.random() * 0.07); }
+  });
+  vidWrap.addEventListener("pointerup", () => {
     if (!rip || !rip.drag) return;
     const wasClick = rip.drag.moved < 7 && performance.now() - rip.drag.t < 350;
     rip.drag = null;

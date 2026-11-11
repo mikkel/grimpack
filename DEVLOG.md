@@ -360,3 +360,18 @@ failure TRAVELS. v11 rebuilds the tear as a traveling front:
 - Dragging itself has texture now: micro-crinkles every ~16px of pull.
 - The final give flutters — the flap tumbles with a decaying wobble
   instead of spinning cleanly away.
+
+## v12 — THE TEAR, RENDERED (Mikkel on v11: "ehh its not great also
+still a bit strange.")
+Diagnosis, honestly: the SVG rig hit its ceiling. The flap was the same
+flat illustration under a moving clip window — the texture never truly
+deformed, and eyes catch that. So the mechanism changed: a Nanoodle
+graph (batch-h, Seedance image-to-video from the pack art, two prompt
+variants, $0.24) rendered the tear as film — real foil physics, silver
+underside, curl, a fragment that breaks free. The "resistance" cut won.
+Interaction kept and mapped onto the film: dragging SCRUBS the video
+through the same stall/pop resistance model — stalls hold the frame
+while the pack visibly strains (scale/tilt, creak-ticks), pops lurch it
+forward with crinkle and flecks; the final give lets the clip play out
+in realtime into the card ritual. The SVG rig remains as a fallback if
+the video can't load. Spend: $1.18 of $5 cumulative.

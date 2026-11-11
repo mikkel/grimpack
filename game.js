@@ -385,6 +385,7 @@
     setTimeout(() => { currentPack = null; $("pack-modal").classList.add("hidden"); state = "build"; updatePackButton(); updateHUD(); }, 2000);
   }
   function showPackCards() {
+    ripLive = false;
     currentPack = rollPack(); ritualChosen = false;
     if (currentPack[0] && currentPack[0].foil) { $("foil-note").textContent = "\u2726 FOIL PACK \u2014 every card raised a rarity \u2726"; hitStop = Math.max(hitStop, 0.08); }
     $("pack-closed").style.display = "none";
@@ -420,43 +421,32 @@
     });
   }
 
-  // ---- THE RIP: a foil pack you tear open with your own hand ----
-  const CATCHES = [0.16, 0.34, 0.52, 0.70, 0.86];
-  let rip = null;
-  function ripState(raw) {
-    let d = raw, strain = 0, stuckAt = -1;
-    for (const c of CATCHES) {
-      if (raw > c && raw < c + 0.095) { d = c; strain = (raw - c) / 0.095; stuckAt = c; break; }
+  // ---- THE RIP v2: a tear that travels, strains, and gives ----
+  // The seam is 8 segments torn from the grabbed corner (B) to the hinge
+  // (A). Each segment stalls (the foil stretches and whitens), then pops.
+  // Geometry is rebuilt every frame: the flap peels and crumples along a
+  // traveling front instead of swinging like a lid.
+  const SEAM = [[78,150],[120,138],[163,147],[205,128],[248,133],[290,112],[333,116],[372,95],[398,82]];
+  const SEG_W = [1.25, 1.0, 0.9, 1.2, 1.35, 1.1, 0.8, 0.62];
+  const W_SUM = SEG_W.reduce((a, b) => a + b, 0);
+  let rip = null, ripLive = false;
+  function stallMap(u) { return u < 0.3 ? 0 : (u - 0.3) / 0.7; }
+  function rawToF(raw) {
+    let budget = raw * W_SUM, F = 0, strain = 0;
+    for (let k = 0; k < 8; k++) {
+      const i = 7 - k, w = SEG_W[i];
+      if (budget >= w) { F += 1; budget -= w; }
+      else { const u = budget / w; strain = u < 0.3 ? u / 0.3 : 0; F += stallMap(u); break; }
     }
-    return { d, strain, stuckAt };
+    return { F, strain };
   }
-  function applyRip() {
-    if (!rip) return;
-    const { d, strain, stuckAt } = ripState(rip.raw);
-    if (rip.stuckPrev >= 0 && stuckAt < 0 && rip.raw > rip.stuckPrev) { snapRelease(); rip.stuckPrev = -1; }
-    if (stuckAt >= 0) rip.stuckPrev = stuckAt;
-    rip.d = d; rip.strain = strain;
-    const ang = -(d * 36 + strain * 17), tx = d * 20 - strain * 3, ty = -d * 12 - strain * 4;
-    $("pack-flap").setAttribute("transform", `translate(${tx.toFixed(1)} ${ty.toFixed(1)}) rotate(${ang.toFixed(1)} 78 150)`);
-    $("band-rect").setAttribute("height", (6 + d * 58).toFixed(1));
-    $("rip-glow").setAttribute("opacity", (d * 0.9).toFixed(2));
-    $("cavity").setAttribute("opacity", (d * 0.38).toFixed(2));
-    $("flap-edge").setAttribute("opacity", Math.min(1, d * 1.6).toFixed(2));
-    if (strain > 0.45 && performance.now() - rip.lastCreak > 140) { rip.lastCreak = performance.now(); if (Math.random() < 0.6) SFX.crinkle(0.15); }
-    if (d >= 0.985 && !rip.done) theGive();
-  }
-  function snapRelease() {
-    SFX.crinkle(0.5);
-    const pc = $("pack-closed"); pc.classList.remove("snapshake"); void pc.offsetWidth; pc.classList.add("snapshake");
-    foilFlecks(5);
-  }
-  function foilFlecks(n) {
+  function foilFlecksAt(sx, sy, n) {
     const el = $("pack-svg"); if (!el) return;
     const r = el.getBoundingClientRect();
     for (let i = 0; i < n; i++) {
       const s = document.createElement("span"); s.className = "foil-fleck";
-      s.style.left = (r.left + r.width * (0.35 + Math.random() * 0.55)) + "px";
-      s.style.top = (r.top + r.height * (0.10 + Math.random() * 0.12)) + "px";
+      s.style.left = (r.left + sx / 443 * r.width + (Math.random() * 16 - 8)) + "px";
+      s.style.top = (r.top + sy / 598 * r.height + (Math.random() * 10 - 5)) + "px";
       document.body.appendChild(s);
       s.animate([
         { transform: "translate(0,0) rotate(0deg)", opacity: 1 },
@@ -464,33 +454,95 @@
       ], { duration: 700 + Math.random() * 500, easing: "cubic-bezier(.2,.7,.3,1)" }).onfinish = () => s.remove();
     }
   }
+  function ripPop(i) {
+    SFX.crinkle(0.55); rip.flash = 1;
+    const a = SEAM[i], b = SEAM[i + 1];
+    foilFlecksAt((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, 4);
+    const now = performance.now();
+    if (now - rip.lastShake > 140) { rip.lastShake = now; const pc = $("pack-closed"); pc.classList.remove("snapshake"); void pc.offsetWidth; pc.classList.add("snapshake"); }
+  }
+  function ripFrame(t) {
+    if (!ripLive || !rip) return;
+    const dt = Math.min(0.05, rip.lastT ? (t - rip.lastT) / 1000 : 0.016); rip.lastT = t;
+    const { F, strain } = rawToF(rip.raw); rip.F = F; rip.strain = strain;
+    for (let i = 0; i < 8; i++) {
+      const target = Math.max(0, Math.min(1, F - (7 - i)));
+      if (rip.prevP[i] === 0 && target > 0 && !rip.done) ripPop(i);
+      rip.prevP[i] = target;
+      rip.segS[i] += (target - rip.segS[i]) * Math.min(1, dt * 15);
+    }
+    rip.flash = Math.max(0, rip.flash - dt * 5);
+    if (strain > 0.4 && t - rip.lastCreak > 150 && Math.random() < 0.5) { rip.lastCreak = t; SFX.crinkle(0.10); }
+    const S = rip.segS, sep = [];
+    for (let j = 0; j < 9; j++) sep[j] = j === 0 ? S[0] : j === 8 ? S[7] : (S[j - 1] + S[j]) / 2;
+    const meanS = S.reduce((a, b) => a + b, 0) / 8;
+    const fx = [], fy = [], bx = [], by = [];
+    for (let j = 0; j < 9; j++) {
+      const lift = sep[j] * (24 + 78 * Math.pow(j / 8, 1.35)) + meanS * 5;
+      fx.push(SEAM[j][0] - sep[j] * (j / 8) * 12); fy.push(SEAM[j][1] - lift);
+      bx.push(SEAM[j][0]); by.push(SEAM[j][1] + sep[j] * 8);
+    }
+    const trx = 453 - sep[8] * 30, try_ = -12 - sep[8] * 30, tlx = -12 + sep[0] * 26, tly = -12 - sep[0] * 26;
+    const flapD = `M${fx[0]},${fy[0]} ` + fx.slice(1).map((x, i) => `L${x},${fy[i + 1]}`).join(" ") + ` L${trx},${try_} L${tlx},${tly} Z`;
+    const bodyD = `M${bx[0]},${by[0]} ` + bx.slice(1).map((x, i) => `L${x},${by[i + 1]}`).join(" ") + ` L453,610 L-12,610 Z`;
+    const gapD = `M${fx[0]},${fy[0]} ` + fx.slice(1).map((x, i) => `L${x},${fy[i + 1]}`).join(" ") + ` ` + bx.slice().reverse().map((x, i) => `L${x},${by[8 - i]}`).join(" ") + ` Z`;
+    $("clip-top-path").setAttribute("d", flapD);
+    $("clip-body-path").setAttribute("d", bodyD);
+    $("clip-gap-path").setAttribute("d", gapD);
+    $("gap-fill").setAttribute("d", gapD);
+    $("flap-edge").setAttribute("points", fx.map((x, i) => `${x},${fy[i]}`).join(" "));
+    $("flap-edge").setAttribute("opacity", Math.min(1, meanS * 2.2).toFixed(2));
+    $("gap-light").setAttribute("points", fx.map((x, i) => `${(x + bx[i]) / 2},${(fy[i] + by[i]) / 2}`).join(" "));
+    $("gap-light").setAttribute("opacity", (meanS * 0.75).toFixed(2));
+    const flick = 0.5 + 0.18 * Math.sin(t * 0.013) + 0.12 * Math.sin(t * 0.0047 + 1.7);
+    $("rip-glow").setAttribute("opacity", Math.max(0, meanS * flick + rip.flash * 0.25).toFixed(2));
+    const fi = 8 - F, i0 = Math.max(0, Math.floor(fi)), i1 = Math.min(8, i0 + 1), fr = fi - i0;
+    const frontX = SEAM[i0][0] + (SEAM[i1][0] - SEAM[i0][0]) * fr, frontY = SEAM[i0][1] + (SEAM[i1][1] - SEAM[i0][1]) * fr;
+    const fg = $("front-glow");
+    fg.setAttribute("cx", frontX.toFixed(1)); fg.setAttribute("cy", frontY.toFixed(1));
+    fg.setAttribute("opacity", F < 8 ? (0.28 + strain * 0.55 + rip.flash * 0.35).toFixed(2) : "0");
+    const sl = $("stress-line");
+    sl.setAttribute("points", SEAM.slice(0, Math.max(2, Math.ceil(fi) + 1)).map(p => `${p[0]},${p[1] + 1}`).join(" "));
+    sl.setAttribute("opacity", F < 8 ? (0.07 + strain * 0.48).toFixed(2) : "0");
+    const creases = [["crease-a", 3], ["crease-b", 5], ["crease-c", 7]];
+    for (const [id, j] of creases) {
+      const el = $(id), liftJ = fy[j] - SEAM[j][1];
+      el.setAttribute("d", `M${fx[j]},${fy[j]} Q${fx[j] - 12 - j * 3},${fy[j] - 62 + liftJ * 0.3} ${fx[j] - 34 - j * 7},${fy[j] - 128 + liftJ * 0.45}`);
+      el.setAttribute("opacity", (sep[j] * 0.85).toFixed(2));
+    }
+    const flapG = $("pack-flap");
+    if (rip.flying) {
+      rip.flyK = Math.min(1, rip.flyK + dt / 0.56);
+      const k = rip.flyK, e = k * k, flut = Math.sin(k * 28) * 11 * (1 - k);
+      flapG.setAttribute("transform", `translate(${(-180 * e).toFixed(1)} ${(-80 * e - 34 * k).toFixed(1)}) rotate(${(-14 - 108 * e + flut).toFixed(1)} 78 150)`);
+      flapG.setAttribute("opacity", (1 - k * 0.92).toFixed(2));
+    } else {
+      flapG.setAttribute("transform", `translate(${(-meanS * 10).toFixed(1)} ${(-meanS * 16).toFixed(1)}) rotate(${(-meanS * 7).toFixed(1)} 240 300)`);
+      flapG.style.filter = `brightness(${(1 - 0.22 * meanS).toFixed(2)})`;
+    }
+    if (F >= 7.9 && !rip.done) theGive();
+    if (ripLive) requestAnimationFrame(ripFrame);
+  }
   function theGive() {
-    rip.done = true;
+    rip.done = true; rip.flying = true; rip.flyK = 0;
     SFX.tear(); playSnd("rip", 0.45, 0.1); setTimeout(() => SFX.boom(), 260); noiseBurst(0.5, 0.10);
     const pc = $("pack-closed"); pc.classList.remove("snapshake"); void pc.offsetWidth; pc.classList.add("snapshake");
-    foilFlecks(16);
-    const flap = $("pack-flap"); const t0 = performance.now();
-    (function fly(t) {
-      const k = Math.min(1, (t - t0) / 560), e = k * k;
-      flap.setAttribute("transform", `translate(${(-170 * e).toFixed(1)} ${(-70 * e - 30 * k).toFixed(1)}) rotate(${(-36 - 105 * e).toFixed(1)} 78 150)`);
-      flap.setAttribute("opacity", (1 - k * 0.9).toFixed(2));
-      if (k < 1) requestAnimationFrame(fly);
-    })(t0);
-    setTimeout(showPackCards, 720);
+    foilFlecksAt(300, 110, 16);
+    setTimeout(showPackCards, 800);
   }
   function resetRip() {
-    rip = { raw: 0, d: 0, strain: 0, stuckPrev: -1, done: false, lastCreak: 0, drag: null };
-    const flap = $("pack-flap"); if (flap) { flap.setAttribute("transform", ""); flap.setAttribute("opacity", "1"); }
+    rip = { raw: 0, segS: [0, 0, 0, 0, 0, 0, 0, 0], prevP: [0, 0, 0, 0, 0, 0, 0, 0], F: 0, strain: 0, flash: 0, done: false, flying: false, flyK: 0, lastCreak: 0, lastShake: 0, lastT: 0, drag: null, dragAcc: 0 };
+    const flap = $("pack-flap"); if (flap) { flap.setAttribute("transform", ""); flap.setAttribute("opacity", "1"); flap.style.filter = ""; }
     const gh = $("grab-hint"); if (gh) gh.style.display = "";
-    applyRip();
+    ripLive = true; rip.lastT = 0;
+    requestAnimationFrame(ripFrame);
   }
   function autoRip() {
     const t0 = performance.now(), from = rip ? rip.raw : 0;
     (function step(t) {
       if (!rip || rip.done) return;
-      const k = Math.min(1, (t - t0) / 1150);
+      const k = Math.min(1, (t - t0) / 1750);
       rip.raw = from + (1 - from) * (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
-      applyRip();
       if (k < 1) requestAnimationFrame(step);
     })(t0);
   }
@@ -508,8 +560,10 @@
     rip.drag.moved = Math.max(rip.drag.moved, Math.hypot(dx, dy));
     const proj = dx * -0.52 + dy * -0.86;
     const dist = Math.max(proj, Math.hypot(dx, dy) * 0.35);
-    rip.raw = Math.min(1, Math.max(rip.drag.raw0, rip.drag.raw0 + dist / 250));
-    applyRip();
+    const newRaw = Math.min(1, Math.max(rip.drag.raw0, rip.drag.raw0 + dist / 300));
+    rip.dragAcc += (newRaw - rip.raw) * 300;
+    rip.raw = newRaw;
+    while (rip.dragAcc > 16) { rip.dragAcc -= 16; if (Math.random() < 0.75) SFX.crinkle(0.05 + Math.random() * 0.07); }
   });
   packSvg.addEventListener("pointerup", () => {
     if (!rip || !rip.drag) return;

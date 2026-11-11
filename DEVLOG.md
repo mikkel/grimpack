@@ -339,3 +339,24 @@ whitening — until the final give: the flap rips clean off and spins
 away, the full tear sound lands, and the cards rise. A plain click still
 works (an auto-rip through the same catches) for the clickers.
 Spend: $0.940 of $5 cumulative.
+
+## v11 — THE RIP, REBUILT (Mikkel: "animation is weird. not quite
+unnerving. needs much more attention.")
+He was right: v10's flap swung on one pivot like a cardboard lid, and
+the whole seam opened at once. Real foil fails at a point and the
+failure TRAVELS. v11 rebuilds the tear as a traveling front:
+- 8 seam segments torn in order from the grabbed corner to the hinge.
+  Each segment's drag budget differs: the first resists longest (dread),
+  the middle over the seal is heaviest, the last third goes eagerly —
+  the pack gives up.
+- Every segment stalls before it pops: drag builds strain, the un-torn
+  seam ahead of the front whitens under stress, creak-ticks sound, then
+  the segment snaps with a crinkle, flecks, a shake, and a glow flash.
+- Geometry is rebuilt per frame: the flap PEELS (lift graded along the
+  seam, hinge corner last), creases streak across it as it crumples, it
+  darkens as it bends away from the light; the body side curls down;
+  the gap between them is foil lining over a black cavity, lit by a
+  flickering ember glow that burns hottest at the active tear point.
+- Dragging itself has texture now: micro-crinkles every ~16px of pull.
+- The final give flutters — the flap tumbles with a decaying wobble
+  instead of spinning cleanly away.

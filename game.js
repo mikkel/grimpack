@@ -189,12 +189,12 @@
   // around Begin — blinking out of sync, glancing at the button, and now
   // and then one creeps closer. They snap shut when the night begins.
   const EYE_SPOTS = [
-    { l: "-6px", t: "-14px", s: 15, r: -8, dx: 0.3, dy: 1 },
-    { l: "33%", t: "-20px", s: 11, r: 5, dx: 0, dy: 1 },
-    { r: "-4px", t: "-16px", s: 13, r: 9, dx: -0.3, dy: 1 },
-    { l: "14px", b: "-14px", s: 10, r: -14, dx: 0.4, dy: -1 },
-    { r: "24px", b: "-16px", s: 14, r: 6, dx: -0.2, dy: -1 },
-    { l: "57%", t: "-18px", s: 9, r: -4, dx: 0, dy: 1 }
+    { l: "-8px", t: "-18px", s: 25, r: -8, dx: 0.3, dy: 1 },
+    { l: "33%", t: "-24px", s: 18, r: 5, dx: 0, dy: 1 },
+    { r: "4px", t: "-20px", s: 21, r: 9, dx: -0.3, dy: 1 },
+    { l: "16px", b: "-17px", s: 16, r: -14, dx: 0.4, dy: -1 },
+    { r: "28px", b: "-19px", s: 23, r: 6, dx: -0.2, dy: -1 },
+    { l: "57%", t: "-22px", s: 15, r: -4, dx: 0, dy: 1 }
   ];
   const eyeEls = [];
   for (const spot of EYE_SPOTS) {
@@ -226,10 +226,17 @@
       const ir = e.querySelector(".iris");
       ir.style.transform = `translate(${(Math.random() * 2.4 - 1.2).toFixed(1)}px, ${(Math.random() * 1.6 - 0.8).toFixed(1)}px)`;
     }
-    const e = eyeEls[Math.floor(Math.random() * eyeEls.length)];
+    if (Math.random() < 0.13) {
+      // the beat: every watcher stares straight out, all at once
+      for (const e of eyeEls) e.querySelector(".iris").style.transform = "translate(0px, 0px)";
+      return;
+    }
+    const bold = eyeEls[0];
+    const pool = Math.random() < 0.55 ? [bold] : eyeEls;
+    const e = pool[Math.floor(Math.random() * pool.length)];
     const cur = parseFloat(e.dataset.creep || 0);
-    if (cur < 26) {
-      const nxt = cur + 6 + Math.random() * 5; e.dataset.creep = String(nxt);
+    if (cur < 30) {
+      const nxt = cur + 5 + Math.random() * 4; e.dataset.creep = String(nxt);
       e.style.marginLeft = (e._base.dx * nxt).toFixed(1) + "px";
       e.style.marginTop = (e._base.dy * nxt).toFixed(1) + "px";
       if (Math.random() < 0.35) playSnd("toll", 0.09, 0.15);

@@ -52,7 +52,7 @@
     } catch (e) {}
   }
   const SND = {};
-  for (const n of ["shoot", "hit", "die", "hurt", "toll", "rip", "flip", "ash", "place", "dash", "boom", "shock", "win", "lose"]) {
+  for (const n of ["shoot", "hit", "die", "hurt", "toll", "rip", "flip", "ash", "place", "dash", "boom", "shock", "win", "lose", "tear", "crinkle"]) {
     const a = new Audio("assets/sfx/" + n + ".mp3"); a.preload = "auto"; SND[n] = a;
   }
   function playSnd(name, vol, rateJitter) {
@@ -71,6 +71,8 @@
     hurt:  () => { if (!playSnd("hurt", 0.75, 0.1)) { tone(110, 0.2, "sawtooth", 0.07, 60); noiseBurst(0.12, 0.08); } },
     toll:  () => { if (!playSnd("toll", 0.85, 0.04)) { tone(196, 0.9, "sine", 0.10); tone(98, 1.1, "sine", 0.07); } },
     rip:   () => { if (!playSnd("rip", 0.8, 0.1)) noiseBurst(0.35, 0.16); },
+    tear:  () => { if (!playSnd("tear", 0.95, 0.04)) noiseBurst(0.5, 0.16); },
+    crinkle: (v) => { playSnd("crinkle", v == null ? 0.5 : v, 0.35); },
     flip:  r => { if (!playSnd("flip", 0.65, 0.1)) tone(420 + r * 130, 0.22, "triangle", 0.06, 900 + r * 260); },
     ash:   () => { if (!playSnd("ash", 0.36, 0.22)) tone(1250 + Math.random() * 300, 0.07, "sine", 0.02, 1800); },
     place: () => { if (!playSnd("place", 0.7, 0.08)) tone(150, 0.14, "triangle", 0.07, 70); },
@@ -352,7 +354,7 @@
     packsOpened++; packsThisBuild++; state = "pack"; currentPack = null; flipped = 0;
     $("pack-modal").classList.remove("hidden");
     $("pack-closed").style.display = ""; $("pack-cards").classList.add("hidden");
-    $("pack-cards").innerHTML = ""; $("btn-collect").classList.add("hidden"); $("pack-prompt").classList.add("hidden"); $("pack-img").classList.remove("tearing"); ritualChosen = false;
+    $("pack-cards").innerHTML = ""; $("btn-collect").classList.add("hidden"); $("pack-prompt").classList.add("hidden"); resetRip(); ritualChosen = false;
     $("foil-note").textContent = packsThisBuild >= 3 ? "" : (packsThisBuild === 2 ? "One more pack this vigil and it turns FOIL — every card +1 rarity." : "");
     updatePackButton(); updateHUD();
   }
@@ -382,45 +384,140 @@
     setTimeout(() => { flyCard(el, pull); setTimeout(() => applyCard(pull), 700); }, 950);
     setTimeout(() => { currentPack = null; $("pack-modal").classList.add("hidden"); state = "build"; updatePackButton(); updateHUD(); }, 2000);
   }
-  $("pack-img").addEventListener("click", () => {
-    if (currentPack) return;
-    $("pack-img").classList.add("tearing"); SFX.rip(); noiseBurst(0.3, 0.12);
-    setTimeout(() => {
-      currentPack = rollPack(); ritualChosen = false;
-      if (currentPack[0] && currentPack[0].foil) { $("foil-note").textContent = "✦ FOIL PACK — every card raised a rarity ✦"; hitStop = Math.max(hitStop, 0.08); }
-      $("pack-closed").style.display = "none";
-      const wrap = $("pack-cards"); wrap.classList.remove("hidden");
-      currentPack.forEach((pull, i) => {
-        const R = G.RARITIES[pull.rarityIdx], d = document.createElement("div");
-        d.className = "gcard risen";
-        d.style.setProperty("--fan", (i - (currentPack.length - 1) / 2) * 7 + "deg");
-        d.innerHTML = `<div class="inner">
-          <div class="face back"><img src="assets/card-back.jpg" alt=""></div>
-          <div class="face front" style="border-color:${R.color}">
-            <img src="${pull.def.art}" alt="">
-            <div class="cbody">
-              <span class="cname">${pull.def.name}</span>
-              <span class="crar" style="color:${R.color}">${R.name} · ${pull.def.kind}</span>
-              <span class="cstat">${describeCard(pull)}</span>
-              <span class="cblurb">${pull.def.blurb}</span>
-            </div></div></div>`;
-        d.onclick = () => {
-          if (ritualChosen) return;
-          if (!d.classList.contains("flipped")) {
-            d.classList.add("flipped"); SFX.flip(pull.rarityIdx);
-            if (pull.rarityIdx >= 4) { hitStop = Math.max(hitStop, 0.1); SFX.toll(); }
-            flipped++;
-            if (flipped >= currentPack.length) { $("pack-prompt").classList.remove("hidden"); startWhispers(); }
-            return;
-          }
-          if (flipped >= currentPack.length) chooseCard(pull, d);
-          else { d.classList.add("nudge"); setTimeout(() => d.classList.remove("nudge"), 400); }
-        };
-        wrap.appendChild(d);
-        setTimeout(() => { if (!d.classList.contains("flipped")) d.click(); }, 700 + i * 650);
-      });
-    }, 430);
+  function showPackCards() {
+    currentPack = rollPack(); ritualChosen = false;
+    if (currentPack[0] && currentPack[0].foil) { $("foil-note").textContent = "\u2726 FOIL PACK \u2014 every card raised a rarity \u2726"; hitStop = Math.max(hitStop, 0.08); }
+    $("pack-closed").style.display = "none";
+    const wrap = $("pack-cards"); wrap.classList.remove("hidden");
+    currentPack.forEach((pull, i) => {
+      const R = G.RARITIES[pull.rarityIdx], d = document.createElement("div");
+      d.className = "gcard risen";
+      d.style.setProperty("--fan", (i - (currentPack.length - 1) / 2) * 7 + "deg");
+      d.innerHTML = `<div class="inner">
+        <div class="face back"><img src="assets/card-back.jpg" alt=""></div>
+        <div class="face front" style="border-color:${R.color}">
+          <img src="${pull.def.art}" alt="">
+          <div class="cbody">
+            <span class="cname">${pull.def.name}</span>
+            <span class="crar" style="color:${R.color}">${R.name} \u00b7 ${pull.def.kind}</span>
+            <span class="cstat">${describeCard(pull)}</span>
+            <span class="cblurb">${pull.def.blurb}</span>
+          </div></div></div>`;
+      d.onclick = () => {
+        if (ritualChosen) return;
+        if (!d.classList.contains("flipped")) {
+          d.classList.add("flipped"); SFX.flip(pull.rarityIdx);
+          if (pull.rarityIdx >= 4) { hitStop = Math.max(hitStop, 0.1); SFX.toll(); }
+          flipped++;
+          if (flipped >= currentPack.length) { $("pack-prompt").classList.remove("hidden"); startWhispers(); }
+          return;
+        }
+        if (flipped >= currentPack.length) chooseCard(pull, d);
+        else { d.classList.add("nudge"); setTimeout(() => d.classList.remove("nudge"), 400); }
+      };
+      wrap.appendChild(d);
+      setTimeout(() => { if (!d.classList.contains("flipped")) d.click(); }, 700 + i * 650);
+    });
+  }
+
+  // ---- THE RIP: a foil pack you tear open with your own hand ----
+  const CATCHES = [0.16, 0.34, 0.52, 0.70, 0.86];
+  let rip = null;
+  function ripState(raw) {
+    let d = raw, strain = 0, stuckAt = -1;
+    for (const c of CATCHES) {
+      if (raw > c && raw < c + 0.075) { d = c; strain = (raw - c) / 0.075; stuckAt = c; break; }
+    }
+    return { d, strain, stuckAt };
+  }
+  function applyRip() {
+    if (!rip) return;
+    const { d, strain, stuckAt } = ripState(rip.raw);
+    if (rip.stuckPrev >= 0 && stuckAt < 0 && rip.raw > rip.stuckPrev) { snapRelease(); rip.stuckPrev = -1; }
+    if (stuckAt >= 0) rip.stuckPrev = stuckAt;
+    rip.d = d; rip.strain = strain;
+    const ang = -(d * 36 + strain * 13), tx = d * 20 - strain * 3, ty = -d * 12 - strain * 4;
+    $("pack-flap").setAttribute("transform", `translate(${tx.toFixed(1)} ${ty.toFixed(1)}) rotate(${ang.toFixed(1)} 78 150)`);
+    $("band-rect").setAttribute("height", (6 + d * 58).toFixed(1));
+    $("rip-glow").setAttribute("opacity", (d * 0.9).toFixed(2));
+    $("cavity").setAttribute("opacity", (d * 0.38).toFixed(2));
+    $("flap-edge").setAttribute("opacity", Math.min(1, d * 1.6).toFixed(2));
+    if (strain > 0.45 && performance.now() - rip.lastCreak > 140) { rip.lastCreak = performance.now(); if (Math.random() < 0.6) SFX.crinkle(0.15); }
+    if (d >= 0.985 && !rip.done) theGive();
+  }
+  function snapRelease() {
+    SFX.crinkle(0.5);
+    const pc = $("pack-closed"); pc.classList.remove("snapshake"); void pc.offsetWidth; pc.classList.add("snapshake");
+    foilFlecks(5);
+  }
+  function foilFlecks(n) {
+    const el = $("pack-svg"); if (!el) return;
+    const r = el.getBoundingClientRect();
+    for (let i = 0; i < n; i++) {
+      const s = document.createElement("span"); s.className = "foil-fleck";
+      s.style.left = (r.left + r.width * (0.35 + Math.random() * 0.55)) + "px";
+      s.style.top = (r.top + r.height * (0.10 + Math.random() * 0.12)) + "px";
+      document.body.appendChild(s);
+      s.animate([
+        { transform: "translate(0,0) rotate(0deg)", opacity: 1 },
+        { transform: `translate(${Math.random() * 90 - 45}px, ${50 + Math.random() * 80}px) rotate(${Math.random() * 320 - 160}deg)`, opacity: 0 }
+      ], { duration: 700 + Math.random() * 500, easing: "cubic-bezier(.2,.7,.3,1)" }).onfinish = () => s.remove();
+    }
+  }
+  function theGive() {
+    rip.done = true;
+    SFX.tear(); playSnd("rip", 0.45, 0.1); setTimeout(() => SFX.boom(), 260); noiseBurst(0.5, 0.10);
+    const pc = $("pack-closed"); pc.classList.remove("snapshake"); void pc.offsetWidth; pc.classList.add("snapshake");
+    foilFlecks(16);
+    const flap = $("pack-flap"); const t0 = performance.now();
+    (function fly(t) {
+      const k = Math.min(1, (t - t0) / 560), e = k * k;
+      flap.setAttribute("transform", `translate(${(-170 * e).toFixed(1)} ${(-70 * e - 30 * k).toFixed(1)}) rotate(${(-36 - 105 * e).toFixed(1)} 78 150)`);
+      flap.setAttribute("opacity", (1 - k * 0.9).toFixed(2));
+      if (k < 1) requestAnimationFrame(fly);
+    })(t0);
+    setTimeout(showPackCards, 720);
+  }
+  function resetRip() {
+    rip = { raw: 0, d: 0, strain: 0, stuckPrev: -1, done: false, lastCreak: 0, drag: null };
+    const flap = $("pack-flap"); if (flap) { flap.setAttribute("transform", ""); flap.setAttribute("opacity", "1"); }
+    const gh = $("grab-hint"); if (gh) gh.style.display = "";
+    applyRip();
+  }
+  function autoRip() {
+    const t0 = performance.now(), from = rip ? rip.raw : 0;
+    (function step(t) {
+      if (!rip || rip.done) return;
+      const k = Math.min(1, (t - t0) / 1150);
+      rip.raw = from + (1 - from) * (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
+      applyRip();
+      if (k < 1) requestAnimationFrame(step);
+    })(t0);
+  }
+  const packSvg = $("pack-svg");
+  packSvg.addEventListener("pointerdown", e => {
+    if (!rip || rip.done || currentPack) return;
+    try { packSvg.setPointerCapture(e.pointerId); } catch (err) {}
+    rip.drag = { x: e.clientX, y: e.clientY, raw0: rip.raw, t: performance.now(), moved: 0 };
+    $("grab-hint").style.display = "none";
+    e.preventDefault();
   });
+  packSvg.addEventListener("pointermove", e => {
+    if (!rip || !rip.drag || rip.done) return;
+    const dx = e.clientX - rip.drag.x, dy = e.clientY - rip.drag.y;
+    rip.drag.moved = Math.max(rip.drag.moved, Math.hypot(dx, dy));
+    const proj = dx * -0.52 + dy * -0.86;
+    const dist = Math.max(proj, Math.hypot(dx, dy) * 0.35);
+    rip.raw = Math.min(1, Math.max(rip.drag.raw0, rip.drag.raw0 + dist / 230));
+    applyRip();
+  });
+  packSvg.addEventListener("pointerup", () => {
+    if (!rip || !rip.drag) return;
+    const wasClick = rip.drag.moved < 7 && performance.now() - rip.drag.t < 350;
+    rip.drag = null;
+    if (wasClick && !rip.done) autoRip();
+  });
+
   function flyCard(el, pull) {
     const r = el.getBoundingClientRect();
     const target = (pull.def.kind === "tower" ? $("hand-wrap") : $("stats-wrap")).getBoundingClientRect();

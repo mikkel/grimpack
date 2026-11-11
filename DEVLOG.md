@@ -321,3 +321,21 @@ dark ring hugging the pack; invisible on the dark button, obvious on the
 title's mottled backdrop. Re-keyed with a soft alpha ramp: anything
 edge-connected and dark fades out by darkness (0 at near-black, full at
 the trim line), so the glow now melts into whatever is behind it.
+
+## v10 — THE RIP (Mikkel: "turn it into an animated svg using a nanoodle
+workflow... you should be able to actually rip open the pack and it
+should feel hefty. like a weird foil that is unnerving in how it opens.")
+Built through a Nanoodle graph (graphs/batch-g-packrip.noodle-graph.json,
+$0.0587): a long close-mic foil tear, a short crinkle, and a photograph of
+a torn silver foil sheet — keyed and used as the pack's inner lining.
+The sealed pack is now an inline SVG: the keyed pack art is clipped into
+a flap and a body along a jagged tear line that starts at the art's own
+torn corner. You grab the corner (pulsing marker) and PULL. The tear has
+stick-slip physics: five catches where the foil refuses, strains (the
+flap bends, creak-ticks sound), then snaps through with a crinkle, a
+shake, and flying foil flecks. The opening widens over a dark cavity and
+the torn-foil lining, ember glow leaking out, the flap's torn edge
+whitening — until the final give: the flap rips clean off and spins
+away, the full tear sound lands, and the cards rise. A plain click still
+works (an auto-rip through the same catches) for the clickers.
+Spend: $0.940 of $5 cumulative.

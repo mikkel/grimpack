@@ -228,3 +228,17 @@ aside h3{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#a89a7
 .reward-dock .tithe-opt:hover{border-color:var(--gold)}
 #tithe-box .tithe-opt.skip{display:block;width:100%;margin-top:8px;text-align:center;color:#8a7f6a}
 .reward-dock.hidden{display:none}
+
+/* ==== v10: THE RIP — an SVG foil pack torn by hand ==== */
+#pack-svg{width:300px;max-width:72vw;display:block;margin:0 auto;cursor:grab;touch-action:none;
+  animation:packbreathe 2.6s ease-in-out infinite;
+  filter:drop-shadow(0 0 34px rgba(255,90,40,.30)) drop-shadow(0 24px 30px rgba(0,0,0,.9))}
+#pack-svg:active{cursor:grabbing}
+#pack-closed.snapshake{animation:snapshake .12s linear}
+@keyframes snapshake{0%,100%{transform:translate(0,0)}30%{transform:translate(-3px,1px)}65%{transform:translate(3px,-1px)}}
+.foil-fleck{position:fixed;width:7px;height:5px;background:linear-gradient(135deg,#f4f7fb,#9aa7b5);
+  pointer-events:none;z-index:96;border-radius:1px;box-shadow:0 0 4px rgba(255,255,255,.5)}
+#sheen{animation:sheensweep 6.5s ease-in-out infinite}
+@keyframes sheensweep{0%,68%{transform:rotate(18deg) translateX(0)}90%,100%{transform:rotate(18deg) translateX(780px)}}
+#grab-hint{animation:hintpulse 1.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes hintpulse{0%,100%{opacity:.95;transform:scale(1)}50%{opacity:.45;transform:scale(1.25)}}

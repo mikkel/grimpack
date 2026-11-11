@@ -1,0 +1,128 @@
+{
+ "v": 1,
+ "nid": 8,
+ "lid": 4,
+ "view": {
+  "x": 0,
+  "y": 0,
+  "k": 1
+ },
+ "nodes": [
+  {
+   "id": "c1",
+   "type": "comment",
+   "name": "GRIMPACK pack-rip",
+   "x": 40,
+   "y": -260,
+   "w": 760,
+   "fields": {
+    "text": "GRIMPACK pack-rip: the foil tear sounds (long climactic rip + short crinkle ticks for the stick-slip catches) and a torn-foil edge texture for the interactive SVG pack."
+   }
+  },
+  {
+   "id": "t1",
+   "type": "text",
+   "name": "sfx-tear",
+   "x": 40,
+   "y": 300,
+   "w": 340,
+   "fields": {
+    "text": "Tearing open a thick metallic foil packet, extremely close microphone: one long heavy rip, the foil resists in stages then gives way, crackling metallic crinkle and shredding, deep and unsettling, ASMR detail. Sound effect only, no music, no voices."
+   }
+  },
+  {
+   "id": "m1",
+   "type": "music",
+   "name": "sfx-tear",
+   "x": 460,
+   "y": 300,
+   "w": 300,
+   "fields": {
+    "model": "stable-audio-3/small/music/text-to-audio",
+    "response_format": "mp3"
+   }
+  },
+  {
+   "id": "t2",
+   "type": "text",
+   "name": "sfx-crinkle",
+   "x": 40,
+   "y": 560,
+   "w": 340,
+   "fields": {
+    "text": "A single short sharp crinkle of stiff metallic foil being flexed and squeezed once, brittle crackly texture, extremely close microphone. One brief sound effect only, no music, no voices."
+   }
+  },
+  {
+   "id": "m2",
+   "type": "music",
+   "name": "sfx-crinkle",
+   "x": 460,
+   "y": 560,
+   "w": 300,
+   "fields": {
+    "model": "stable-audio-3/small/music/text-to-audio",
+    "response_format": "mp3"
+   }
+  },
+  {
+   "id": "t3",
+   "type": "text",
+   "name": "foil-edge",
+   "x": 40,
+   "y": 820,
+   "w": 340,
+   "fields": {
+    "text": "One long horizontal strip of torn silver foil packaging, a jagged ripped metallic edge with crinkles, curls and flakes, running straight across the middle of the frame, photographed from directly above on a pure black background, studio product shot, high detail"
+   }
+  },
+  {
+   "id": "i3",
+   "type": "image",
+   "name": "foil-edge",
+   "x": 460,
+   "y": 820,
+   "w": 260,
+   "fields": {
+    "model": "meta/muse-image/text-to-image",
+    "size": "1:1",
+    "variations": "1"
+   }
+  }
+ ],
+ "links": [
+  {
+   "id": "l1",
+   "from": {
+    "node": "t1",
+    "port": "text"
+   },
+   "to": {
+    "node": "m1",
+    "port": "prompt"
+   }
+  },
+  {
+   "id": "l2",
+   "from": {
+    "node": "t2",
+    "port": "text"
+   },
+   "to": {
+    "node": "m2",
+    "port": "prompt"
+   }
+  },
+  {
+   "id": "l3",
+   "from": {
+    "node": "t3",
+    "port": "text"
+   },
+   "to": {
+    "node": "i3",
+    "port": "prompt"
+   }
+  }
+ ]
+}

@@ -116,6 +116,8 @@
   const dClamp01 = v => Math.max(0, Math.min(1, v));
   const dSmooth = v => { v = dClamp01(v); return v * v * (3 - 2 * v); };
   let corpses = [], embers = [], titheId = null, tonightTithe = null;
+  const DEBUG = new URLSearchParams(location.search).has("debug");
+  const corpseStats = { spawned: 0, maxLive: 0 };
   let diff = G.DIFFS.vigil, omen = null, nextOmen = null;
   let packsThisBuild = 0, bonusCards = 0, emberTimer = 5, strikeWarn = null;
   let best = JSON.parse(localStorage.getItem("grimpack-best") || '{"nights":0,"kills":0,"wins":0,"bestTime":0}');
@@ -129,6 +131,7 @@
       fireCd: 0, invuln: 0, r: B.radius, chillSlow: 0, chillSecs: 0, stormEvery: 0, hitCount: 0, vx: 0, vy: 0, walkPh: 0, kx: 0, ky: 0, dashId: 0,
       thorns: 0, brandPct: 0, dashCd: 0, dashT: 0, dashDx: 0, dashDy: 0, lastDx: 1, lastDy: 0 };
     enemies = []; bolts = []; ebolts = []; towers = []; shards = []; zones = []; parts = []; texts = []; decals = []; zaps = []; corpses = []; embers = []; dying = null; deathEyes = [];
+    corpseStats.spawned = 0; corpseStats.maxLive = 0;
     for (let i = 0; i < 26; i++) embers.push({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - 0.5) * 9, vy: -6 - Math.random() * 12, ph: Math.random() * 6.28 });
     titheId = null; tonightTithe = null; $("tithe-box").classList.add("hidden"); $("pack-prompt").classList.add("hidden");
     MW.clear(world, false); staticBodies.clear(); physAcc = 0;
@@ -1251,7 +1254,7 @@
       e.dead = true; kills++; streak++; SFX.die();
       if (e.body) { MW.remove(world, e.body); e.body = null; }
       const co = { img: e.img, x: e.x, y: e.y, s: e.r * 3.4, t: 0, dir: Math.random() < 0.5 ? -1 : 1, boss: e.boss, vx: 0, vy: 0, spin: 0, av: 0, smear: 0, px: e.x, py: e.y };
-      corpses.push(co); if (corpses.length > 40) { const old = corpses.shift(); if (old.body) MW.remove(world, old.body); }
+      corpses.push(co); corpseStats.spawned++; if (corpses.length > corpseStats.maxLive) corpseStats.maxLive = corpses.length; if (corpses.length > 40) { const old = corpses.shift(); if (old.body) MW.remove(world, old.body); }
       co.body = MB.circle(e.x, e.y, Math.max(6, e.r * 0.8), { friction: 0.1, frictionAir: 0.055, restitution: 0.25, density: bodyDensity(0.7, Math.max(6, e.r * 0.8)), label: "corpse" });
       MV.setVelocity(co.body, { x: ((e.vx || 0) * 1.2 + (e.lastKbX || 0)) / 60, y: ((e.vy || 0) * 1.2 + (e.lastKbY || 0)) / 60 });
       MV.setAngularVelocity(co.body, (Math.random() - 0.5) * 0.09 + ((e.lastKbX || 0) * 0.00012));
@@ -1305,9 +1308,10 @@
 
   const keys = {};
   addEventListener("keydown", e => {
-    if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(e.key.toLowerCase())) e.preventDefault();
+    const isSpace = e.key === " " || e.key === "Space" || e.code === "Space";
+    if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(e.key.toLowerCase()) || isSpace) e.preventDefault();
     keys[e.key.toLowerCase()] = true;
-    if (e.key === " " && state === "wave") { e.preventDefault(); tryDash(); }
+    if (isSpace && state === "wave") { e.preventDefault(); tryDash(); }
     if (e.key.toLowerCase() === "shift" && state === "wave") tryDash();
     if (e.key.toLowerCase() === "p" && (state === "wave" || state === "build")) togglePause();
     if (e.key.toLowerCase() === "m") toggleMute();
@@ -1376,10 +1380,10 @@
         const moved = Math.hypot(c.x - c.px, c.y - c.py); c.px = c.x; c.py = c.y;
         c.smear = (c.smear || 0) + moved;
         if (c.smear > 30 && Math.hypot(c.body.velocity.x, c.body.velocity.y) * 60 > 55) { c.smear = 0; decals.push({ x: c.x, y: c.y, r: c.s * 0.22, a: 0.3 }); if (decals.length > 260) decals.shift(); }
-        if (c.t > 1.5) { MW.remove(world, c.body); c.body = null; }
+        if (c.t > 2.5) { MW.remove(world, c.body); c.body = null; }
       }
     }
-    corpses = corpses.filter(c => { if (c.t >= 3.4 && c.body) { MW.remove(world, c.body); c.body = null; } return c.t < 3.4; });
+    corpses = corpses.filter(c => { if (c.t >= 5 && c.body) { MW.remove(world, c.body); c.body = null; } return c.t < 5; });
     beams = beams.filter(b => (b.t += dt) < 0.85);
     if (hintT >= 0) hintT += dt;
     parts = parts.filter(p => p.t < p.life);
@@ -1825,14 +1829,6 @@
       ctx.fillRect(c * TILE + 1, r * TILE + 1, TILE - 2, TILE - 2);
       drawSprite(IMG.barricade, c * TILE + 20, r * TILE + 20, TILE * 1.35, 0.6);
     }
-    // the fallen: bodies topple, sink, and become the blood decals below them
-    for (const c of corpses) {
-      const rot = c.dir * Math.min(1, c.t / 0.45) * 1.45 + (c.spin || 0);
-      const sink = c.t > 2.3 ? (c.t - 2.3) * 8 : 0;
-      const al = c.t < 2.4 ? 0.97 : Math.max(0, 0.97 - (c.t - 2.4) * 0.95);
-      shadow(c.x, c.y + c.s * 0.42, c.s * 0.5);
-      drawSpr(c.img, c.x, c.y + sink, c.s * 1.5, { rot, alpha: al });
-    }
     // GRAVE-FOG pools: filled mist with a silhouette — drawn late so nothing washes it out
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
       if (!grid[r] || grid[r][c] !== 'f') continue;
@@ -1905,6 +1901,18 @@
         ctx.fillStyle = "rgba(6,5,8,0.7)"; ctx.fillRect(player.x - 20, player.y + 30, 40, 5);
         ctx.fillStyle = "#7dff9a"; ctx.fillRect(player.x - 20, player.y + 30, 40 * Math.max(0, player.hp / player.maxHp), 5);
       }
+    }
+    // the fallen — drawn ABOVE the living on purpose (v16.2): two full
+    // verification sweeps (~380 kills) never saw a corpse under the crowd,
+    // so the dead now lie on top of everything that walks, in their own blood
+    for (const c of corpses) {
+      const rot = c.dir * Math.min(1, c.t / 0.45) * 1.45 + (c.spin || 0);
+      const sink = c.t > 3.6 ? (c.t - 3.6) * 6 : 0;
+      const al = c.t < 4 ? 0.97 : Math.max(0, 0.97 - (c.t - 4) * 0.95);
+      ctx.fillStyle = "rgba(96,6,12,0.5)"; ctx.beginPath(); ctx.ellipse(c.x, c.y + c.s * 0.30, c.s * 0.62, c.s * 0.30, rot * 0.4, 0, 6.283); ctx.fill();
+      shadow(c.x, c.y + c.s * 0.42, c.s * 0.5);
+      drawSpr(c.img, c.x, c.y + sink, c.s * 1.5, { rot, alpha: al });
+      if (DEBUG) { ctx.strokeStyle = "rgba(120,255,90,0.95)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(c.x, c.y, c.s * 0.78, 0, 6.283); ctx.stroke(); }
     }
     // bolts
     for (const b of bolts) {
@@ -1979,6 +1987,13 @@
       bg.addColorStop(0, "rgba(255,220,150,0)"); bg.addColorStop(0.5, `rgba(255,220,150,${a})`); bg.addColorStop(1, "rgba(255,220,150,0)");
       ctx.fillStyle = bg; ctx.fillRect(b.x - 26, 0, 52, b.y + 8);
       ctx.fillStyle = `rgba(255,240,200,${a * 0.8})`; ctx.beginPath(); ctx.ellipse(b.x, b.y + 6, 30, 9, 0, 0, 6.283); ctx.fill();
+    }
+    if (DEBUG) {
+      ctx.fillStyle = "rgba(0,0,0,0.72)"; ctx.fillRect(8, 8, 300, 62);
+      ctx.fillStyle = "#8dff6a"; ctx.font = "bold 13px monospace"; ctx.textAlign = "left";
+      ctx.fillText(`DEBUG state=${state} wave=${wave} kills=${kills}`, 16, 28);
+      ctx.fillText(`corpses live=${corpses.length} spawned=${corpseStats.spawned} maxLive=${corpseStats.maxLive}`, 16, 48);
+      ctx.fillText(`dashCd=${(player.dashCd || 0).toFixed(1)} dashT=${(player.dashT || 0).toFixed(2)} enemies=${enemies.length}`, 16, 66);
     }
     drawKeyHints();
   }

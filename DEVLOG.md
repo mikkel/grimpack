@@ -445,3 +445,34 @@ interesting")
   farther than 42px from the corpse were NaN-vanishing instead of
   gathering. The close ones froze in place, which is all the testers
   ever saw. Fields verified against balance.js this time.
+
+## v16.1 (2026-11-11) — trap fix + firmer crowds
+- Removed the space-to-begin trap: the keydown handler started the next
+  night when a space press landed just after a night ended. Nights now
+  begin ONLY from the Begin button (verified by test: 3 space presses on
+  a build screen, no start). Space/Shift in-wave remains dash.
+- Bodies firmer: radius 0.85r -> 0.92r, solver iterations up,
+  frictionAir 0.012 -> 0.02; dash impulse 330 -> 520, bolt knockback
+  0.030 -> 0.042.
+
+## v16.2 (2026-11-11) — the invisible corpses
+- Second dedicated corpse hunt came back negative again: ~180 kills,
+  25-frame capture covering 33 kills, ZERO fallen sprites seen — only
+  blood decals. With v16's sweep that's ~380 kills, no corpse ever
+  seen, while the code reads correct top to bottom (creation in
+  damageEnemy, physics sync, render loop). Code-reading has had its
+  chances; this build INTRUMENTS instead.
+- Corpses now render ABOVE the living (moved after the player in the
+  draw order) in a dark blood pool, live 5s (physics body 2.5s), so
+  crowd/fog occlusion is off the table.
+- ?debug=1 turns on a canvas HUD (state, kills, corpses live/spawned/
+  maxLive, dash timers) and a bright green ring around every corpse.
+  Next verification reads the HUD: live=0 while kills climb means
+  creation/retention is broken; live>0 with rings but no visible body
+  means the sprite draw itself is broken.
+- Dash input hardened: Space accepted via e.key " ", e.key "Space",
+  or e.code "Space" (the test harness sends the named key; a human
+  keyboard sends " " — both work now).
+- Still open: one test run stalled on Night 3 after game.js was opened
+  in a second tab (time frozen, banner repeating) — unconfirmed as a
+  game bug; watch for it in clean single-tab runs.

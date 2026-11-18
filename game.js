@@ -2299,7 +2299,9 @@
     log(`${CARDMAP[tw.type].name} overcharged to level ${tw.level}.`); updateHUD(); updatePackButton();
   });
   cv.addEventListener("touchstart", ev => { const t = ev.touches[0]; touchTarget = canvasPos(t); }, { passive: true });
-  cv.addEventListener("touchmove", ev => { const t = ev.touches[0]; touchTarget = canvasPos(t); }, { passive: true });
+  // non-passive + preventDefault: a drag on the canvas steers the knight —
+  // it must never scroll the page out from under the player's thumb
+  cv.addEventListener("touchmove", ev => { if (ev.touches.length) { ev.preventDefault(); const t = ev.touches[0]; touchTarget = canvasPos(t); } }, { passive: false });
   cv.addEventListener("touchend", () => touchTarget = null);
   $("btn-begin").addEventListener("click", () => { if (state === "build") { $("begin-wrap").classList.add("shut"); setTimeout(() => { $("begin-wrap").classList.remove("shut"); beginWave(); kickMusic(); }, 140); } });
   document.addEventListener("click", e => { const b = e.target.closest("button"); if (b) b.blur(); });

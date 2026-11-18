@@ -278,6 +278,15 @@ aside h3{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#a89a7
 .gcard .back{box-shadow:inset 0 0 0 2px rgba(0,0,0,.85),inset 0 0 26px rgba(0,0,0,.55)}
 @media (max-width:560px){ .pack-stage{transform:scale(.86)} }
 
+/* phone widths: the topbar stacks or it overflows — brand + HUD side by
+   side measure 464px on a 390px phone (playtest report 2026-11-18) */
+@media (max-width:560px){
+  header#topbar{flex-direction:column;align-items:flex-start;gap:6px}
+  .brand{font-size:22px}
+  #hud{margin-left:0;gap:10px}
+  .hud-item .bar{width:100px}
+}
+
 /* ==== v14: THE WATCHERS — eyes for the Begin button ==== */
 #begin-wrap{position:relative}
 #begin-wrap .big-btn{margin-top:0}
